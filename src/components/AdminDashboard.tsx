@@ -45,7 +45,12 @@ import ReactMarkdown from 'react-markdown';
 
 type TabType = 'news' | 'admissions' | 'home' | 'about' | 'contact' | 'admissions_page' | 'news_page' | 'features' | 'departments' | 'youth_union' | 'achievements' | 'schedule' | 'gallery';
 
-export default function AdminDashboard() {
+interface AdminDashboardProps {
+  onLogout?: () => void;
+  onExit?: () => void;
+}
+
+export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabType>('news');
   const [news, setNews] = useState<any[]>([]);
   const [admissions, setAdmissions] = useState<any[]>([]);
@@ -792,7 +797,14 @@ export default function AdminDashboard() {
         </nav>
 
         <button 
-          onClick={() => supabase.auth.signOut()}
+          onClick={onExit}
+          className="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-blue-400 transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" /> Quay lại trang web
+        </button>
+
+        <button 
+          onClick={onLogout}
           className="mt-auto flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-red-400 transition-colors"
         >
           <LogOut className="w-5 h-5" /> Đăng xuất
