@@ -1,0 +1,287 @@
+{
+  "entities": {
+    "news": {
+      "title": "Tin tức",
+      "description": "Danh sách các tin tức và thông báo của trường.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Tiêu đề tin tức" },
+        "summary": { "type": "string", "description": "Tóm tắt ngắn gọn" },
+        "content": { "type": "string", "description": "Nội dung chi tiết" },
+        "date": { "type": "string", "format": "date-time", "description": "Ngày đăng" },
+        "category": { "type": "string", "enum": ["Thông báo", "Tin tức", "Sự kiện"], "description": "Loại tin" },
+        "imageUrl": { "type": "string", "description": "Link ảnh minh họa" },
+        "documentUrl": { "type": "string", "description": "Đường link tài liệu đính kèm (nếu có)" },
+        "detailUrl": { "type": "string", "description": "Link chi tiết bên ngoài" }
+      },
+      "required": ["title", "content", "date", "category"]
+    },
+    "admissions": {
+      "title": "Tuyển sinh",
+      "description": "Thông tin tuyển sinh lớp 10.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Tiêu đề tuyển sinh" },
+        "summary": { "type": "string", "description": "Tóm tắt ngắn gọn" },
+        "content": { "type": "string", "description": "Nội dung chi tiết" },
+        "deadline": { "type": "string", "format": "date", "description": "Hạn chót nộp hồ sơ" },
+        "year": { "type": "number", "description": "Năm học" },
+        "documentUrl": { "type": "string", "description": "Đường link tài liệu đính kèm (nếu có)" },
+        "detailUrl": { "type": "string", "description": "Link chi tiết bên ngoài" }
+      },
+      "required": ["title", "content", "deadline", "year"]
+    },
+    "youthUnion": {
+      "title": "Hoạt động Đoàn",
+      "description": "Các hoạt động của Đoàn thanh niên.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "summary": { "type": "string" },
+        "content": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "imageUrl": { "type": "string" },
+        "detailUrl": { "type": "string" }
+      },
+      "required": ["title", "content"]
+    },
+    "achievements": {
+      "title": "Thành tích",
+      "description": "Thành tích của học sinh và nhà trường.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "studentName": { "type": "string" },
+        "class": { "type": "string" },
+        "year": { "type": "string" },
+        "award": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "type": { "type": "string", "enum": ["academic", "sport", "art", "other"] },
+        "description": { "type": "string" },
+        "detailUrl": { "type": "string" }
+      },
+      "required": ["title", "year", "type", "description"]
+    },
+    "schedules": {
+      "title": "Lịch công tác",
+      "description": "Lịch công tác tuần của nhà trường.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "week": { "type": "string" },
+        "dateRange": { "type": "string" },
+        "content": { "type": "string" },
+        "fileUrl": { "type": "string" },
+        "startDate": { "type": "string", "format": "date" },
+        "endDate": { "type": "string", "format": "date" },
+        "detailUrl": { "type": "string" }
+      },
+      "required": ["title", "content", "startDate", "endDate"]
+    },
+    "gallery": {
+      "title": "Thư viện ảnh",
+      "description": "Hình ảnh hoạt động của trường.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "detailUrl": { "type": "string" }
+      },
+      "required": ["title", "imageUrl"]
+    },
+    "schoolInfo": {
+      "title": "Thông tin trường",
+      "description": "Thông tin cơ bản của trường.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "slogan": { "type": "string" },
+        "address": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "renderType": { "type": "string", "enum": ["standard", "html"], "description": "Cách hiển thị trang liên hệ" },
+        "htmlContent": { "type": "string", "description": "Nội dung HTML nhúng cho trang liên hệ" }
+      },
+      "required": ["name", "slogan", "address", "phone"]
+    },
+    "aboutContent": {
+      "title": "Nội dung giới thiệu",
+      "description": "Nội dung trang giới thiệu.",
+      "type": "object",
+      "properties": {
+        "mainText": { "type": "string", "description": "Văn bản giới thiệu chính" },
+        "history": { "type": "string", "description": "Lịch sử hình thành" },
+        "coreValues": { "type": "string", "description": "Giá trị cốt lõi" },
+        "renderType": { "type": "string", "enum": ["standard", "html"], "description": "Cách hiển thị" },
+        "htmlContent": { "type": "string", "description": "Nội dung HTML nhúng" }
+      },
+      "required": ["mainText", "history", "coreValues"]
+    },
+    "homeContent": {
+      "title": "Nội dung trang chủ",
+      "description": "Nội dung hiển thị trên trang chủ.",
+      "type": "object",
+      "properties": {
+        "bannerTitle": { "type": "string" },
+        "bannerDescription": { "type": "string" },
+        "bannerImage": { "type": "string" },
+        "renderType": { "type": "string", "enum": ["standard", "html"], "description": "Cách hiển thị" },
+        "htmlContent": { "type": "string", "description": "Nội dung HTML nhúng" }
+      },
+      "required": ["bannerTitle", "bannerDescription"]
+    },
+    "admissionsContent": {
+      "title": "Nội dung trang tuyển sinh",
+      "description": "Cấu hình hiển thị trang tuyển sinh.",
+      "type": "object",
+      "properties": {
+        "renderType": { "type": "string", "enum": ["standard", "html"], "description": "Cách hiển thị" },
+        "htmlContent": { "type": "string", "description": "Nội dung HTML nhúng" }
+      },
+      "required": ["renderType"]
+    },
+    "newsContent": {
+      "title": "Nội dung trang tin tức",
+      "description": "Cấu hình hiển thị trang tin tức.",
+      "type": "object",
+      "properties": {
+        "renderType": { "type": "string", "enum": ["standard", "html"], "description": "Cách hiển thị" },
+        "htmlContent": { "type": "string", "description": "Nội dung HTML nhúng" }
+      },
+      "required": ["renderType"]
+    },
+    "features": {
+      "title": "Tính năng/Dịch vụ",
+      "description": "Các thẻ tính năng hiển thị trên trang chủ.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Tiêu đề thẻ" },
+        "description": { "type": "string", "description": "Mô tả ngắn" },
+        "icon": { "type": "string", "description": "Tên icon (lucide-react)" },
+        "color": { "type": "string", "description": "Màu sắc (Tailwind classes)" },
+        "order": { "type": "number", "description": "Thứ tự hiển thị" }
+      },
+      "required": ["title", "description", "icon", "color"]
+    },
+    "departments": {
+      "title": "Tổ chuyên môn",
+      "description": "Thông tin về các tổ chuyên môn trong trường.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "icon": { "type": "string" },
+        "description": { "type": "string" }
+      },
+      "required": ["name", "icon", "description"]
+    },
+    "personnel": {
+      "title": "Nhân sự",
+      "description": "Thông tin cán bộ, giáo viên trong tổ.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "position": { "type": "string" },
+        "bio": { "type": "string" },
+        "imageUrl": { "type": "string" }
+      },
+      "required": ["name", "position"]
+    },
+    "activities": {
+      "title": "Hoạt động",
+      "description": "Các hoạt động của tổ chuyên môn.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "summary": { "type": "string" },
+        "content": { "type": "string" },
+        "description": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "documentUrl": { "type": "string", "description": "Đường link tài liệu đính kèm (nếu có)" },
+        "detailUrl": { "type": "string" }
+      },
+      "required": ["title", "date"]
+    },
+    "deptDocuments": {
+      "title": "Tài liệu tổ chuyên môn",
+      "description": "Các tài liệu, giáo án, chuyên đề của tổ chuyên môn.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "fileUrl": { "type": "string" },
+        "category": { "type": "string", "enum": ["Giáo án", "Chuyên đề", "Tài liệu tham khảo", "Khác"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "fileUrl", "category"]
+    }
+  },
+  "firestore": {
+    "/news/{newsId}": {
+      "schema": "news",
+      "description": "Bộ sưu tập tin tức."
+    },
+    "/admissions/{admissionId}": {
+      "schema": "admissions",
+      "description": "Bộ sưu tập thông tin tuyển sinh."
+    },
+    "/schoolInfo/main": {
+      "schema": "schoolInfo",
+      "description": "Thông tin cấu hình chính của trường."
+    },
+    "/aboutContent/main": {
+      "schema": "aboutContent",
+      "description": "Nội dung trang giới thiệu."
+    },
+    "/homeContent/main": {
+      "schema": "homeContent",
+      "description": "Cấu hình trang chủ."
+    },
+    "/admissionsContent/main": {
+      "schema": "admissionsContent",
+      "description": "Cấu hình trang tuyển sinh."
+    },
+    "/newsContent/main": {
+      "schema": "newsContent",
+      "description": "Cấu hình trang tin tức."
+    },
+    "/youthUnion/{activityId}": {
+      "schema": "youthUnion",
+      "description": "Danh sách hoạt động Đoàn."
+    },
+    "/achievements/{achievementId}": {
+      "schema": "achievements",
+      "description": "Danh sách thành tích."
+    },
+    "/schedules/{scheduleId}": {
+      "schema": "schedules",
+      "description": "Danh sách lịch công tác."
+    },
+    "/gallery/{galleryId}": {
+      "schema": "gallery",
+      "description": "Danh sách hình ảnh thư viện."
+    },
+    "/features/{featureId}": {
+      "schema": "features",
+      "description": "Danh sách các thẻ tính năng trên trang chủ."
+    },
+    "/departments/{deptId}": {
+      "schema": "departments",
+      "description": "Danh sách các tổ chuyên môn."
+    },
+    "/departments/{deptId}/personnel/{personnelId}": {
+      "schema": "personnel",
+      "description": "Danh sách nhân sự của tổ."
+    },
+    "/departments/{deptId}/activities/{activityId}": {
+      "schema": "activities",
+      "description": "Danh sách hoạt động của tổ."
+    },
+    "/departments/{deptId}/documents/{docId}": {
+      "schema": "deptDocuments",
+      "description": "Danh sách tài liệu của tổ."
+    }
+  }
+}

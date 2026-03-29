@@ -1,0 +1,282 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: news
+    // Fields: title (string), content (string), date (timestamp), category (string)
+    //
+    // Collection: admissions
+    // Fields: title (string), content (string), deadline (string), year (number)
+    //
+    // Collection: schoolInfo
+    // Fields: name (string), slogan (string), address (string), phone (string)
+    //
+    // Collection: aboutContent
+    // Fields: mainText (string), history (string), coreValues (string)
+    //
+    // Collection: homeContent
+    // Fields: bannerTitle (string), bannerDescription (string), bannerImage (string)
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.email == "trieuhaminh@gmail.com" && request.auth.token.email_verified == true);
+    }
+
+    function isValidNews(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.content is string && data.content.size() > 0 &&
+             data.date is timestamp &&
+             data.category in ['Thông báo', 'Tin tức', 'Sự kiện'] &&
+             (!('summary' in data) || data.summary is string) &&
+             (!('imageUrl' in data) || data.imageUrl is string) &&
+             (!('documentUrl' in data) || data.documentUrl is string) &&
+             (!('detailUrl' in data) || data.detailUrl is string);
+    }
+
+    function isValidAdmission(data) {
+      return data.title is string && data.title.size() > 0 &&
+             data.content is string &&
+             data.deadline is string &&
+             data.year is number &&
+             (!('summary' in data) || data.summary is string) &&
+             (!('documentUrl' in data) || data.documentUrl is string) &&
+             (!('detailUrl' in data) || data.detailUrl is string) &&
+             (!('createdAt' in data) || data.createdAt is string || data.createdAt is timestamp) &&
+             (!('updatedAt' in data) || data.updatedAt is string || data.updatedAt is timestamp);
+    }
+
+    function isValidYouthUnion(data) {
+      return data.title is string && data.title.size() > 0 &&
+             data.content is string &&
+             (!('summary' in data) || data.summary is string) &&
+             (!('date' in data) || data.date is string) &&
+             (!('imageUrl' in data) || data.imageUrl is string) &&
+             (!('detailUrl' in data) || data.detailUrl is string) &&
+             (!('createdAt' in data) || data.createdAt is string || data.createdAt is timestamp) &&
+             (!('updatedAt' in data) || data.updatedAt is string || data.updatedAt is timestamp);
+    }
+
+    function isValidAchievement(data) {
+      return data.title is string && data.title.size() > 0 &&
+             data.year is string &&
+             data.type in ['academic', 'sport', 'art', 'other'] &&
+             data.description is string &&
+             (!('studentName' in data) || data.studentName is string) &&
+             (!('class' in data) || data.class is string) &&
+             (!('award' in data) || data.award is string) &&
+             (!('imageUrl' in data) || data.imageUrl is string) &&
+             (!('detailUrl' in data) || data.detailUrl is string) &&
+             (!('createdAt' in data) || data.createdAt is string || data.createdAt is timestamp) &&
+             (!('updatedAt' in data) || data.updatedAt is string || data.updatedAt is timestamp);
+    }
+
+    function isValidSchedule(data) {
+      return data.title is string && data.title.size() > 0 &&
+             data.content is string &&
+             data.startDate is string &&
+             data.endDate is string &&
+             (!('week' in data) || data.week is string) &&
+             (!('dateRange' in data) || data.dateRange is string) &&
+             (!('fileUrl' in data) || data.fileUrl is string) &&
+             (!('detailUrl' in data) || data.detailUrl is string) &&
+             (!('createdAt' in data) || data.createdAt is string || data.createdAt is timestamp) &&
+             (!('updatedAt' in data) || data.updatedAt is string || data.updatedAt is timestamp);
+    }
+
+    function isValidGallery(data) {
+      return data.title is string && data.title.size() > 0 &&
+             data.imageUrl is string &&
+             (!('category' in data) || data.category is string) &&
+             (!('description' in data) || data.description is string) &&
+             (!('detailUrl' in data) || data.detailUrl is string) &&
+             (!('createdAt' in data) || data.createdAt is string || data.createdAt is timestamp) &&
+             (!('updatedAt' in data) || data.updatedAt is string || data.updatedAt is timestamp);
+    }
+
+    function isValidSchoolInfo(data) {
+      return data.name is string && data.slogan is string &&
+             data.address is string && data.phone is string &&
+             (!('email' in data) || data.email is string) &&
+             (!('renderType' in data) || data.renderType in ['standard', 'html']) &&
+             (!('htmlContent' in data) || data.htmlContent is string) &&
+             (!('createdAt' in data) || data.createdAt is string || data.createdAt is timestamp) &&
+             (!('updatedAt' in data) || data.updatedAt is string || data.updatedAt is timestamp);
+    }
+
+    function isValidNewsContent(data) {
+      return data.renderType in ['standard', 'html'] &&
+             (!('htmlContent' in data) || data.htmlContent is string);
+    }
+
+    function isValidFeature(data) {
+      return data.title is string && data.title.size() > 0 &&
+             data.description is string &&
+             data.icon is string &&
+             data.color is string &&
+             (!('order' in data) || data.order is number) &&
+             (!('createdAt' in data) || data.createdAt is string || data.createdAt is timestamp) &&
+             (!('updatedAt' in data) || data.updatedAt is string || data.updatedAt is timestamp);
+    }
+
+    function isValidAboutContent(data) {
+      return data.mainText is string && data.history is string &&
+             data.coreValues is string &&
+             (!('renderType' in data) || data.renderType in ['standard', 'html']) &&
+             (!('htmlContent' in data) || data.htmlContent is string);
+    }
+
+    function isValidHomeContent(data) {
+      return data.bannerTitle is string && data.bannerDescription is string &&
+             (!('renderType' in data) || data.renderType in ['standard', 'html']) &&
+             (!('htmlContent' in data) || data.htmlContent is string);
+    }
+
+    function isValidAdmissionsContent(data) {
+      return data.renderType in ['standard', 'html'] &&
+             (!('htmlContent' in data) || data.htmlContent is string);
+    }
+
+    function isValidDepartment(data) {
+      return data.name is string && data.name.size() > 0 &&
+             data.icon is string &&
+             data.description is string &&
+             (!('createdAt' in data) || data.createdAt is string || data.createdAt is timestamp) &&
+             (!('updatedAt' in data) || data.updatedAt is string || data.updatedAt is timestamp);
+    }
+
+    function isValidPersonnel(data) {
+      return data.name is string && data.name.size() > 0 &&
+             data.position is string &&
+             (!('bio' in data) || data.bio is string) &&
+             (!('imageUrl' in data) || data.imageUrl is string) &&
+             (!('createdAt' in data) || data.createdAt is string || data.createdAt is timestamp) &&
+             (!('updatedAt' in data) || data.updatedAt is string || data.updatedAt is timestamp);
+    }
+
+    function isValidActivity(data) {
+      return data.title is string && data.title.size() > 0 &&
+             data.date is string &&
+             (!('description' in data) || data.description is string) &&
+             (!('content' in data) || data.content is string) &&
+             (!('summary' in data) || data.summary is string) &&
+             (!('imageUrl' in data) || data.imageUrl is string) &&
+             (!('documentUrl' in data) || data.documentUrl is string) &&
+             (!('detailUrl' in data) || data.detailUrl is string) &&
+             (!('createdAt' in data) || data.createdAt is string || data.createdAt is timestamp) &&
+             (!('updatedAt' in data) || data.updatedAt is string || data.updatedAt is timestamp);
+    }
+
+    function isValidDeptDocument(data) {
+      return data.title is string && data.title.size() > 0 &&
+             data.fileUrl is string &&
+             data.category in ['Giáo án', 'Chuyên đề', 'Tài liệu tham khảo', 'Khác'] &&
+             (!('description' in data) || data.description is string) &&
+             (!('createdAt' in data) || data.createdAt is string || data.createdAt is timestamp) &&
+             (!('updatedAt' in data) || data.updatedAt is string || data.updatedAt is timestamp);
+    }
+
+    // Rules
+    match /news/{newsId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidNews(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /admissions/{admissionId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidAdmission(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /schoolInfo/{infoId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidSchoolInfo(request.resource.data);
+    }
+
+    match /aboutContent/{contentId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidAboutContent(request.resource.data);
+    }
+
+    match /homeContent/{contentId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidHomeContent(request.resource.data);
+    }
+
+    match /admissionsContent/{contentId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidAdmissionsContent(request.resource.data);
+    }
+
+    match /newsContent/{contentId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidNewsContent(request.resource.data);
+    }
+
+    match /youthUnion/{activityId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidYouthUnion(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /achievements/{achievementId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidAchievement(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /schedules/{scheduleId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidSchedule(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /gallery/{galleryId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidGallery(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /features/{featureId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidFeature(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /departments/{deptId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidDepartment(request.resource.data);
+      allow delete: if isAdmin();
+
+      match /personnel/{personnelId} {
+        allow read: if true;
+        allow write: if isAdmin() && isValidPersonnel(request.resource.data);
+        allow delete: if isAdmin();
+      }
+
+      match /activities/{activityId} {
+        allow read: if true;
+        allow write: if isAdmin() && isValidActivity(request.resource.data);
+        allow delete: if isAdmin();
+      }
+
+      match /documents/{docId} {
+        allow read: if true;
+        allow write: if isAdmin() && isValidDeptDocument(request.resource.data);
+        allow delete: if isAdmin();
+      }
+    }
+    
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+  }
+}
