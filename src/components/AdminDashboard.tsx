@@ -99,42 +99,42 @@ export default function AdminDashboard() {
   };
 
   // Form states
-  const [newsForm, setNewsForm] = useState({ title: '', summary: '', content: '', category: 'Tin tức', imageUrl: '', documentUrl: '', detailUrl: '' });
-  const [admissionForm, setAdmissionForm] = useState({ title: '', summary: '', content: '', deadline: '', year: 2026, documentUrl: '', detailUrl: '' });
-  const [featureForm, setFeatureForm] = useState({ title: '', description: '', icon: 'BookOpen', color: 'bg-blue-100 text-blue-700', order: 0, detailUrl: '' });
-  const [deptForm, setDeptForm] = useState({ name: '', icon: 'BookOpen', description: '', detailUrl: '' });
-  const [youthUnionForm, setYouthUnionForm] = useState({ title: '', summary: '', content: '', date: '', imageUrl: '', detailUrl: '' });
-  const [achievementForm, setAchievementForm] = useState({ title: '', studentName: '', class: '', year: '2025-2026', award: '', imageUrl: '', type: 'academic', description: '', detailUrl: '' });
-  const [scheduleForm, setScheduleForm] = useState({ title: '', week: '', dateRange: '', content: '', fileUrl: '', startDate: '', endDate: '', detailUrl: '' });
-  const [galleryForm, setGalleryForm] = useState({ title: '', imageUrl: '', category: 'Hoạt động trường', description: '', detailUrl: '' });
-  const [personnelForm, setPersonnelForm] = useState({ name: '', position: '', bio: '', imageUrl: '' });
-  const [activityForm, setActivityForm] = useState({ title: '', date: '', summary: '', description: '', imageUrl: '', documentUrl: '', content: '', detailUrl: '' });
-  const [documentForm, setDocumentForm] = useState({ title: '', description: '', fileUrl: '', category: 'Giáo án' });
+  const [newsForm, setNewsForm] = useState({ title: '', summary: '', content: '', category: 'Tin tức', image_url: '', document_url: '', detail_url: '' });
+  const [admissionForm, setAdmissionForm] = useState({ title: '', summary: '', content: '', deadline: '', year: 2026, document_url: '', detail_url: '' });
+  const [featureForm, setFeatureForm] = useState({ title: '', description: '', icon: 'BookOpen', color: 'bg-blue-100 text-blue-700', order_num: 0, detail_url: '' });
+  const [deptForm, setDeptForm] = useState({ name: '', icon: 'BookOpen', description: '', detail_url: '' });
+  const [youthUnionForm, setYouthUnionForm] = useState({ title: '', summary: '', content: '', date: '', image_url: '', detail_url: '' });
+  const [achievementForm, setAchievementForm] = useState({ title: '', student_name: '', class: '', year: '2025-2026', award: '', image_url: '', type: 'academic', description: '', detail_url: '' });
+  const [scheduleForm, setScheduleForm] = useState({ title: '', week: '', date_range: '', content: '', file_url: '', start_date: '', end_date: '', detail_url: '' });
+  const [galleryForm, setGalleryForm] = useState({ title: '', image_url: '', category: 'Hoạt động trường', description: '', detail_url: '' });
+  const [personnelForm, setPersonnelForm] = useState({ name: '', position: '', bio: '', image_url: '' });
+  const [activityForm, setActivityForm] = useState({ title: '', date: '', summary: '', description: '', image_url: '', document_url: '', content: '', detail_url: '' });
+  const [documentForm, setDocumentForm] = useState({ title: '', description: '', file_url: '', category: 'Giáo án' });
   
   const [homeForm, setHomeForm] = useState({ 
-    bannerTitle: 'Môi trường giáo dục hiện đại & thân thiện', 
-    bannerDescription: 'Với đội ngũ giáo viên tâm huyết và cơ sở vật chất khang trang, chúng tôi cam kết mang lại chất lượng giáo dục tốt nhất cho học sinh.',
-    bannerImage: 'https://picsum.photos/seed/school/1200/600',
-    renderType: 'standard',
-    htmlContent: ''
+    banner_title: 'Môi trường giáo dục hiện đại & thân thiện', 
+    banner_description: 'Với đội ngũ giáo viên tâm huyết và cơ sở vật chất khang trang, chúng tôi cam kết mang lại chất lượng giáo dục tốt nhất cho học sinh.',
+    banner_image: 'https://picsum.photos/seed/school/1200/600',
+    render_type: 'standard',
+    html_content: ''
   });
 
   const [aboutForm, setAboutForm] = useState({
-    mainText: '',
+    main_text: '',
     history: '',
-    coreValues: '',
-    renderType: 'standard',
-    htmlContent: ''
+    core_values: '',
+    render_type: 'standard',
+    html_content: ''
   });
 
   const [admissionsPageForm, setAdmissionsPageForm] = useState({
-    renderType: 'standard',
-    htmlContent: ''
+    render_type: 'standard',
+    html_content: ''
   });
 
   const [newsPageForm, setNewsPageForm] = useState({
-    renderType: 'standard',
-    htmlContent: ''
+    render_type: 'standard',
+    html_content: ''
   });
 
   const [contactForm, setContactForm] = useState({
@@ -143,8 +143,8 @@ export default function AdminDashboard() {
     address: '',
     phone: '',
     email: '',
-    renderType: 'standard',
-    htmlContent: ''
+    render_type: 'standard',
+    html_content: ''
   });
 
   const departments = [
@@ -176,19 +176,19 @@ export default function AdminDashboard() {
         channel = supabase.channel('adm_admin').on('postgres_changes', { event: '*', schema: 'public', table: 'admissions' }, fetchData).subscribe();
       } else if (activeTab === 'home') {
         const { data } = await supabase.from('home_content').select('*').eq('id', 'main').maybeSingle();
-        if (data) setHomeForm(data);
+        if (data) setHomeForm(prev => ({ ...prev, ...data }));
       } else if (activeTab === 'about') {
         const { data } = await supabase.from('about_content').select('*').eq('id', 'main').maybeSingle();
         if (data) setAboutForm(prev => ({ ...prev, ...data }));
       } else if (activeTab === 'contact') {
         const { data } = await supabase.from('school_info').select('*').eq('id', 'main').maybeSingle();
-        if (data) setContactForm(data);
+        if (data) setContactForm(prev => ({ ...prev, ...data }));
       } else if (activeTab === 'admissions_page') {
         const { data } = await supabase.from('admissions_content').select('*').eq('id', 'main').maybeSingle();
-        if (data) setAdmissionsPageForm(data);
+        if (data) setAdmissionsPageForm(prev => ({ ...prev, ...data }));
       } else if (activeTab === 'news_page') {
         const { data } = await supabase.from('news_content').select('*').eq('id', 'main').maybeSingle();
-        if (data) setNewsPageForm(data);
+        if (data) setNewsPageForm(prev => ({ ...prev, ...data }));
       } else if (activeTab === 'departments') {
         const { data } = await supabase.from('departments').select('*');
         if (data) setDepartmentsList(data);
@@ -264,7 +264,7 @@ export default function AdminDashboard() {
         const { error } = await supabase.from('news').insert([{ ...newsForm, date: new Date() }]);
         if (error) throw error;
       }
-      setNewsForm({ title: '', summary: '', content: '', category: 'Tin tức', imageUrl: '', documentUrl: '', detailUrl: '' });
+      setNewsForm({ title: '', summary: '', content: '', category: 'Tin tức', image_url: '', document_url: '', detail_url: '' });
       showSuccess();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi khi lưu tin tức: " + error.message);
@@ -278,9 +278,9 @@ export default function AdminDashboard() {
       summary: item.summary || '',
       content: item.content,
       category: item.category,
-      imageUrl: item.imageUrl || '',
-      documentUrl: item.documentUrl || '',
-      detailUrl: item.detailUrl || ''
+      image_url: item.image_url || '',
+      document_url: item.document_url || '',
+      detail_url: item.detail_url || ''
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -303,7 +303,7 @@ export default function AdminDashboard() {
         const { error } = await supabase.from('admissions').insert([{ ...admissionForm }]);
         if (error) throw error;
       }
-      setAdmissionForm({ title: '', summary: '', content: '', deadline: '', year: 2026, documentUrl: '', detailUrl: '' });
+      setAdmissionForm({ title: '', summary: '', content: '', deadline: '', year: 2026, document_url: '', detail_url: '' });
       showSuccess();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi khi lưu thông tin tuyển sinh: " + error.message);
@@ -318,8 +318,8 @@ export default function AdminDashboard() {
       content: item.content,
       deadline: item.deadline,
       year: item.year,
-      documentUrl: item.documentUrl || '',
-      detailUrl: item.detailUrl || ''
+      document_url: item.document_url || '',
+      detail_url: item.detail_url || ''
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -397,7 +397,7 @@ export default function AdminDashboard() {
         const { error } = await supabase.from('features').insert([{ ...featureForm }]);
         if (error) throw error;
       }
-      setFeatureForm({ title: '', description: '', icon: 'BookOpen', color: 'bg-blue-100 text-blue-700', order: 0, detailUrl: '' });
+      setFeatureForm({ title: '', description: '', icon: 'BookOpen', color: 'bg-blue-100 text-blue-700', order_num: 0, detail_url: '' });
       showSuccess();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi khi lưu tính năng: " + error.message);
@@ -411,8 +411,8 @@ export default function AdminDashboard() {
       description: item.description,
       icon: item.icon,
       color: item.color,
-      order: item.order || 0,
-      detailUrl: item.detailUrl || ''
+      order_num: item.order_num || 0,
+      detail_url: item.detail_url || ''
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -435,7 +435,7 @@ export default function AdminDashboard() {
         const { error } = await supabase.from('departments').insert([{ ...deptForm }]);
         if (error) throw error;
       }
-      setDeptForm({ name: '', icon: 'BookOpen', description: '', detailUrl: '' });
+      setDeptForm({ name: '', icon: 'BookOpen', description: '', detail_url: '' });
       showSuccess();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi khi lưu tổ chuyên môn: " + error.message);
@@ -456,8 +456,8 @@ export default function AdminDashboard() {
       summary: item.summary || '',
       content: item.content,
       date: item.date || '',
-      imageUrl: item.imageUrl || '',
-      detailUrl: item.detailUrl || ''
+      image_url: item.image_url || '',
+      detail_url: item.detail_url || ''
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -473,7 +473,7 @@ export default function AdminDashboard() {
         const { error } = await supabase.from('youth_union').insert([{ ...youthUnionForm }]);
         if (error) throw error;
       }
-      setYouthUnionForm({ title: '', summary: '', content: '', date: '', imageUrl: '', detailUrl: '' });
+      setYouthUnionForm({ title: '', summary: '', content: '', date: '', image_url: '', detail_url: '' });
       showSuccess();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi: " + error.message);
@@ -491,14 +491,14 @@ export default function AdminDashboard() {
     setEditingAchievementId(item.id);
     setAchievementForm({
       title: item.title,
-      studentName: item.studentName || '',
+      student_name: item.student_name || '',
       class: item.class || '',
       year: item.year || '2025-2026',
       award: item.award || '',
-      imageUrl: item.imageUrl || '',
+      image_url: item.image_url || '',
       type: item.type || 'academic',
       description: item.description || '',
-      detailUrl: item.detailUrl || ''
+      detail_url: item.detail_url || ''
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -514,7 +514,7 @@ export default function AdminDashboard() {
         const { error } = await supabase.from('achievements').insert([{ ...achievementForm }]);
         if (error) throw error;
       }
-      setAchievementForm({ title: '', studentName: '', class: '', year: '2025-2026', award: '', imageUrl: '', type: 'academic', description: '', detailUrl: '' });
+      setAchievementForm({ title: '', student_name: '', class: '', year: '2025-2026', award: '', image_url: '', type: 'academic', description: '', detail_url: '' });
       showSuccess();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi: " + error.message);
@@ -533,12 +533,12 @@ export default function AdminDashboard() {
     setScheduleForm({
       title: item.title,
       week: item.week || '',
-      dateRange: item.dateRange || '',
+      date_range: item.date_range || '',
       content: item.content || '',
-      fileUrl: item.fileUrl || '',
-      startDate: item.startDate || '',
-      endDate: item.endDate || '',
-      detailUrl: item.detailUrl || ''
+      file_url: item.file_url || '',
+      start_date: item.start_date || '',
+      end_date: item.end_date || '',
+      detail_url: item.detail_url || ''
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -554,7 +554,7 @@ export default function AdminDashboard() {
         const { error } = await supabase.from('schedules').insert([{ ...scheduleForm }]);
         if (error) throw error;
       }
-      setScheduleForm({ title: '', week: '', dateRange: '', content: '', fileUrl: '', startDate: '', endDate: '', detailUrl: '' });
+      setScheduleForm({ title: '', week: '', date_range: '', content: '', file_url: '', start_date: '', end_date: '', detail_url: '' });
       showSuccess();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi: " + error.message);
@@ -572,10 +572,10 @@ export default function AdminDashboard() {
     setEditingGalleryId(item.id);
     setGalleryForm({
       title: item.title,
-      imageUrl: item.imageUrl || '',
+      image_url: item.image_url || '',
       category: item.category || 'Hoạt động trường',
       description: item.description || '',
-      detailUrl: item.detailUrl || ''
+      detail_url: item.detail_url || ''
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -591,7 +591,7 @@ export default function AdminDashboard() {
         const { error } = await supabase.from('gallery').insert([{ ...galleryForm }]);
         if (error) throw error;
       }
-      setGalleryForm({ title: '', imageUrl: '', category: 'Hoạt động trường', description: '', detailUrl: '' });
+      setGalleryForm({ title: '', image_url: '', category: 'Hoạt động trường', description: '', detail_url: '' });
       showSuccess();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi: " + error.message);
@@ -617,7 +617,7 @@ export default function AdminDashboard() {
         const { error } = await supabase.from('personnel').insert([{ ...personnelForm, dept_id: selectedDeptId }]);
         if (error) throw error;
       }
-      setPersonnelForm({ name: '', position: '', bio: '', imageUrl: '' });
+      setPersonnelForm({ name: '', position: '', bio: '', image_url: '' });
       showSuccess();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi: " + error.message);
@@ -639,10 +639,10 @@ export default function AdminDashboard() {
       date: item.date || '',
       summary: item.summary || '',
       description: item.description || '',
-      imageUrl: item.imageUrl || '',
-      documentUrl: item.document_url || '',
+      image_url: item.image_url || '',
+      document_url: item.document_url || '',
       content: item.content || '',
-      detailUrl: item.detail_url || ''
+      detail_url: item.detail_url || ''
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -651,26 +651,15 @@ export default function AdminDashboard() {
     e.preventDefault();
     if (!selectedDeptId) return;
     try {
-      const payload = {
-        title: activityForm.title,
-        date: activityForm.date,
-        summary: activityForm.summary,
-        description: activityForm.description,
-        imageUrl: activityForm.imageUrl,
-        document_url: activityForm.documentUrl,
-        content: activityForm.content,
-        detail_url: activityForm.detailUrl,
-        dept_id: selectedDeptId
-      };
       if (editingActivityId) {
-        const { error } = await supabase.from('activities').update({ ...payload, updated_at: new Date() }).eq('id', editingActivityId);
+        const { error } = await supabase.from('activities').update({ ...activityForm, updated_at: new Date() }).eq('id', editingActivityId);
         if (error) throw error;
         setEditingActivityId(null);
       } else {
-        const { error } = await supabase.from('activities').insert([payload]);
+        const { error } = await supabase.from('activities').insert([{ ...activityForm, dept_id: selectedDeptId }]);
         if (error) throw error;
       }
-      setActivityForm({ title: '', date: '', summary: '', description: '', imageUrl: '', documentUrl: '', content: '', detailUrl: '' });
+      setActivityForm({ title: '', date: '', summary: '', description: '', image_url: '', document_url: '', content: '', detail_url: '' });
       showSuccess();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi: " + error.message);
@@ -689,22 +678,15 @@ export default function AdminDashboard() {
     e.preventDefault();
     if (!selectedDeptId) return;
     try {
-      const payload = {
-        title: documentForm.title,
-        description: documentForm.description,
-        file_url: documentForm.fileUrl,
-        category: documentForm.category,
-        dept_id: selectedDeptId
-      };
       if (editingDocumentId) {
-        const { error } = await supabase.from('dept_documents').update({ ...payload, updated_at: new Date() }).eq('id', editingDocumentId);
+        const { error } = await supabase.from('dept_documents').update({ ...documentForm, updated_at: new Date() }).eq('id', editingDocumentId);
         if (error) throw error;
         setEditingDocumentId(null);
       } else {
-        const { error } = await supabase.from('dept_documents').insert([payload]);
+        const { error } = await supabase.from('dept_documents').insert([{ ...documentForm, dept_id: selectedDeptId }]);
         if (error) throw error;
       }
-      setDocumentForm({ title: '', description: '', fileUrl: '', category: 'Giáo án' });
+      setDocumentForm({ title: '', description: '', file_url: '', category: 'Giáo án' });
       showSuccess();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi: " + error.message);
@@ -874,22 +856,22 @@ export default function AdminDashboard() {
                   <input 
                     type="url" 
                     placeholder="Link hình ảnh minh họa (tùy chọn)" 
-                    value={newsForm.imageUrl}
-                    onChange={e => setNewsForm({...newsForm, imageUrl: e.target.value})}
+                    value={newsForm.image_url}
+                    onChange={e => setNewsForm({...newsForm, image_url: e.target.value})}
                     className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <input 
                     type="url" 
                     placeholder="Link tài liệu đính kèm (tùy chọn)" 
-                    value={newsForm.documentUrl}
-                    onChange={e => setNewsForm({...newsForm, documentUrl: e.target.value})}
+                    value={newsForm.document_url}
+                    onChange={e => setNewsForm({...newsForm, document_url: e.target.value})}
                     className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <input 
                     type="url" 
                     placeholder="Link chi tiết bên ngoài (Google Doc, Sheet, HTML...)" 
-                    value={newsForm.detailUrl}
-                    onChange={e => setNewsForm({...newsForm, detailUrl: e.target.value})}
+                    value={newsForm.detail_url}
+                    onChange={e => setNewsForm({...newsForm, detail_url: e.target.value})}
                     className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 md:col-span-2"
                   />
                 </div>
@@ -909,7 +891,7 @@ export default function AdminDashboard() {
                       type="button" 
                       onClick={() => {
                         setEditingNewsId(null);
-                        setNewsForm({ title: '', summary: '', content: '', category: 'Tin tức', imageUrl: '', documentUrl: '', detailUrl: '' });
+                        setNewsForm({ title: '', summary: '', content: '', category: 'Tin tức', image_url: '', document_url: '', detail_url: '' });
                       }}
                       className="px-6 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
                     >
@@ -988,15 +970,15 @@ export default function AdminDashboard() {
                   <input 
                     type="url" 
                     placeholder="Link tài liệu đính kèm (tùy chọn)" 
-                    value={admissionForm.documentUrl}
-                    onChange={e => setAdmissionForm({...admissionForm, documentUrl: e.target.value})}
+                    value={admissionForm.document_url}
+                    onChange={e => setAdmissionForm({...admissionForm, document_url: e.target.value})}
                     className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 md:col-span-2"
                   />
                   <input 
                     type="url" 
                     placeholder="Link chi tiết bên ngoài (Google Doc, Sheet, HTML...)" 
-                    value={admissionForm.detailUrl}
-                    onChange={e => setAdmissionForm({...admissionForm, detailUrl: e.target.value})}
+                    value={admissionForm.detail_url}
+                    onChange={e => setAdmissionForm({...admissionForm, detail_url: e.target.value})}
                     className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -1016,7 +998,7 @@ export default function AdminDashboard() {
                       type="button" 
                       onClick={() => {
                         setEditingAdmissionId(null);
-                        setAdmissionForm({ title: '', summary: '', content: '', deadline: '', year: 2026, documentUrl: '', detailUrl: '' });
+                        setAdmissionForm({ title: '', summary: '', content: '', deadline: '', year: 2026, document_url: '', detail_url: '' });
                       }}
                       className="px-6 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
                     >
@@ -1093,10 +1075,10 @@ export default function AdminDashboard() {
                   <input 
                     type="number" 
                     placeholder="Thứ tự" 
-                    value={featureForm.order}
+                    value={featureForm.order_num}
                     onChange={e => {
                       const val = parseInt(e.target.value);
-                      setFeatureForm({...featureForm, order: isNaN(val) ? 0 : val});
+                      setFeatureForm({...featureForm, order_num: isNaN(val) ? 0 : val});
                     }}
                     className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                   />
@@ -1117,7 +1099,7 @@ export default function AdminDashboard() {
                       type="button" 
                       onClick={() => {
                         setEditingFeatureId(null);
-                        setFeatureForm({ title: '', description: '', icon: 'BookOpen', color: 'bg-blue-100 text-blue-700', order: 0, detailUrl: '' });
+                        setFeatureForm({ title: '', description: '', icon: 'BookOpen', color: 'bg-blue-100 text-blue-700', order_num: 0, detail_url: '' });
                       }}
                       className="px-6 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
                     >
@@ -1178,36 +1160,36 @@ export default function AdminDashboard() {
               <div className="flex gap-4 p-1 bg-slate-100 rounded-xl w-fit mb-6">
                 <button 
                   type="button"
-                  onClick={() => setHomeForm({...homeForm, renderType: 'standard'})}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${homeForm.renderType === 'standard' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
+                  onClick={() => setHomeForm({...homeForm, render_type: 'standard'})}
+                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${homeForm.render_type === 'standard' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
                 >
                   Giao diện chuẩn
                 </button>
                 <button 
                   type="button"
-                  onClick={() => setHomeForm({...homeForm, renderType: 'html'})}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${homeForm.renderType === 'html' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
+                  onClick={() => setHomeForm({...homeForm, render_type: 'html'})}
+                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${homeForm.render_type === 'html' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
                 >
                   Nhúng HTML
                 </button>
               </div>
 
-              {homeForm.renderType === 'standard' ? (
+              {homeForm.render_type === 'standard' ? (
                 <>
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-2">Tiêu đề Banner</label>
                     <input 
                       type="text" 
-                      value={homeForm.bannerTitle}
-                      onChange={e => setHomeForm({...homeForm, bannerTitle: e.target.value})}
+                      value={homeForm.banner_title}
+                      onChange={e => setHomeForm({...homeForm, banner_title: e.target.value})}
                       className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-2">Mô tả Banner</label>
                     <textarea 
-                      value={homeForm.bannerDescription}
-                      onChange={e => setHomeForm({...homeForm, bannerDescription: e.target.value})}
+                      value={homeForm.banner_description}
+                      onChange={e => setHomeForm({...homeForm, banner_description: e.target.value})}
                       className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-24"
                     />
                   </div>
@@ -1215,8 +1197,8 @@ export default function AdminDashboard() {
                     <label className="block text-sm font-bold text-slate-700 mb-2">URL Hình ảnh Banner</label>
                     <input 
                       type="text" 
-                      value={homeForm.bannerImage}
-                      onChange={e => setHomeForm({...homeForm, bannerImage: e.target.value})}
+                      value={homeForm.banner_image}
+                      onChange={e => setHomeForm({...homeForm, banner_image: e.target.value})}
                       className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
@@ -1225,8 +1207,8 @@ export default function AdminDashboard() {
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-2">Nội dung HTML (Nhúng toàn bộ trang chủ)</label>
                   <textarea 
-                    value={homeForm.htmlContent}
-                    onChange={e => setHomeForm({...homeForm, htmlContent: e.target.value})}
+                    value={homeForm.html_content}
+                    onChange={e => setHomeForm({...homeForm, html_content: e.target.value})}
                     className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-96 font-mono text-sm"
                     placeholder="<div class='custom-home'>...</div>"
                   />
@@ -1245,27 +1227,27 @@ export default function AdminDashboard() {
               <div className="flex gap-4 p-1 bg-slate-100 rounded-xl w-fit mb-6">
                 <button 
                   type="button"
-                  onClick={() => setAboutForm({...aboutForm, renderType: 'standard'})}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${aboutForm.renderType === 'standard' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
+                  onClick={() => setAboutForm({...aboutForm, render_type: 'standard'})}
+                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${aboutForm.render_type === 'standard' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
                 >
                   Giao diện chuẩn
                 </button>
                 <button 
                   type="button"
-                  onClick={() => setAboutForm({...aboutForm, renderType: 'html'})}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${aboutForm.renderType === 'html' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
+                  onClick={() => setAboutForm({...aboutForm, render_type: 'html'})}
+                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${aboutForm.render_type === 'html' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
                 >
                   Nhúng HTML
                 </button>
               </div>
 
-              {aboutForm.renderType === 'standard' ? (
+              {aboutForm.render_type === 'standard' ? (
                 <>
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-2">Văn bản giới thiệu chính</label>
                     <textarea 
-                      value={aboutForm.mainText}
-                      onChange={e => setAboutForm({...aboutForm, mainText: e.target.value})}
+                      value={aboutForm.main_text}
+                      onChange={e => setAboutForm({...aboutForm, main_text: e.target.value})}
                       className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-32"
                     />
                   </div>
@@ -1280,8 +1262,8 @@ export default function AdminDashboard() {
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-2">Giá trị cốt lõi</label>
                     <textarea 
-                      value={aboutForm.coreValues}
-                      onChange={e => setAboutForm({...aboutForm, coreValues: e.target.value})}
+                      value={aboutForm.core_values}
+                      onChange={e => setAboutForm({...aboutForm, core_values: e.target.value})}
                       className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-32"
                     />
                   </div>
@@ -1290,8 +1272,8 @@ export default function AdminDashboard() {
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-2">Nội dung HTML (Nhúng trang giới thiệu)</label>
                   <textarea 
-                    value={aboutForm.htmlContent}
-                    onChange={e => setAboutForm({...aboutForm, htmlContent: e.target.value})}
+                    value={aboutForm.html_content}
+                    onChange={e => setAboutForm({...aboutForm, html_content: e.target.value})}
                     className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-96 font-mono text-sm"
                     placeholder="<section>...</section>"
                   />
@@ -1309,33 +1291,33 @@ export default function AdminDashboard() {
               <div className="flex gap-4 p-1 bg-slate-100 rounded-xl w-fit mb-6">
                 <button 
                   type="button"
-                  onClick={() => setAdmissionsPageForm({...admissionsPageForm, renderType: 'standard'})}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${admissionsPageForm.renderType === 'standard' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
+                  onClick={() => setAdmissionsPageForm({...admissionsPageForm, render_type: 'standard'})}
+                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${admissionsPageForm.render_type === 'standard' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
                 >
                   Giao diện chuẩn (Danh sách)
                 </button>
                 <button 
                   type="button"
-                  onClick={() => setAdmissionsPageForm({...admissionsPageForm, renderType: 'html'})}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${admissionsPageForm.renderType === 'html' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
+                  onClick={() => setAdmissionsPageForm({...admissionsPageForm, render_type: 'html'})}
+                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${admissionsPageForm.render_type === 'html' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
                 >
                   Nhúng HTML
                 </button>
               </div>
 
-              {admissionsPageForm.renderType === 'html' && (
+              {admissionsPageForm.render_type === 'html' && (
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-2">Nội dung HTML (Nhúng trang tuyển sinh)</label>
                   <textarea 
-                    value={admissionsPageForm.htmlContent}
-                    onChange={e => setAdmissionsPageForm({...admissionsPageForm, htmlContent: e.target.value})}
+                    value={admissionsPageForm.html_content}
+                    onChange={e => setAdmissionsPageForm({...admissionsPageForm, html_content: e.target.value})}
                     className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-96 font-mono text-sm"
                     placeholder="<div class='admissions-page'>...</div>"
                   />
                 </div>
               )}
 
-              {admissionsPageForm.renderType === 'standard' && (
+              {admissionsPageForm.render_type === 'standard' && (
                 <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100 text-blue-800">
                   <p className="font-medium">Chế độ hiển thị chuẩn đang được kích hoạt. Hệ thống sẽ hiển thị danh sách các thông tin tuyển sinh từ tab "Danh sách Tuyển sinh".</p>
                 </div>
@@ -1352,33 +1334,33 @@ export default function AdminDashboard() {
               <div className="flex gap-4 p-1 bg-slate-100 rounded-xl w-fit mb-6">
                 <button 
                   type="button"
-                  onClick={() => setNewsPageForm({...newsPageForm, renderType: 'standard'})}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${newsPageForm.renderType === 'standard' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
+                  onClick={() => setNewsPageForm({...newsPageForm, render_type: 'standard'})}
+                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${newsPageForm.render_type === 'standard' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
                 >
                   Giao diện chuẩn (Danh sách)
                 </button>
                 <button 
                   type="button"
-                  onClick={() => setNewsPageForm({...newsPageForm, renderType: 'html'})}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${newsPageForm.renderType === 'html' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
+                  onClick={() => setNewsPageForm({...newsPageForm, render_type: 'html'})}
+                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${newsPageForm.render_type === 'html' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
                 >
                   Nhúng HTML
                 </button>
               </div>
 
-              {newsPageForm.renderType === 'html' && (
+              {newsPageForm.render_type === 'html' && (
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-2">Nội dung HTML (Nhúng trang tin tức)</label>
                   <textarea 
-                    value={newsPageForm.htmlContent}
-                    onChange={e => setNewsPageForm({...newsPageForm, htmlContent: e.target.value})}
+                    value={newsPageForm.html_content}
+                    onChange={e => setNewsPageForm({...newsPageForm, html_content: e.target.value})}
                     className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-96 font-mono text-sm"
                     placeholder="<div class='news-page'>...</div>"
                   />
                 </div>
               )}
 
-              {newsPageForm.renderType === 'standard' && (
+              {newsPageForm.render_type === 'standard' && (
                 <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100 text-blue-800">
                   <p className="font-medium">Chế độ hiển thị chuẩn đang được kích hoạt. Hệ thống sẽ hiển thị danh sách các tin tức từ tab "Danh sách Tin tức".</p>
                 </div>
@@ -1395,21 +1377,21 @@ export default function AdminDashboard() {
               <div className="flex gap-4 p-1 bg-slate-100 rounded-xl w-fit mb-6">
                 <button 
                   type="button"
-                  onClick={() => setContactForm({...contactForm, renderType: 'standard'})}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${contactForm.renderType === 'standard' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
+                  onClick={() => setContactForm({...contactForm, render_type: 'standard'})}
+                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${contactForm.render_type === 'standard' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
                 >
                   Giao diện chuẩn
                 </button>
                 <button 
                   type="button"
-                  onClick={() => setContactForm({...contactForm, renderType: 'html'})}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${contactForm.renderType === 'html' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
+                  onClick={() => setContactForm({...contactForm, render_type: 'html'})}
+                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${contactForm.render_type === 'html' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
                 >
                   Nhúng HTML
                 </button>
               </div>
 
-              {contactForm.renderType === 'standard' ? (
+              {contactForm.render_type === 'standard' ? (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
@@ -1463,8 +1445,8 @@ export default function AdminDashboard() {
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-2">Nội dung HTML (Nhúng trang liên hệ)</label>
                   <textarea 
-                    value={contactForm.htmlContent}
-                    onChange={e => setContactForm({...contactForm, htmlContent: e.target.value})}
+                    value={contactForm.html_content}
+                    onChange={e => setContactForm({...contactForm, html_content: e.target.value})}
                     className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-96 font-mono text-sm"
                     placeholder="<div class='contact-page'>...</div>"
                   />
@@ -1506,8 +1488,8 @@ export default function AdminDashboard() {
                       <input 
                         type="url" 
                         placeholder="Link chi tiết bên ngoài (tùy chọn)" 
-                        value={deptForm.detailUrl}
-                        onChange={e => setDeptForm({...deptForm, detailUrl: e.target.value})}
+                        value={deptForm.detail_url}
+                        onChange={e => setDeptForm({...deptForm, detail_url: e.target.value})}
                         className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 md:col-span-2"
                       />
                     </div>
@@ -1527,7 +1509,7 @@ export default function AdminDashboard() {
                           type="button" 
                           onClick={() => {
                             setEditingDeptId(null);
-                            setDeptForm({ name: '', icon: 'BookOpen', description: '', detailUrl: '' });
+                            setDeptForm({ name: '', icon: 'BookOpen', description: '', detail_url: '' });
                           }}
                           className="px-6 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
                         >
@@ -1553,7 +1535,7 @@ export default function AdminDashboard() {
                                   name: dept.name, 
                                   icon: dept.icon, 
                                   description: dept.description,
-                                  detailUrl: dept.detailUrl || ''
+                                  detail_url: dept.detail_url || ''
                                 });
                                 window.scrollTo({ top: 0, behavior: 'smooth' });
                               }}
@@ -1644,8 +1626,8 @@ export default function AdminDashboard() {
                           <input 
                             type="url" 
                             placeholder="Link ảnh chân dung (tùy chọn)" 
-                            value={personnelForm.imageUrl}
-                            onChange={e => setPersonnelForm({...personnelForm, imageUrl: e.target.value})}
+                            value={personnelForm.image_url}
+                            onChange={e => setPersonnelForm({...personnelForm, image_url: e.target.value})}
                             className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 md:col-span-2"
                           />
                         </div>
@@ -1664,7 +1646,7 @@ export default function AdminDashboard() {
                               type="button" 
                               onClick={() => {
                                 setEditingPersonnelId(null);
-                                setPersonnelForm({ name: '', position: '', bio: '', imageUrl: '' });
+                                setPersonnelForm({ name: '', position: '', bio: '', image_url: '' });
                               }}
                               className="px-6 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
                             >
@@ -1678,7 +1660,7 @@ export default function AdminDashboard() {
                         {deptPersonnel.map(p => (
                           <div key={p.id} className="bg-white p-4 rounded-xl border border-slate-200 flex items-center gap-4 group">
                             <div className="w-12 h-12 bg-slate-100 rounded-full overflow-hidden flex-shrink-0">
-                              <img src={p.imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=random`} className="w-full h-full object-cover" />
+                              <img src={p.image_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=random`} className="w-full h-full object-cover" />
                             </div>
                             <div className="flex-1 min-w-0">
                               <h5 className="font-bold text-slate-800 truncate">{p.name}</h5>
@@ -1688,7 +1670,7 @@ export default function AdminDashboard() {
                               <button 
                                 onClick={() => {
                                   setEditingPersonnelId(p.id);
-                                  setPersonnelForm({ name: p.name, position: p.position, bio: p.bio || '', imageUrl: p.imageUrl || '' });
+                                  setPersonnelForm({ name: p.name, position: p.position, bio: p.bio || '', image_url: p.image_url || '' });
                                 }}
                                 className="p-1 text-blue-500 hover:bg-blue-50 rounded"
                               >
@@ -1746,23 +1728,23 @@ export default function AdminDashboard() {
                             <input 
                               type="url" 
                               placeholder="Link ảnh (tùy chọn)" 
-                              value={activityForm.imageUrl}
-                              onChange={e => setActivityForm({...activityForm, imageUrl: e.target.value})}
+                              value={activityForm.image_url}
+                              onChange={e => setActivityForm({...activityForm, image_url: e.target.value})}
                               className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                             />
                             <input 
                               type="url" 
                               placeholder="Link tài liệu đính kèm (tùy chọn)" 
-                              value={activityForm.documentUrl}
-                              onChange={e => setActivityForm({...activityForm, documentUrl: e.target.value})}
+                              value={activityForm.document_url}
+                              onChange={e => setActivityForm({...activityForm, document_url: e.target.value})}
                               className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                             />
                           </div>
                           <input 
                             type="url" 
                             placeholder="Link chi tiết bên ngoài (tùy chọn)" 
-                            value={activityForm.detailUrl}
-                            onChange={e => setActivityForm({...activityForm, detailUrl: e.target.value})}
+                            value={activityForm.detail_url}
+                            onChange={e => setActivityForm({...activityForm, detail_url: e.target.value})}
                             className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                           />
                         </div>
@@ -1775,7 +1757,7 @@ export default function AdminDashboard() {
                               type="button" 
                               onClick={() => {
                                 setEditingActivityId(null);
-                                setActivityForm({ title: '', date: '', summary: '', description: '', imageUrl: '', documentUrl: '', content: '', detailUrl: '' });
+                                setActivityForm({ title: '', date: '', summary: '', description: '', image_url: '', document_url: '', content: '', detail_url: '' });
                               }}
                               className="px-6 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
                             >
@@ -1806,9 +1788,9 @@ export default function AdminDashboard() {
                                       date: a.date || '', 
                                       summary: a.summary || '',
                                       description: a.description || '', 
-                                      imageUrl: a.imageUrl || '', 
-                                      documentUrl: a.documentUrl || '',
-                                      detailUrl: a.detailUrl || ''
+                                      image_url: a.image_url || '', 
+                                      document_url: a.document_url || '',
+                                      detail_url: a.detail_url || ''
                                     });
                                   }}
                                   className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"
@@ -1847,8 +1829,8 @@ export default function AdminDashboard() {
                           <input 
                             type="url" 
                             placeholder="Link tải tài liệu (Google Drive, Dropbox...)" 
-                            value={documentForm.fileUrl}
-                            onChange={e => setDocumentForm({...documentForm, fileUrl: e.target.value})}
+                            value={documentForm.file_url}
+                            onChange={e => setDocumentForm({...documentForm, file_url: e.target.value})}
                             className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                             required
                           />
@@ -1862,7 +1844,7 @@ export default function AdminDashboard() {
                               type="button" 
                               onClick={() => {
                                 setEditingDocumentId(null);
-                                setDocumentForm({ title: '', description: '', fileUrl: '', category: 'Giáo án' });
+                                setDocumentForm({ title: '', description: '', file_url: '', category: 'Giáo án' });
                               }}
                               className="px-6 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
                             >
@@ -1879,14 +1861,14 @@ export default function AdminDashboard() {
                               <FileText className="w-8 h-8 text-blue-500" />
                               <div>
                                 <h5 className="font-bold text-slate-800">{d.title}</h5>
-                                <a href={d.fileUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">Xem tài liệu</a>
+                                <a href={d.file_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">Xem tài liệu</a>
                               </div>
                             </div>
                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                               <button 
                                 onClick={() => {
                                   setEditingDocumentId(d.id);
-                                  setDocumentForm({ title: d.title, fileUrl: d.fileUrl, description: d.description || '', category: d.category || 'Giáo án' });
+                                  setDocumentForm({ title: d.title, file_url: d.file_url, description: d.description || '', category: d.category || 'Giáo án' });
                                 }}
                                 className="p-1 text-blue-500 hover:bg-blue-50 rounded"
                               >
@@ -1956,8 +1938,8 @@ export default function AdminDashboard() {
                     <label className="block text-sm font-bold text-slate-700 mb-2">Link ảnh (tùy chọn)</label>
                     <input 
                       type="url" 
-                      value={youthUnionForm.imageUrl}
-                      onChange={e => setYouthUnionForm({...youthUnionForm, imageUrl: e.target.value})}
+                      value={youthUnionForm.image_url}
+                      onChange={e => setYouthUnionForm({...youthUnionForm, image_url: e.target.value})}
                       className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
@@ -1965,8 +1947,8 @@ export default function AdminDashboard() {
                     <label className="block text-sm font-bold text-slate-700 mb-2">Link chi tiết bên ngoài (Google Doc, Sheet, HTML...)</label>
                     <input 
                       type="url" 
-                      value={youthUnionForm.detailUrl}
-                      onChange={e => setYouthUnionForm({...youthUnionForm, detailUrl: e.target.value})}
+                      value={youthUnionForm.detail_url}
+                      onChange={e => setYouthUnionForm({...youthUnionForm, detail_url: e.target.value})}
                       className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
@@ -1980,7 +1962,7 @@ export default function AdminDashboard() {
                       type="button" 
                       onClick={() => {
                         setEditingYouthUnionId(null);
-                        setYouthUnionForm({ title: '', summary: '', content: '', date: '', imageUrl: '', detailUrl: '' });
+                        setYouthUnionForm({ title: '', summary: '', content: '', date: '', image_url: '', detail_url: '' });
                       }}
                       className="px-8 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-all"
                     >
@@ -1994,7 +1976,7 @@ export default function AdminDashboard() {
                 {youthUnion.map(item => (
                   <div key={item.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center group">
                     <div className="flex items-center gap-4">
-                      {item.imageUrl && <img src={item.imageUrl} className="w-16 h-16 rounded-lg object-cover" />}
+                      {item.image_url && <img src={item.image_url} className="w-16 h-16 rounded-lg object-cover" />}
                       <div>
                         <h4 className="font-bold text-slate-800">{item.title}</h4>
                         <div className="flex items-center gap-2 text-xs text-slate-400 mt-1">
@@ -2008,7 +1990,7 @@ export default function AdminDashboard() {
                       <button 
                         onClick={() => {
                           setEditingYouthUnionId(item.id);
-                          setYouthUnionForm({ title: item.title, summary: item.summary || '', content: item.content, date: item.date || '', imageUrl: item.imageUrl || '', detailUrl: item.detailUrl || '' });
+                          setYouthUnionForm({ title: item.title, summary: item.summary || '', content: item.content, date: item.date || '', image_url: item.image_url || '', detail_url: item.detail_url || '' });
                           window.scrollTo({ top: 0, behavior: 'smooth' });
                         }}
                         className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"
@@ -2079,8 +2061,8 @@ export default function AdminDashboard() {
                     <label className="block text-sm font-bold text-slate-700 mb-2">Link chi tiết bên ngoài (tùy chọn)</label>
                     <input 
                       type="url" 
-                      value={achievementForm.detailUrl}
-                      onChange={e => setAchievementForm({...achievementForm, detailUrl: e.target.value})}
+                      value={achievementForm.detail_url}
+                      onChange={e => setAchievementForm({...achievementForm, detail_url: e.target.value})}
                       className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
@@ -2094,7 +2076,7 @@ export default function AdminDashboard() {
                       type="button" 
                       onClick={() => {
                         setEditingAchievementId(null);
-                        setAchievementForm({ title: '', studentName: '', class: '', year: '2025-2026', award: '', imageUrl: '', type: 'academic', description: '', detailUrl: '' });
+                        setAchievementForm({ title: '', student_name: '', class: '', year: '2025-2026', award: '', image_url: '', type: 'academic', description: '', detail_url: '' });
                       }}
                       className="px-8 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-all"
                     >
@@ -2125,7 +2107,7 @@ export default function AdminDashboard() {
                       <button 
                         onClick={() => {
                           setEditingAchievementId(item.id);
-                          setAchievementForm({ title: item.title, description: item.description, year: item.year, type: item.type, studentName: item.studentName || '', class: item.class || '', award: item.award || '', imageUrl: item.imageUrl || '', detailUrl: item.detailUrl || '' });
+                          setAchievementForm({ title: item.title, description: item.description, year: item.year, type: item.type, student_name: item.student_name || '', class: item.class || '', award: item.award || '', image_url: item.image_url || '', detail_url: item.detail_url || '' });
                           window.scrollTo({ top: 0, behavior: 'smooth' });
                         }}
                         className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"
@@ -2164,8 +2146,8 @@ export default function AdminDashboard() {
                     <label className="block text-sm font-bold text-slate-700 mb-2">Ngày bắt đầu</label>
                     <input 
                       type="date" 
-                      value={scheduleForm.startDate}
-                      onChange={e => setScheduleForm({...scheduleForm, startDate: e.target.value})}
+                      value={scheduleForm.start_date}
+                      onChange={e => setScheduleForm({...scheduleForm, start_date: e.target.value})}
                       className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                       required
                     />
@@ -2174,8 +2156,8 @@ export default function AdminDashboard() {
                     <label className="block text-sm font-bold text-slate-700 mb-2">Ngày kết thúc</label>
                     <input 
                       type="date" 
-                      value={scheduleForm.endDate}
-                      onChange={e => setScheduleForm({...scheduleForm, endDate: e.target.value})}
+                      value={scheduleForm.end_date}
+                      onChange={e => setScheduleForm({...scheduleForm, end_date: e.target.value})}
                       className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                       required
                     />
@@ -2193,8 +2175,8 @@ export default function AdminDashboard() {
                     <label className="block text-sm font-bold text-slate-700 mb-2">Link chi tiết bên ngoài (tùy chọn)</label>
                     <input 
                       type="url" 
-                      value={scheduleForm.detailUrl}
-                      onChange={e => setScheduleForm({...scheduleForm, detailUrl: e.target.value})}
+                      value={scheduleForm.detail_url}
+                      onChange={e => setScheduleForm({...scheduleForm, detail_url: e.target.value})}
                       className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
@@ -2208,7 +2190,7 @@ export default function AdminDashboard() {
                       type="button" 
                       onClick={() => {
                         setEditingScheduleId(null);
-                        setScheduleForm({ title: '', week: '', dateRange: '', content: '', fileUrl: '', startDate: '', endDate: '', detailUrl: '' });
+                        setScheduleForm({ title: '', week: '', date_range: '', content: '', file_url: '', start_date: '', end_date: '', detail_url: '' });
                       }}
                       className="px-8 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-all"
                     >
@@ -2224,14 +2206,14 @@ export default function AdminDashboard() {
                     <div>
                       <h4 className="font-bold text-slate-800">{item.title}</h4>
                       <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">
-                        {item.startDate} — {item.endDate}
+                        {item.start_date} — {item.end_date}
                       </p>
                     </div>
                     <div className="flex gap-2">
                       <button 
                         onClick={() => {
                           setEditingScheduleId(item.id);
-                          setScheduleForm({ title: item.title, content: item.content, startDate: item.startDate, endDate: item.endDate, week: item.week || '', dateRange: item.dateRange || '', fileUrl: item.fileUrl || '', detailUrl: item.detailUrl || '' });
+                          setScheduleForm({ title: item.title, content: item.content, start_date: item.start_date, end_date: item.end_date, week: item.week || '', date_range: item.date_range || '', file_url: item.file_url || '', detail_url: item.detail_url || '' });
                           window.scrollTo({ top: 0, behavior: 'smooth' });
                         }}
                         className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"
@@ -2270,8 +2252,8 @@ export default function AdminDashboard() {
                     <label className="block text-sm font-bold text-slate-700 mb-2">Link ảnh (URL)</label>
                     <input 
                       type="url" 
-                      value={galleryForm.imageUrl}
-                      onChange={e => setGalleryForm({...galleryForm, imageUrl: e.target.value})}
+                      value={galleryForm.image_url}
+                      onChange={e => setGalleryForm({...galleryForm, image_url: e.target.value})}
                       className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                       required
                     />
@@ -2299,8 +2281,8 @@ export default function AdminDashboard() {
                     <label className="block text-sm font-bold text-slate-700 mb-2">Link chi tiết bên ngoài (tùy chọn)</label>
                     <input 
                       type="url" 
-                      value={galleryForm.detailUrl}
-                      onChange={e => setGalleryForm({...galleryForm, detailUrl: e.target.value})}
+                      value={galleryForm.detail_url}
+                      onChange={e => setGalleryForm({...galleryForm, detail_url: e.target.value})}
                       className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
@@ -2314,7 +2296,7 @@ export default function AdminDashboard() {
                       type="button" 
                       onClick={() => {
                         setEditingGalleryId(null);
-                        setGalleryForm({ title: '', imageUrl: '', description: '', category: 'Hoạt động trường', detailUrl: '' });
+                        setGalleryForm({ title: '', image_url: '', description: '', category: 'Hoạt động trường', detail_url: '' });
                       }}
                       className="px-8 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-all"
                     >
@@ -2327,7 +2309,7 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {gallery.map(item => (
                   <div key={item.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden group relative aspect-square">
-                    <img src={item.imageUrl} className="w-full h-full object-cover" />
+                    <img src={item.image_url} className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-4 text-center">
                       <h4 className="text-white font-bold text-sm mb-1">{item.title}</h4>
                       <p className="text-white/70 text-[10px] mb-4">{item.category}</p>
@@ -2335,7 +2317,7 @@ export default function AdminDashboard() {
                         <button 
                           onClick={() => {
                             setEditingGalleryId(item.id);
-                            setGalleryForm({ title: item.title, imageUrl: item.imageUrl, description: item.description || '', category: item.category || '', detailUrl: item.detailUrl || '' });
+                            setGalleryForm({ title: item.title, image_url: item.image_url, description: item.description || '', category: item.category || '', detail_url: item.detail_url || '' });
                             window.scrollTo({ top: 0, behavior: 'smooth' });
                           }}
                           className="p-2 bg-white/20 hover:bg-white/40 rounded-lg text-white"
