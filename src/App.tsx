@@ -19,12 +19,17 @@ import {
   MapPin,
   Home,
   LogIn,
+  LogOut,
   LayoutDashboard,
   Loader2,
-  ExternalLink
+  ExternalLink,
+  Lock,
+  X,
+  AlertCircle
 } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import AdminDashboard from './components/AdminDashboard';
+import { motion } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
@@ -37,6 +42,8 @@ export default function App() {
   const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [adminPasswordInput, setAdminPasswordInput] = useState('');
   const [loading, setLoading] = useState(true);
   
   // Data states
@@ -79,15 +86,21 @@ export default function App() {
   const adminEmail = "trieuhaminh@gmail.com";
 
   useEffect(() => {
+    const checkAdmin = (sessionUser: any) => {
+      const isEmailAdmin = sessionUser?.email === adminEmail;
+      const isPasswordAdmin = localStorage.getItem('admin_authenticated') === 'true';
+      setIsAdmin(isEmailAdmin || isPasswordAdmin);
+    };
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
-      setIsAdmin(session?.user?.email === adminEmail);
+      checkAdmin(session?.user);
       setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-      setIsAdmin(session?.user?.email === adminEmail);
+      checkAdmin(session?.user);
       setLoading(false);
     });
 
@@ -211,7 +224,12 @@ export default function App() {
   }, [selectedDepartment]);
 
   const handleLogin = async () => {
+    setShowLoginModal(true);
+  };
+
+  const handleGoogleLogin = async () => {
     setLoginError(null);
+    setShowLoginModal(false);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -222,8 +240,30 @@ export default function App() {
       if (error) throw error;
     } catch (error: any) {
       console.error("Login error:", error);
-      setLoginError("Lỗi đăng nhập. Vui lòng thử lại.");
+      setLoginError("Lỗi đăng nhập Google. Vui lòng thử lại.");
     }
+  };
+
+  const handlePasswordLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError(null);
+    const correctPassword = import.meta.env.VITE_ADMIN_PASSWORD || "admin123";
+    
+    if (adminPasswordInput === correctPassword) {
+      localStorage.setItem('admin_authenticated', 'true');
+      setIsAdmin(true);
+      setShowLoginModal(false);
+      setAdminPasswordInput('');
+    } else {
+      setLoginError("Mật khẩu không chính xác.");
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    localStorage.removeItem('admin_authenticated');
+    setIsAdmin(false);
+    setShowAdmin(false);
   };
 
   const renderContent = () => {
@@ -1258,12 +1298,20 @@ export default function App() {
         </div>
         <div className="flex gap-4 items-center">
           {isAdmin ? (
-            <button 
-              onClick={() => setShowAdmin(true)}
-              className="flex items-center gap-1 hover:text-blue-200 transition-colors bg-blue-800 px-3 py-1 rounded-full"
-            >
-              <LayoutDashboard className="w-3 h-3" /> Quản trị hệ thống
-            </button>
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setShowAdmin(true)}
+                className="flex items-center gap-1 hover:text-blue-200 transition-colors bg-blue-800 px-3 py-1 rounded-full"
+              >
+                <LayoutDashboard className="w-3 h-3" /> Quản trị hệ thống
+              </button>
+              <button 
+                onClick={handleLogout}
+                className="flex items-center gap-1 hover:text-red-200 transition-colors text-red-300"
+              >
+                <LogOut className="w-3 h-3" /> Đăng xuất
+              </button>
+            </div>
           ) : (
             <div className="flex items-center gap-3">
               {loginError && (
@@ -1414,6 +1462,89 @@ export default function App() {
           &copy; 2026 {schoolInfo?.name || 'Trường THPT Nguyễn Hữu Cầu'}. Thiết kế và vận hành bởi Tổ CNTT.
         </div>
       </footer>
+
+      {/* Login Modal */}
+      {showLoginModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+          >
+            <div className="bg-blue-900 p-8 text-white relative">
+              <button 
+                onClick={() => setShowLoginModal(false)}
+                className="absolute top-4 right-4 text-white/60 hover:text-white transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center">
+                  <GraduationCap className="w-8 h-8 text-blue-300" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold">Đăng nhập Quản trị</h3>
+                  <p className="text-blue-300 text-sm">Truy cập hệ thống quản lý trường học</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-8">
+              <form onSubmit={handlePasswordLogin} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Mật khẩu admin</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <input 
+                      type="password"
+                      value={adminPasswordInput}
+                      onChange={(e) => setAdminPasswordInput(e.target.value)}
+                      placeholder="Nhập mật khẩu..."
+                      className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
+                      autoFocus
+                    />
+                  </div>
+                  {loginError && (
+                    <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" /> {loginError}
+                    </p>
+                  )}
+                </div>
+
+                <button 
+                  type="submit"
+                  className="w-full bg-blue-900 text-white py-3 rounded-xl font-bold hover:bg-blue-800 transition-all shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2"
+                >
+                  <LogIn className="w-5 h-5" /> Đăng nhập
+                </button>
+              </form>
+
+              <div className="relative my-8">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-200"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-4 bg-white text-slate-500 font-medium">Hoặc đăng nhập với</span>
+                </div>
+              </div>
+
+              <button 
+                onClick={handleGoogleLogin}
+                className="w-full border border-slate-200 py-3 rounded-xl font-semibold text-slate-700 hover:bg-slate-50 transition-all flex items-center justify-center gap-3"
+              >
+                <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
+                Tiếp tục với Google
+              </button>
+            </div>
+            
+            <div className="bg-slate-50 p-4 text-center">
+              <p className="text-xs text-slate-500">
+                Chỉ dành cho cán bộ quản lý và giáo viên được cấp quyền.
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
