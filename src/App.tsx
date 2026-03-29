@@ -1285,7 +1285,7 @@ export default function App() {
   }
 
   if (showAdmin && isAdmin) {
-    return <AdminDashboard />;
+    return <AdminDashboard onLogout={handleLogout} onExit={() => setShowAdmin(false)} />;
   }
 
   return (
