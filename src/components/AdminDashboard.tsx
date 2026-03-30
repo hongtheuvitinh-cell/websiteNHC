@@ -247,7 +247,8 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
   const [youthUnionForm, setYouthUnionForm] = useState({ title: '', summary: '', content: '', date: '', image_url: '', detail_url: '' });
   const [achievementForm, setAchievementForm] = useState({ title: '', student_name: '', class: '', year: '2025-2026', award: '', image_url: '', type: 'academic', description: '', detail_url: '' });
   const [scheduleForm, setScheduleForm] = useState({ title: '', week: '', date_range: '', content: '', file_url: '', start_date: '', end_date: '', detail_url: '' });
-  const [galleryForm, setGalleryForm] = useState({ title: '', image_url: '', category: 'Hoạt động trường', description: '', detail_url: '' });
+  const [galleryForm, setGalleryForm] = useState({ title: '', image_url: '', category: 'Hoạt động trường', description: '', detail_url: '', images_json: '[]' });
+  const [galleryImages, setGalleryImages] = useState<{ url: string, caption: string }[]>([]);
   const [personnelForm, setPersonnelForm] = useState({ name: '', position: '', bio: '', image_url: '' });
   const [activityForm, setActivityForm] = useState({ title: '', date: '', summary: '', description: '', image_url: '', document_url: '', content: '', detail_url: '' });
   const [documentForm, setDocumentForm] = useState({ title: '', description: '', file_url: '', category: 'Giáo án' });
@@ -716,23 +717,31 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
       image_url: item.image_url || '',
       category: item.category || 'Hoạt động trường',
       description: item.description || '',
-      detail_url: item.detail_url || ''
+      detail_url: item.detail_url || '',
+      images_json: item.images_json || '[]'
     });
+    try {
+      setGalleryImages(JSON.parse(item.images_json || '[]'));
+    } catch (e) {
+      setGalleryImages([]);
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSaveGallery = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const finalData = { ...galleryForm, images_json: JSON.stringify(galleryImages) };
       if (editingGalleryId) {
-        const { error } = await supabase.from('gallery').update({ ...galleryForm, updated_at: new Date() }).eq('id', editingGalleryId);
+        const { error } = await supabase.from('gallery').update({ ...finalData, updated_at: new Date() }).eq('id', editingGalleryId);
         if (error) throw error;
         setEditingGalleryId(null);
       } else {
-        const { error } = await supabase.from('gallery').insert([{ ...galleryForm }]);
+        const { error } = await supabase.from('gallery').insert([{ ...finalData }]);
         if (error) throw error;
       }
-      setGalleryForm({ title: '', image_url: '', category: 'Hoạt động trường', description: '', detail_url: '' });
+      setGalleryForm({ title: '', image_url: '', category: 'Hoạt động trường', description: '', detail_url: '', images_json: '[]' });
+      setGalleryImages([]);
       showSuccess();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi: " + error.message);
@@ -2492,6 +2501,68 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
+
+                  {/* Multi-image management */}
+                  <div className="md:col-span-2 space-y-4 pt-4 border-t border-slate-100">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-sm font-bold text-slate-700">Bộ sưu tập ảnh (Slideshow)</label>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-1 rounded-md">Tùy chọn</span>
+                    </div>
+                    <p className="text-xs text-slate-500">Thêm nhiều ảnh để tạo hiệu ứng slideshow khi xem chi tiết.</p>
+                    
+                    <div className="grid grid-cols-1 gap-3">
+                      {galleryImages.map((img, index) => (
+                        <div key={index} className="flex gap-3 items-start bg-slate-50 p-4 rounded-2xl border border-slate-200 group/item">
+                          <div className="flex-1 space-y-3">
+                            <div className="flex items-center gap-2">
+                              <ImageIcon className="w-4 h-4 text-slate-400" />
+                              <input 
+                                type="url" 
+                                placeholder="Link ảnh (URL)" 
+                                value={img.url}
+                                onChange={e => {
+                                  const newImages = [...galleryImages];
+                                  newImages[index].url = e.target.value;
+                                  setGalleryImages(newImages);
+                                }}
+                                className="flex-1 p-2 text-sm border-0 bg-transparent outline-none focus:ring-0 placeholder:text-slate-400"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Type className="w-4 h-4 text-slate-400" />
+                              <input 
+                                type="text" 
+                                placeholder="Chú thích cho ảnh này" 
+                                value={img.caption}
+                                onChange={e => {
+                                  const newImages = [...galleryImages];
+                                  newImages[index].caption = e.target.value;
+                                  setGalleryImages(newImages);
+                                }}
+                                className="flex-1 p-2 text-sm border-0 bg-transparent outline-none focus:ring-0 placeholder:text-slate-400"
+                              />
+                            </div>
+                          </div>
+                          <button 
+                            type="button"
+                            onClick={() => setGalleryImages(galleryImages.filter((_, i) => i !== index))}
+                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                      
+                      <button 
+                        type="button"
+                        onClick={() => setGalleryImages([...galleryImages, { url: '', caption: '' }])}
+                        className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-200 rounded-2xl text-slate-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 transition-all group"
+                      >
+                        <Plus className="w-5 h-5 group-hover:scale-110 transition-transform" /> 
+                        <span className="font-bold text-sm">Thêm ảnh vào bộ sưu tập</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
                 <div className="flex gap-3">
                   <button type="submit" className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2">
@@ -2502,7 +2573,8 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       type="button" 
                       onClick={() => {
                         setEditingGalleryId(null);
-                        setGalleryForm({ title: '', image_url: '', description: '', category: 'Hoạt động trường', detail_url: '' });
+                        setGalleryForm({ title: '', image_url: '', description: '', category: 'Hoạt động trường', detail_url: '', images_json: '[]' });
+                        setGalleryImages([]);
                       }}
                       className="px-8 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-all"
                     >
@@ -2523,7 +2595,19 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                         <button 
                           onClick={() => {
                             setEditingGalleryId(item.id);
-                            setGalleryForm({ title: item.title, image_url: item.image_url, description: item.description || '', category: item.category || '', detail_url: item.detail_url || '' });
+                            setGalleryForm({ 
+                              title: item.title, 
+                              image_url: item.image_url, 
+                              description: item.description || '', 
+                              category: item.category || '', 
+                              detail_url: item.detail_url || '',
+                              images_json: item.images_json || '[]'
+                            });
+                            try {
+                              setGalleryImages(JSON.parse(item.images_json || '[]'));
+                            } catch (e) {
+                              setGalleryImages([]);
+                            }
                             window.scrollTo({ top: 0, behavior: 'smooth' });
                           }}
                           className="p-2 bg-white/20 hover:bg-white/40 rounded-lg text-white"
