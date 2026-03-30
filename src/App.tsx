@@ -76,7 +76,7 @@ export default function App() {
   const [gallery, setGallery] = useState<any[]>([]);
 
   const MarkdownContent = ({ content }: { content: string }) => (
-    <div className="markdown-body prose prose-slate max-w-none">
+    <div className="markdown-body prose prose-slate prose-sm max-w-none prose-p:my-0.5 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-0.5 prose-li:my-0">
       <ReactMarkdown 
         remarkPlugins={[remarkMath, remarkGfm, remarkBreaks]} 
         rehypePlugins={[rehypeKatex]}
@@ -84,7 +84,7 @@ export default function App() {
           img: ({ node, ...props }) => (
             <img 
               {...props} 
-              className="max-w-full h-auto rounded-xl shadow-sm my-4 mx-auto block" 
+              className="max-w-full h-auto rounded-xl shadow-sm my-2 mx-auto block" 
               referrerPolicy="no-referrer"
               loading="lazy"
             />
@@ -500,66 +500,36 @@ export default function App() {
           <div className="space-y-8 animate-in fade-in duration-500">
             <h2 className="text-3xl font-black text-slate-900 uppercase">Thông tin tuyển sinh</h2>
             <div className="h-1.5 w-24 bg-blue-800 rounded-full mb-8"></div>
-            {admissions.length > 0 ? admissions.map(item => (
-              <div 
-                key={item.id} 
-                className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm mb-6 hover:shadow-md transition-all cursor-pointer group"
-                onClick={() => setSelectedAdmission(item)}
-              >
-                <div className="flex justify-between items-start mb-6">
-                  <h3 className="text-2xl font-bold text-blue-900 group-hover:text-blue-700 transition-colors">{item.title}</h3>
-                  <span className="px-4 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-bold">Năm học {item.year}</span>
-                </div>
-                <div className="text-slate-600 mb-6 line-clamp-3">
-                  {item.summary ? (
-                    <p>{item.summary}</p>
-                  ) : (
-                    <MarkdownContent content={item.content} />
-                  )}
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2 text-red-600 font-bold">
-                      <Calendar className="w-5 h-5" />
-                      <span>Hạn chót: {item.deadline ? new Date(item.deadline).toLocaleDateString('vi-VN') : '...'}</span>
-                    </div>
-                    <div className="flex flex-wrap gap-3">
-                      {item.document_url && (
-                        <div className="flex items-center gap-1 text-blue-600 text-xs font-bold">
-                          <Icons.FileText className="w-4 h-4" /> Có tài liệu đính kèm
-                        </div>
-                      )}
-                      {item.detail_url && (
-                        <div className="flex items-center gap-1 text-green-600 text-xs font-bold">
-                          <Icons.ExternalLink className="w-4 h-4" /> Có link chi tiết
-                        </div>
-                      )}
-                    </div>
+            <div className="space-y-0.5 border-t border-slate-100 pt-4">
+              {admissions.length > 0 ? admissions.map(item => (
+                <div 
+                  key={item.id} 
+                  className="flex flex-wrap items-center gap-x-4 py-1 border-b border-slate-50 hover:bg-slate-50 transition-colors text-sm"
+                >
+                  <div className="flex items-center gap-1 min-w-0 flex-1">
+                    <span className="font-bold text-slate-900 shrink-0">Tiêu đề:</span>
+                    <span className="text-slate-700 truncate">{item.title}</span>
                   </div>
-                  <div className="flex items-center gap-4">
-                    {item.detailUrl && (
-                      <a 
-                        href={item.detailUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-green-600 font-bold flex items-center gap-1 hover:text-green-800 transition-colors"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        Link chi tiết <ExternalLink className="w-4 h-4" />
-                      </a>
-                    )}
-                    <span className="text-blue-600 font-bold flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      Xem chi tiết <ChevronRight className="w-4 h-4" />
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="font-bold text-slate-900">Thời gian:</span>
+                    <span className="text-slate-500">
+                      {item.deadline ? new Date(item.deadline).toLocaleDateString('vi-VN') : '...'}
                     </span>
                   </div>
+                  <button 
+                    onClick={() => setSelectedAdmission(item)}
+                    className="text-blue-600 font-bold hover:underline shrink-0"
+                  >
+                    &lt;xem chi tiết&gt;
+                  </button>
                 </div>
-              </div>
-            )) : (
-              <div className="text-center py-20 bg-slate-50 rounded-3xl border border-dashed border-slate-300">
-                <GraduationCap className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                <p className="text-slate-500">Hiện chưa có thông tin tuyển sinh mới.</p>
-              </div>
-            )}
+              )) : (
+                <div className="text-center py-10 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                  <GraduationCap className="w-12 h-12 text-slate-300 mx-auto mb-2" />
+                  <p className="text-slate-500 text-sm">Hiện chưa có thông tin tuyển sinh mới.</p>
+                </div>
+              )}
+            </div>
           </div>
         );
       case 'Tin tức':
@@ -567,62 +537,28 @@ export default function App() {
           <div className="space-y-8 animate-in fade-in duration-500">
             <h2 className="text-3xl font-black text-slate-900 uppercase">Tin tức & Sự kiện</h2>
             <div className="h-1.5 w-24 bg-blue-800 rounded-full mb-8"></div>
-            <div className="grid grid-cols-1 gap-6">
+            <div className="space-y-0.5 border-t border-slate-100 pt-4">
               {news.map(item => (
                 <div 
                   key={item.id} 
-                  className="flex flex-col md:flex-row gap-6 p-6 bg-white border border-slate-100 rounded-3xl hover:shadow-md transition-all cursor-pointer group"
-                  onClick={() => setSelectedNews(item)}
+                  className="flex flex-wrap items-center gap-x-4 py-1 border-b border-slate-50 hover:bg-slate-50 transition-colors text-sm"
                 >
-                  <div className="w-full md:w-48 h-32 bg-slate-200 rounded-2xl overflow-hidden shrink-0">
-                    <img src={item.image_url || `https://picsum.photos/seed/${item.id}/400/300`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer" />
+                  <div className="flex items-center gap-1 min-w-0 flex-1">
+                    <span className="font-bold text-slate-900 shrink-0">Tiêu đề:</span>
+                    <span className="text-slate-700 truncate">{item.title}</span>
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="text-xs font-bold text-blue-600 uppercase">{item.category}</span>
-                      <span className="text-xs text-slate-400">
-                        {item.date ? new Date(item.date).toLocaleDateString('vi-VN') : 'Mới'}
-                      </span>
-                    </div>
-                    <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-blue-800 transition-colors">{item.title}</h3>
-                    <div className="text-slate-500 line-clamp-2 text-sm mb-4">
-                      {item.summary ? (
-                        <p>{item.summary}</p>
-                      ) : (
-                        <MarkdownContent content={item.content} />
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <span className="text-blue-600 text-sm font-bold flex items-center gap-1">
-                          Xem chi tiết <ChevronRight className="w-4 h-4" />
-                        </span>
-                        {item.detail_url && (
-                          <a 
-                            href={item.detail_url} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-green-600 text-sm font-bold flex items-center gap-1 hover:text-green-800 transition-colors"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            Link chi tiết <Icons.ExternalLink className="w-4 h-4" />
-                          </a>
-                        )}
-                      </div>
-                      <div className="flex gap-3">
-                        {item.document_url && (
-                          <div className="flex items-center gap-1 text-slate-400 text-xs font-bold">
-                            <Icons.FileText className="w-3.5 h-3.5" /> Có tài liệu đính kèm
-                          </div>
-                        )}
-                        {item.detail_url && (
-                          <div className="flex items-center gap-1 text-green-500 text-xs font-bold">
-                            <Icons.ExternalLink className="w-3.5 h-3.5" /> Có link chi tiết
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="font-bold text-slate-900">Thời gian:</span>
+                    <span className="text-slate-500">
+                      {item.date ? new Date(item.date).toLocaleDateString('vi-VN') : 'Mới'}
+                    </span>
                   </div>
+                  <button 
+                    onClick={() => setSelectedNews(item)}
+                    className="text-blue-600 font-bold hover:underline shrink-0"
+                  >
+                    &lt;xem chi tiết&gt;
+                  </button>
                 </div>
               ))}
             </div>
