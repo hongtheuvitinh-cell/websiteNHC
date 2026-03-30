@@ -1507,16 +1507,16 @@ export default function App() {
               <X className="w-8 h-8" />
             </motion.button>
 
-            <div className="relative w-full max-w-4xl h-[50vh] md:h-[60vh] flex items-center justify-center group mt-12">
+            <div className="relative w-full max-w-6xl h-[70vh] md:h-[75vh] flex items-center justify-center group mt-4">
               <AnimatePresence mode="wait">
                 <motion.img 
                   key={currentSlideIndex}
-                  initial={{ opacity: 0, scale: 0.9, filter: 'blur(10px)' }}
+                  initial={{ opacity: 0, scale: 0.95, filter: 'blur(10px)' }}
                   animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-                  exit={{ opacity: 0, scale: 1.1, filter: 'blur(10px)' }}
-                  transition={{ duration: 0.4, ease: "easeOut" }}
+                  exit={{ opacity: 0, scale: 1.05, filter: 'blur(10px)' }}
+                  transition={{ duration: 0.3, ease: "easeOut" }}
                   src={JSON.parse(activeSlideshow.images_json)[currentSlideIndex].url} 
-                  className="max-w-full max-h-full object-contain shadow-2xl rounded-2xl"
+                  className="max-w-full max-h-full object-contain shadow-2xl rounded-xl"
                   referrerPolicy="no-referrer"
                 />
               </AnimatePresence>
@@ -1525,13 +1525,13 @@ export default function App() {
                 <>
                   <button 
                     onClick={() => setCurrentSlideIndex((currentSlideIndex - 1 + JSON.parse(activeSlideshow.images_json).length) % JSON.parse(activeSlideshow.images_json).length)}
-                    className="absolute left-0 md:-left-16 p-4 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all opacity-0 group-hover:opacity-100 shadow-xl backdrop-blur-md"
+                    className="absolute left-0 md:-left-20 p-4 bg-white/5 hover:bg-white/20 text-white rounded-full transition-all opacity-0 group-hover:opacity-100 shadow-xl backdrop-blur-sm"
                   >
                     <ChevronLeft className="w-10 h-10" />
                   </button>
                   <button 
                     onClick={() => setCurrentSlideIndex((currentSlideIndex + 1) % JSON.parse(activeSlideshow.images_json).length)}
-                    className="absolute right-0 md:-right-16 p-4 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all opacity-0 group-hover:opacity-100 shadow-xl backdrop-blur-md"
+                    className="absolute right-0 md:-right-20 p-4 bg-white/5 hover:bg-white/20 text-white rounded-full transition-all opacity-0 group-hover:opacity-100 shadow-xl backdrop-blur-sm"
                   >
                     <ChevronRight className="w-10 h-10" />
                   </button>
@@ -1540,32 +1540,36 @@ export default function App() {
             </div>
 
             <motion.div 
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-6 text-center max-w-3xl px-6"
+              className="mt-4 text-center max-w-5xl px-6"
             >
-              <div className="inline-block px-4 py-1 bg-blue-600 text-white text-[10px] font-bold uppercase tracking-widest rounded-full mb-4">
-                {activeSlideshow.category}
-              </div>
-              <h3 className="text-3xl font-black text-white mb-3 tracking-tight">{activeSlideshow.title}</h3>
-              {JSON.parse(activeSlideshow.images_json)[currentSlideIndex].caption && (
-                <p className="text-blue-200 text-xl italic font-medium">
-                  "{JSON.parse(activeSlideshow.images_json)[currentSlideIndex].caption}"
-                </p>
-              )}
-              
-              <div className="mt-10 flex justify-center gap-3 overflow-x-auto pb-4 max-w-full no-scrollbar">
-                {JSON.parse(activeSlideshow.images_json).map((_, i) => (
-                  <button 
-                    key={i}
-                    onClick={() => setCurrentSlideIndex(i)}
-                    className={`h-2 rounded-full transition-all duration-300 ${i === currentSlideIndex ? 'bg-blue-500 w-12' : 'bg-white/20 w-4 hover:bg-white/40'}`}
-                  />
-                ))}
+              <div className="flex flex-wrap items-center justify-center gap-3 mb-4">
+                <div className="px-2 py-0.5 bg-blue-600 text-white text-[9px] font-bold uppercase tracking-widest rounded">
+                  {activeSlideshow.category}
+                </div>
+                <h3 className="text-base font-bold text-white tracking-tight">{activeSlideshow.title}</h3>
+                {JSON.parse(activeSlideshow.images_json)[currentSlideIndex].caption && (
+                  <p className="text-blue-200 text-sm italic font-medium">
+                    — "{JSON.parse(activeSlideshow.images_json)[currentSlideIndex].caption}"
+                  </p>
+                )}
               </div>
               
-              <div className="mt-4 text-white/40 text-xs font-bold uppercase tracking-widest">
-                Ảnh {currentSlideIndex + 1} / {JSON.parse(activeSlideshow.images_json).length}
+              <div className="flex flex-col items-center gap-3">
+                <div className="flex justify-center gap-2 overflow-x-auto max-w-full no-scrollbar">
+                  {JSON.parse(activeSlideshow.images_json).map((_, i) => (
+                    <button 
+                      key={i}
+                      onClick={() => setCurrentSlideIndex(i)}
+                      className={`h-1.5 rounded-full transition-all duration-300 ${i === currentSlideIndex ? 'bg-blue-500 w-8' : 'bg-white/20 w-2 hover:bg-white/40'}`}
+                    />
+                  ))}
+                </div>
+                
+                <div className="text-white/30 text-[10px] font-bold uppercase tracking-widest">
+                  Ảnh {currentSlideIndex + 1} / {JSON.parse(activeSlideshow.images_json).length}
+                </div>
               </div>
             </motion.div>
           </div>
