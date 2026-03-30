@@ -213,6 +213,25 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
     </div>
   );
 
+  const MarkdownContent = ({ content }: { content: string }) => (
+    <div className="markdown-body prose prose-slate max-w-none">
+      <ReactMarkdown 
+        components={{
+          img: ({ node, ...props }) => (
+            <img 
+              {...props} 
+              className="max-w-full h-auto rounded-xl shadow-sm my-4 mx-auto block" 
+              referrerPolicy="no-referrer"
+              loading="lazy"
+            />
+          )
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+
   const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
   const [isManagingDeptContent, setIsManagingDeptContent] = useState(false);
   const [deptActiveTab, setDeptActiveTab] = useState<'personnel' | 'activities' | 'documents'>('personnel');
@@ -2002,7 +2021,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                               </div>
                             </div>
                             <div className="text-sm text-slate-500 line-clamp-3 prose prose-slate max-w-none">
-                              <ReactMarkdown>{a.content}</ReactMarkdown>
+                              <MarkdownContent content={a.content} />
                             </div>
                           </div>
                         ))}
@@ -2351,7 +2370,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-2">Ngày bắt đầu</label>
                     <input 
-                      type="date" 
+                      type="datetime-local" 
                       value={scheduleForm.start_date}
                       onChange={e => setScheduleForm({...scheduleForm, start_date: e.target.value})}
                       className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
@@ -2361,7 +2380,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-2">Ngày kết thúc</label>
                     <input 
-                      type="date" 
+                      type="datetime-local" 
                       value={scheduleForm.end_date}
                       onChange={e => setScheduleForm({...scheduleForm, end_date: e.target.value})}
                       className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
@@ -2421,7 +2440,8 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                     <div>
                       <h4 className="font-bold text-slate-800">{item.title}</h4>
                       <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">
-                        {item.start_date} — {item.end_date}
+                        {item.start_date ? new Date(item.start_date).toLocaleString('vi-VN') : '...'} — 
+                        {item.end_date ? new Date(item.end_date).toLocaleString('vi-VN') : '...'}
                       </p>
                     </div>
                     <div className="flex gap-2">
