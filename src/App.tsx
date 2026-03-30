@@ -12,8 +12,11 @@ import {
   Calendar, 
   Phone, 
   ChevronRight, 
+  ChevronLeft,
   Award, 
   Globe, 
+  Maximize2,
+  Layers,
   Bell,
   Search,
   MapPin,
@@ -29,7 +32,7 @@ import {
 } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import AdminDashboard from './components/AdminDashboard';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
@@ -1144,28 +1147,51 @@ export default function App() {
             <div className="h-1.5 w-24 bg-blue-800 rounded-full mb-8"></div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {gallery.map(item => (
-                <div key={item.id} className="group bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1">
+                <div 
+                  key={item.id} 
+                  onClick={() => {
+                    const images = JSON.parse(item.images_json || '[]');
+                    if (images.length > 0) {
+                      setActiveSlideshow(item);
+                      setCurrentSlideIndex(0);
+                    }
+                  }}
+                  className={`group bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 ${item.images_json && JSON.parse(item.images_json).length > 0 ? 'cursor-pointer' : ''}`}
+                >
                   <div className="aspect-square overflow-hidden relative">
                     <img src={item.image_url} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" referrerPolicy="no-referrer" />
-                    <div className="absolute top-4 left-4">
-                      <span className="px-3 py-1 bg-white/90 backdrop-blur-sm text-blue-600 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                    <div className="absolute top-4 left-4 flex flex-col gap-2">
+                      <span className="px-3 py-1 bg-white/90 backdrop-blur-sm text-blue-600 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm w-fit">
                         {item.category}
                       </span>
+                      {item.images_json && JSON.parse(item.images_json).length > 0 && (
+                        <span className="px-3 py-1 bg-blue-600/90 backdrop-blur-sm text-white rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm flex items-center gap-1 w-fit">
+                          <Icons.Layers className="w-3 h-3" /> {JSON.parse(item.images_json).length} ảnh
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="p-6">
                     <h3 className="font-bold text-slate-900 mb-1 group-hover:text-blue-800 transition-colors">{item.title}</h3>
                     {item.description && <p className="text-xs text-slate-500 line-clamp-2 italic mb-3">{item.description}</p>}
-                    {item.detail_url && (
-                      <a 
-                        href={item.detail_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-blue-600 text-xs font-bold hover:text-blue-800 transition-colors"
-                      >
-                        Xem chi tiết <Icons.ExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
+                    <div className="flex items-center justify-between mt-auto">
+                      {item.detail_url && (
+                        <a 
+                          href={item.detail_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1 text-blue-600 text-xs font-bold hover:text-blue-800 transition-colors"
+                        >
+                          Xem chi tiết <Icons.ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                      {item.images_json && JSON.parse(item.images_json).length > 0 && (
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                          <Icons.Maximize2 className="w-3 h-3" /> Xem bộ ảnh
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -1177,7 +1203,8 @@ export default function App() {
               )}
             </div>
           </div>
-        );      default:
+        );
+      default:
         return (
           <div className="space-y-10 animate-in fade-in duration-500">
             <section className="relative rounded-3xl overflow-hidden aspect-[21/9] bg-slate-200 group">
@@ -1258,6 +1285,9 @@ export default function App() {
     { name: 'Lịch công tác', icon: Calendar },
     { name: 'Thư viện ảnh', icon: Globe }
   ];
+
+  const [activeSlideshow, setActiveSlideshow] = useState<any | null>(null);
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
 
   const handleMenuClick = (menu: string) => {
     setActiveMenu(menu);
@@ -1462,6 +1492,85 @@ export default function App() {
           &copy; 2026 {schoolInfo?.name || 'Trường THPT Nguyễn Hữu Cầu'}. Thiết kế và vận hành bởi Tổ CNTT.
         </div>
       </footer>
+
+      {/* Slideshow Modal */}
+      <AnimatePresence>
+        {activeSlideshow && (
+          <div className="fixed inset-0 z-[10000] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 md:p-10">
+            <motion.button 
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.5 }}
+              onClick={() => setActiveSlideshow(null)}
+              className="absolute top-6 right-6 text-white/60 hover:text-white p-3 bg-white/10 hover:bg-white/20 rounded-full transition-all z-10"
+            >
+              <X className="w-8 h-8" />
+            </motion.button>
+
+            <div className="relative w-full max-w-5xl aspect-video flex items-center justify-center group">
+              <AnimatePresence mode="wait">
+                <motion.img 
+                  key={currentSlideIndex}
+                  initial={{ opacity: 0, scale: 0.9, filter: 'blur(10px)' }}
+                  animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                  exit={{ opacity: 0, scale: 1.1, filter: 'blur(10px)' }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
+                  src={JSON.parse(activeSlideshow.images_json)[currentSlideIndex].url} 
+                  className="max-w-full max-h-full object-contain shadow-2xl rounded-2xl"
+                  referrerPolicy="no-referrer"
+                />
+              </AnimatePresence>
+
+              {JSON.parse(activeSlideshow.images_json).length > 1 && (
+                <>
+                  <button 
+                    onClick={() => setCurrentSlideIndex((currentSlideIndex - 1 + JSON.parse(activeSlideshow.images_json).length) % JSON.parse(activeSlideshow.images_json).length)}
+                    className="absolute left-4 p-4 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all opacity-0 group-hover:opacity-100 shadow-xl backdrop-blur-md"
+                  >
+                    <ChevronLeft className="w-10 h-10" />
+                  </button>
+                  <button 
+                    onClick={() => setCurrentSlideIndex((currentSlideIndex + 1) % JSON.parse(activeSlideshow.images_json).length)}
+                    className="absolute right-4 p-4 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all opacity-0 group-hover:opacity-100 shadow-xl backdrop-blur-md"
+                  >
+                    <ChevronRight className="w-10 h-10" />
+                  </button>
+                </>
+              )}
+            </div>
+
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-10 text-center max-w-3xl px-6"
+            >
+              <div className="inline-block px-4 py-1 bg-blue-600 text-white text-[10px] font-bold uppercase tracking-widest rounded-full mb-4">
+                {activeSlideshow.category}
+              </div>
+              <h3 className="text-3xl font-black text-white mb-3 tracking-tight">{activeSlideshow.title}</h3>
+              {JSON.parse(activeSlideshow.images_json)[currentSlideIndex].caption && (
+                <p className="text-blue-200 text-xl italic font-medium">
+                  "{JSON.parse(activeSlideshow.images_json)[currentSlideIndex].caption}"
+                </p>
+              )}
+              
+              <div className="mt-10 flex justify-center gap-3 overflow-x-auto pb-4 max-w-full no-scrollbar">
+                {JSON.parse(activeSlideshow.images_json).map((_, i) => (
+                  <button 
+                    key={i}
+                    onClick={() => setCurrentSlideIndex(i)}
+                    className={`h-2 rounded-full transition-all duration-300 ${i === currentSlideIndex ? 'bg-blue-500 w-12' : 'bg-white/20 w-4 hover:bg-white/40'}`}
+                  />
+                ))}
+              </div>
+              
+              <div className="mt-4 text-white/40 text-xs font-bold uppercase tracking-widest">
+                Ảnh {currentSlideIndex + 1} / {JSON.parse(activeSlideshow.images_json).length}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Login Modal */}
       {showLoginModal && (
