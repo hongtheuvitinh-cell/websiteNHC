@@ -49,6 +49,11 @@ import {
   Type
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
+import 'katex/dist/katex.min.css';
 
 type TabType = 'news' | 'admissions' | 'home' | 'about' | 'contact' | 'admissions_page' | 'news_page' | 'features' | 'departments' | 'youth_union' | 'achievements' | 'schedule' | 'gallery';
 
@@ -201,26 +206,45 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
         <Table2 className="w-4 h-4" />
       </button>
       <div className="w-px h-6 bg-slate-300 mx-1 self-center" />
-      <label className="p-2 hover:bg-slate-200 rounded transition-colors cursor-pointer flex items-center justify-center" title="Tải ảnh">
+      <button 
+        type="button" 
+        onClick={() => {
+          const url = prompt('Nhập link ảnh:');
+          if (url) {
+            const textarea = textareaRef.current;
+            if (!textarea) return;
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const text = form[field];
+            const insertion = `\n![hình ảnh](${url})\n`;
+            const newText = text.substring(0, start) + insertion + text.substring(end);
+            setter({ ...form, [field]: newText });
+            
+            setTimeout(() => {
+              textarea.focus();
+              const newPos = start + insertion.length;
+              textarea.setSelectionRange(newPos, newPos);
+            }, 0);
+          }
+        }} 
+        className="p-2 hover:bg-slate-200 rounded transition-colors" 
+        title="Chèn link ảnh"
+      >
         <ImageIcon className="w-4 h-4" />
-        <input 
-          type="file" 
-          className="hidden" 
-          accept="image/*"
-          onChange={(e) => handleImageUpload(e, setter, form, field, textareaRef)}
-        />
-      </label>
+      </button>
     </div>
   );
 
   const MarkdownContent = ({ content }: { content: string }) => (
-    <div className="markdown-body prose prose-slate max-w-none">
+    <div className="markdown-body prose prose-slate prose-sm max-w-none prose-p:my-0.5 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-0.5 prose-li:my-0">
       <ReactMarkdown 
+        remarkPlugins={[remarkMath, remarkGfm, remarkBreaks]} 
+        rehypePlugins={[rehypeKatex]}
         components={{
           img: ({ node, ...props }) => (
             <img 
               {...props} 
-              className="max-w-full h-auto rounded-xl shadow-sm my-4 mx-auto block" 
+              className="max-w-full h-auto rounded-xl shadow-sm my-2 mx-auto block" 
               referrerPolicy="no-referrer"
               loading="lazy"
             />
