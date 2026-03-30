@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { 
   Plus, 
@@ -39,7 +39,14 @@ import {
   Languages,
   Scale,
   Dumbbell,
-  Monitor
+  Monitor,
+  Bold,
+  Italic,
+  Heading3,
+  List,
+  Table2,
+  Image as ImageIcon,
+  Type
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
@@ -76,6 +83,135 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
   const [editingPersonnelId, setEditingPersonnelId] = useState<string | null>(null);
   const [editingActivityId, setEditingActivityId] = useState<string | null>(null);
   const [editingDocumentId, setEditingDocumentId] = useState<string | null>(null);
+
+  const scheduleTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const newsTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const admissionTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const youthUnionTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const activityTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const aboutMainTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const aboutHistoryTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const aboutCoreValuesTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const insertMarkdown = (
+    ref: React.RefObject<HTMLTextAreaElement>, 
+    setter: React.Dispatch<React.SetStateAction<any>>, 
+    form: any, 
+    field: string, 
+    type: string
+  ) => {
+    const textarea = ref.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = form[field];
+    const selectedText = text.substring(start, end);
+
+    let insertion = '';
+    let newCursorPos = start;
+
+    switch (type) {
+      case 'bold':
+        insertion = `**${selectedText || 'văn bản đậm'}**`;
+        newCursorPos = start + 2;
+        break;
+      case 'italic':
+        insertion = `*${selectedText || 'văn bản nghiêng'}*`;
+        newCursorPos = start + 1;
+        break;
+      case 'heading':
+        insertion = `\n### ${selectedText || 'Tiêu đề'}\n`;
+        newCursorPos = start + 5;
+        break;
+      case 'list':
+        insertion = `\n- ${selectedText || 'mục danh sách'}\n`;
+        newCursorPos = start + 3;
+        break;
+      case 'table':
+        insertion = `\n| Tiêu đề 1 | Tiêu đề 2 |\n|---|---|\n| Nội dung 1 | Nội dung 2 |\n`;
+        newCursorPos = start + 2;
+        break;
+      default:
+        return;
+    }
+
+    const newText = text.substring(0, start) + insertion + text.substring(end);
+    setter({ ...form, [field]: newText });
+
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(newCursorPos, newCursorPos + (selectedText.length || insertion.length - (insertion.indexOf(selectedText) === -1 ? 0 : insertion.length - selectedText.length)));
+    }, 0);
+  };
+
+  const handleImageUpload = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    setter: React.Dispatch<React.SetStateAction<any>>,
+    form: any,
+    field: string,
+    ref: React.RefObject<HTMLTextAreaElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      const textarea = ref.current;
+      if (!textarea) return;
+
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const text = form[field];
+      
+      const insertion = `\n![${file.name}](${base64})\n`;
+      const newText = text.substring(0, start) + insertion + text.substring(end);
+      setter({ ...form, [field]: newText });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const MarkdownToolbar = ({ 
+    textareaRef, 
+    setter, 
+    form, 
+    field 
+  }: { 
+    textareaRef: React.RefObject<HTMLTextAreaElement>, 
+    setter: React.Dispatch<React.SetStateAction<any>>, 
+    form: any, 
+    field: string 
+  }) => (
+    <div className="flex flex-wrap gap-2 mb-0 p-2 bg-slate-50 rounded-t-xl border border-slate-200">
+      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'bold')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Đậm">
+        <Bold className="w-4 h-4" />
+      </button>
+      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'italic')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Nghiêng">
+        <Italic className="w-4 h-4" />
+      </button>
+      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'heading')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Tiêu đề">
+        <Heading3 className="w-4 h-4" />
+      </button>
+      <div className="w-px h-6 bg-slate-300 mx-1 self-center" />
+      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'list')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Danh sách">
+        <List className="w-4 h-4" />
+      </button>
+      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'table')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Bảng biểu">
+        <Table2 className="w-4 h-4" />
+      </button>
+      <div className="w-px h-6 bg-slate-300 mx-1 self-center" />
+      <label className="p-2 hover:bg-slate-200 rounded transition-colors cursor-pointer flex items-center justify-center" title="Tải ảnh">
+        <ImageIcon className="w-4 h-4" />
+        <input 
+          type="file" 
+          className="hidden" 
+          accept="image/*"
+          onChange={(e) => handleImageUpload(e, setter, form, field, textareaRef)}
+        />
+      </label>
+    </div>
+  );
 
   const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
   const [isManagingDeptContent, setIsManagingDeptContent] = useState(false);
@@ -887,11 +1023,18 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                     className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 md:col-span-2"
                   />
                 </div>
+                <MarkdownToolbar 
+                  textareaRef={newsTextareaRef} 
+                  setter={setNewsForm} 
+                  form={newsForm} 
+                  field="content" 
+                />
                 <textarea 
+                  ref={newsTextareaRef}
                   placeholder="Nội dung chi tiết" 
                   value={newsForm.content}
                   onChange={e => setNewsForm({...newsForm, content: e.target.value})}
-                  className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-32 mb-4"
+                  className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-32 mb-4 border-t-0"
                   required
                 />
                 <div className="flex gap-3">
@@ -994,11 +1137,18 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                     className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
+                <MarkdownToolbar 
+                  textareaRef={admissionTextareaRef} 
+                  setter={setAdmissionForm} 
+                  form={admissionForm} 
+                  field="content" 
+                />
                 <textarea 
+                  ref={admissionTextareaRef}
                   placeholder="Nội dung tuyển sinh" 
                   value={admissionForm.content}
                   onChange={e => setAdmissionForm({...admissionForm, content: e.target.value})}
-                  className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-32 mb-4"
+                  className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-32 mb-4 border-t-0"
                   required
                 />
                 <div className="flex gap-3">
@@ -1257,26 +1407,47 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                 <>
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-2">Văn bản giới thiệu chính</label>
+                    <MarkdownToolbar 
+                      textareaRef={aboutMainTextareaRef} 
+                      setter={setAboutForm} 
+                      form={aboutForm} 
+                      field="main_text" 
+                    />
                     <textarea 
+                      ref={aboutMainTextareaRef}
                       value={aboutForm.main_text}
                       onChange={e => setAboutForm({...aboutForm, main_text: e.target.value})}
-                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-32"
+                      className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-32 border-t-0"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-2">Lịch sử hình thành</label>
+                    <MarkdownToolbar 
+                      textareaRef={aboutHistoryTextareaRef} 
+                      setter={setAboutForm} 
+                      form={aboutForm} 
+                      field="history" 
+                    />
                     <textarea 
+                      ref={aboutHistoryTextareaRef}
                       value={aboutForm.history}
                       onChange={e => setAboutForm({...aboutForm, history: e.target.value})}
-                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-32"
+                      className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-32 border-t-0"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-2">Giá trị cốt lõi</label>
+                    <MarkdownToolbar 
+                      textareaRef={aboutCoreValuesTextareaRef} 
+                      setter={setAboutForm} 
+                      form={aboutForm} 
+                      field="core_values" 
+                    />
                     <textarea 
+                      ref={aboutCoreValuesTextareaRef}
                       value={aboutForm.core_values}
                       onChange={e => setAboutForm({...aboutForm, core_values: e.target.value})}
-                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-32"
+                      className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-32 border-t-0"
                     />
                   </div>
                 </>
@@ -1729,11 +1900,18 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                             onChange={e => setActivityForm({...activityForm, summary: e.target.value})}
                             className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                           />
+                          <MarkdownToolbar 
+                            textareaRef={activityTextareaRef} 
+                            setter={setActivityForm} 
+                            form={activityForm} 
+                            field="content" 
+                          />
                           <textarea 
+                            ref={activityTextareaRef}
                             placeholder="Nội dung chi tiết (Markdown)" 
                             value={activityForm.content}
                             onChange={e => setActivityForm({...activityForm, content: e.target.value})}
-                            className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-48"
+                            className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-48 border-t-0"
                             required
                           />
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -1929,10 +2107,17 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-2">Nội dung (Markdown)</label>
+                    <MarkdownToolbar 
+                      textareaRef={youthUnionTextareaRef} 
+                      setter={setYouthUnionForm} 
+                      form={youthUnionForm} 
+                      field="content" 
+                    />
                     <textarea 
+                      ref={youthUnionTextareaRef}
                       value={youthUnionForm.content}
                       onChange={e => setYouthUnionForm({...youthUnionForm, content: e.target.value})}
-                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-64"
+                      className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-64 border-t-0"
                       required
                     />
                   </div>
@@ -2176,10 +2361,19 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-bold text-slate-700 mb-2">Nội dung lịch (Markdown/HTML)</label>
+                    
+                    <MarkdownToolbar 
+                      textareaRef={scheduleTextareaRef} 
+                      setter={setScheduleForm} 
+                      form={scheduleForm} 
+                      field="content" 
+                    />
+
                     <textarea 
+                      ref={scheduleTextareaRef}
                       value={scheduleForm.content}
                       onChange={e => setScheduleForm({...scheduleForm, content: e.target.value})}
-                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-64 font-mono text-sm"
+                      className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-64 font-mono text-sm border-t-0"
                       required
                     />
                   </div>
