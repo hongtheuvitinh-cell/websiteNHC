@@ -80,6 +80,16 @@ export default function App() {
       <ReactMarkdown 
         remarkPlugins={[remarkMath, remarkGfm, remarkBreaks]} 
         rehypePlugins={[rehypeKatex]}
+        components={{
+          img: ({ node, ...props }) => (
+            <img 
+              {...props} 
+              className="max-w-full h-auto rounded-xl shadow-sm my-4 mx-auto block" 
+              referrerPolicy="no-referrer"
+              loading="lazy"
+            />
+          )
+        }}
       >
         {content}
       </ReactMarkdown>
@@ -1120,8 +1130,20 @@ export default function App() {
                       <div className="flex items-center gap-2 text-slate-500 font-bold bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
                         <Icons.Calendar className="w-5 h-5" />
                         <span>
-                          {item.startDate ? new Date(item.startDate).toLocaleDateString('vi-VN') : '...'} — 
-                          {item.endDate ? new Date(item.endDate).toLocaleDateString('vi-VN') : '...'}
+                          {item.start_date ? new Date(item.start_date).toLocaleString('vi-VN', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          }) : '...'} — 
+                          {item.end_date ? new Date(item.end_date).toLocaleString('vi-VN', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          }) : '...'}
                         </span>
                       </div>
                     </div>
