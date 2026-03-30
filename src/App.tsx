@@ -1507,7 +1507,7 @@ export default function App() {
               <X className="w-8 h-8" />
             </motion.button>
 
-            <div className="relative w-full max-w-5xl aspect-video flex items-center justify-center group">
+            <div className="relative w-full max-w-4xl h-[50vh] md:h-[60vh] flex items-center justify-center group mt-12">
               <AnimatePresence mode="wait">
                 <motion.img 
                   key={currentSlideIndex}
@@ -1525,13 +1525,13 @@ export default function App() {
                 <>
                   <button 
                     onClick={() => setCurrentSlideIndex((currentSlideIndex - 1 + JSON.parse(activeSlideshow.images_json).length) % JSON.parse(activeSlideshow.images_json).length)}
-                    className="absolute left-4 p-4 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all opacity-0 group-hover:opacity-100 shadow-xl backdrop-blur-md"
+                    className="absolute left-0 md:-left-16 p-4 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all opacity-0 group-hover:opacity-100 shadow-xl backdrop-blur-md"
                   >
                     <ChevronLeft className="w-10 h-10" />
                   </button>
                   <button 
                     onClick={() => setCurrentSlideIndex((currentSlideIndex + 1) % JSON.parse(activeSlideshow.images_json).length)}
-                    className="absolute right-4 p-4 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all opacity-0 group-hover:opacity-100 shadow-xl backdrop-blur-md"
+                    className="absolute right-0 md:-right-16 p-4 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all opacity-0 group-hover:opacity-100 shadow-xl backdrop-blur-md"
                   >
                     <ChevronRight className="w-10 h-10" />
                   </button>
@@ -1542,7 +1542,7 @@ export default function App() {
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-10 text-center max-w-3xl px-6"
+              className="mt-6 text-center max-w-3xl px-6"
             >
               <div className="inline-block px-4 py-1 bg-blue-600 text-white text-[10px] font-bold uppercase tracking-widest rounded-full mb-4">
                 {activeSlideshow.category}
