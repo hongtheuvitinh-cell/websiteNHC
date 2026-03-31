@@ -910,12 +910,6 @@ export default function App() {
                 <h2 className="text-4xl font-black text-slate-900 mb-6 leading-tight">{selectedYouthUnion.title}</h2>
                 <div className="h-1.5 w-24 bg-blue-800 rounded-full mb-10"></div>
                 
-                {selectedYouthUnion.imageUrl && (
-                  <div className="mb-10 rounded-3xl overflow-hidden shadow-lg">
-                    <img src={selectedYouthUnion.imageUrl} className="w-full h-auto max-h-[600px] object-cover" referrerPolicy="no-referrer" />
-                  </div>
-                )}
-
                 <div className="prose prose-slate max-w-none text-lg text-slate-600 leading-relaxed">
                   {selectedYouthUnion.summary && (
                     <p className="text-xl font-bold text-blue-900 mb-8 p-6 bg-blue-50 rounded-2xl border-l-4 border-blue-600">
@@ -945,51 +939,31 @@ export default function App() {
           <div className="space-y-8 animate-in fade-in duration-500">
             <h2 className="text-3xl font-black text-slate-900 uppercase">Hoạt động Đoàn</h2>
             <div className="h-1.5 w-24 bg-blue-800 rounded-full mb-8"></div>
-            <div className="grid grid-cols-1 gap-8">
+            <div className="space-y-0.5 border-t border-slate-100 pt-4">
               {youthUnion.map(item => (
-                <div key={item.id} className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm flex flex-col md:flex-row gap-8 p-8 hover:shadow-md transition-all">
-                  {item.imageUrl && (
-                    <div className="w-full md:w-64 h-64 md:h-auto rounded-2xl overflow-hidden shrink-0">
-                      <img src={item.imageUrl} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                    </div>
-                  )}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 text-slate-400 text-sm mb-2">
-                      <Icons.Calendar className="w-4 h-4" />
-                      {item.date && !isNaN(new Date(item.date).getTime()) ? new Date(item.date).toLocaleString('vi-VN') : '...'}
-                    </div>
-                    <h3 className="text-2xl font-bold text-slate-900 mb-4">{item.title}</h3>
-                    <div className="text-slate-600 leading-relaxed mb-6">
-                      {item.summary ? (
-                        <p className="line-clamp-3">{item.summary}</p>
-                      ) : (
-                        <div className="line-clamp-3 overflow-hidden">
-                          <MarkdownContent content={item.content} />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-4">
-                      <button 
-                        onClick={() => {
-                          setSelectedYouthUnion(item);
-                          window.scrollTo({ top: 0, behavior: 'smooth' });
-                        }}
-                        className="inline-flex items-center gap-2 px-6 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-md"
-                      >
-                        Xem chi tiết <Icons.ChevronRight className="w-4 h-4" />
-                      </button>
-                      {item.detailUrl && (
-                        <a 
-                          href={item.detailUrl} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 px-6 py-2 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition-colors"
-                        >
-                          Link đính kèm <ExternalLink className="w-4 h-4" />
-                        </a>
-                      )}
-                    </div>
+                <div 
+                  key={item.id} 
+                  className="flex flex-wrap items-center gap-x-4 py-1 border-b border-slate-50 hover:bg-slate-50 transition-colors text-sm"
+                >
+                  <div className="flex items-center gap-1 min-w-0 flex-1">
+                    <span className="font-bold text-slate-900 shrink-0">Tiêu đề:</span>
+                    <span className="text-slate-700 truncate">{item.title}</span>
                   </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="font-bold text-slate-900">Thời gian:</span>
+                    <span className="text-slate-500">
+                      {item.date && !isNaN(new Date(item.date).getTime()) ? new Date(item.date).toLocaleDateString('vi-VN') : '...'}
+                    </span>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      setSelectedYouthUnion(item);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="text-blue-600 font-bold hover:underline shrink-0"
+                  >
+                    &lt;xem chi tiết&gt;
+                  </button>
                 </div>
               ))}
               {youthUnion.length === 0 && (
@@ -1006,31 +980,29 @@ export default function App() {
           <div className="space-y-8 animate-in fade-in duration-500">
             <h2 className="text-3xl font-black text-slate-900 uppercase">Thành tích học tập</h2>
             <div className="h-1.5 w-24 bg-blue-800 rounded-full mb-8"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-0.5 border-t border-slate-100 pt-4">
               {achievements.map(item => (
-                <div key={item.id} className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all">
-                  <div className="flex justify-between items-start mb-4">
-                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                      item.type === 'academic' ? 'bg-blue-100 text-blue-600' :
-                      item.type === 'sport' ? 'bg-green-100 text-green-600' :
-                      item.type === 'art' ? 'bg-purple-100 text-purple-600' : 'bg-slate-100 text-slate-600'
-                    }`}>
-                      {item.type}
-                    </span>
-                    <span className="text-sm font-bold text-slate-400">Năm học {item.year}</span>
+                <div 
+                  key={item.id} 
+                  className="flex flex-wrap items-center gap-x-4 py-1 border-b border-slate-50 hover:bg-slate-50 transition-colors text-sm"
+                >
+                  <div className="flex items-center gap-1 min-w-0 flex-1">
+                    <span className="font-bold text-slate-900 shrink-0">Tiêu đề:</span>
+                    <span className="text-slate-700 truncate">{item.title}</span>
                   </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-3">{item.title}</h3>
-                  <p className="text-slate-600 leading-relaxed mb-4">{item.description}</p>
-                  {item.detailUrl && (
-                    <a 
-                      href={item.detailUrl} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-blue-600 font-bold hover:text-blue-800 transition-colors"
-                    >
-                      Xem chi tiết <ExternalLink className="w-4 h-4" />
-                    </a>
-                  )}
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="font-bold text-slate-900">Năm học:</span>
+                    <span className="text-slate-500">{item.year}</span>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      // Achievements don't have a detail view currently, but we can show description in a modal or just leave it
+                      alert(item.description);
+                    }}
+                    className="text-blue-600 font-bold hover:underline shrink-0"
+                  >
+                    &lt;xem chi tiết&gt;
+                  </button>
                 </div>
               ))}
               {achievements.length === 0 && (
@@ -1047,46 +1019,32 @@ export default function App() {
           <div className="space-y-8 animate-in fade-in duration-500">
             <h2 className="text-3xl font-black text-slate-900 uppercase">Lịch công tác</h2>
             <div className="h-1.5 w-24 bg-blue-800 rounded-full mb-8"></div>
-            <div className="space-y-8">
+            <div className="space-y-0.5 border-t border-slate-100 pt-4">
               {schedules.map(item => (
-                <div key={item.id} className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-                    <h3 className="text-2xl font-bold text-blue-900">{item.title}</h3>
-                    <div className="flex items-center gap-4">
-                      {item.detailUrl && (
-                        <a 
-                          href={item.detailUrl} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 text-green-600 font-bold hover:text-green-800 transition-colors bg-green-50 px-4 py-2 rounded-xl border border-green-100"
-                        >
-                          <ExternalLink className="w-4 h-4" /> Link chi tiết
-                        </a>
-                      )}
-                      <div className="flex items-center gap-2 text-slate-500 font-bold bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
-                        <Icons.Calendar className="w-5 h-5" />
-                        <span>
-                          {item.start_date ? new Date(item.start_date).toLocaleString('vi-VN', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          }) : '...'} — 
-                          {item.end_date ? new Date(item.end_date).toLocaleString('vi-VN', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          }) : '...'}
-                        </span>
-                      </div>
-                    </div>
+                <div 
+                  key={item.id} 
+                  className="flex flex-wrap items-center gap-x-4 py-1 border-b border-slate-50 hover:bg-slate-50 transition-colors text-sm"
+                >
+                  <div className="flex items-center gap-1 min-w-0 flex-1">
+                    <span className="font-bold text-slate-900 shrink-0">Tiêu đề:</span>
+                    <span className="text-slate-700 truncate">{item.title}</span>
                   </div>
-                  <div className="prose prose-slate max-w-none overflow-x-auto">
-                    <MarkdownContent content={item.content} />
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="font-bold text-slate-900">Thời gian:</span>
+                    <span className="text-slate-500">
+                      {item.start_date ? new Date(item.start_date).toLocaleDateString('vi-VN') : '...'}
+                    </span>
                   </div>
+                  <button 
+                    onClick={() => {
+                      // Scroll to the item or show in modal
+                      const element = document.getElementById(`schedule-${item.id}`);
+                      if (element) element.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="text-blue-600 font-bold hover:underline shrink-0"
+                  >
+                    &lt;xem chi tiết&gt;
+                  </button>
                 </div>
               ))}
               {schedules.length === 0 && (
