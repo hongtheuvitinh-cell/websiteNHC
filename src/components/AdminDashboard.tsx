@@ -283,17 +283,17 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
   };
 
   // Form states
-  const [newsForm, setNewsForm] = useState({ title: '', summary: '', content: '', category: 'Tin tức', document_url: '', detail_url: '' });
+  const [newsForm, setNewsForm] = useState({ title: '', summary: '', content: '', category: 'Tin tức', image_url: '', document_url: '', detail_url: '' });
   const [admissionForm, setAdmissionForm] = useState({ title: '', summary: '', content: '', deadline: '', year: 2026, document_url: '', detail_url: '' });
   const [featureForm, setFeatureForm] = useState({ title: '', description: '', icon: 'BookOpen', color: 'bg-blue-100 text-blue-700', order_num: 0, detail_url: '' });
   const [deptForm, setDeptForm] = useState({ name: '', icon: 'BookOpen', description: '', detail_url: '' });
-  const [youthUnionForm, setYouthUnionForm] = useState({ title: '', summary: '', content: '', date: '', detail_url: '' });
-  const [achievementForm, setAchievementForm] = useState({ title: '', student_name: '', class: '', year: '2025-2026', award: '', type: 'academic', description: '', detail_url: '' });
+  const [youthUnionForm, setYouthUnionForm] = useState({ title: '', summary: '', content: '', date: '', image_url: '', detail_url: '' });
+  const [achievementForm, setAchievementForm] = useState({ title: '', student_name: '', class: '', year: '2025-2026', award: '', type: 'academic', description: '', image_url: '', detail_url: '' });
   const [scheduleForm, setScheduleForm] = useState({ title: '', week: '', date_range: '', content: '', file_url: '', start_date: '', end_date: '', detail_url: '' });
   const [galleryForm, setGalleryForm] = useState({ title: '', image_url: '', category: 'Hoạt động trường', description: '', detail_url: '', images_json: '[]' });
   const [galleryImages, setGalleryImages] = useState<{ url: string, caption: string }[]>([]);
   const [personnelForm, setPersonnelForm] = useState({ name: '', position: '', bio: '', image_url: '' });
-  const [activityForm, setActivityForm] = useState({ title: '', date: '', summary: '', description: '', document_url: '', content: '', detail_url: '' });
+  const [activityForm, setActivityForm] = useState({ title: '', date: '', summary: '', description: '', document_url: '', content: '', image_url: '', detail_url: '' });
   const [documentForm, setDocumentForm] = useState({ title: '', description: '', file_url: '', category: 'Giáo án' });
   
   const [homeForm, setHomeForm] = useState({ 
@@ -658,7 +658,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
         const { error } = await supabase.from('youth_union').insert([{ ...youthUnionForm }]);
         if (error) throw error;
       }
-      setYouthUnionForm({ title: '', summary: '', content: '', date: '', detail_url: '' });
+      setYouthUnionForm({ title: '', summary: '', content: '', date: '', image_url: '', detail_url: '' });
       showSuccess();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi: " + error.message);
@@ -699,7 +699,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
         const { error } = await supabase.from('achievements').insert([{ ...achievementForm }]);
         if (error) throw error;
       }
-      setAchievementForm({ title: '', student_name: '', class: '', year: '2025-2026', award: '', type: 'academic', description: '', detail_url: '' });
+      setAchievementForm({ title: '', student_name: '', class: '', year: '2025-2026', award: '', type: 'academic', description: '', image_url: '', detail_url: '' });
       showSuccess();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi: " + error.message);
@@ -852,7 +852,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
         const { error } = await supabase.from('activities').insert([{ ...activityForm, dept_id: selectedDeptId }]);
         if (error) throw error;
       }
-      setActivityForm({ title: '', date: '', summary: '', description: '', document_url: '', content: '', detail_url: '' });
+      setActivityForm({ title: '', date: '', summary: '', description: '', document_url: '', content: '', image_url: '', detail_url: '' });
       showSuccess();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi: " + error.message);
@@ -1080,7 +1080,6 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                   value={newsForm.content}
                   onChange={e => setNewsForm({...newsForm, content: e.target.value})}
                   className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-32 mb-4 border-t-0"
-                  required
                 />
                 <div className="flex gap-3">
                   <button type="submit" className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors">
@@ -1091,7 +1090,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       type="button" 
                       onClick={() => {
                         setEditingNewsId(null);
-                        setNewsForm({ title: '', summary: '', content: '', category: 'Tin tức', document_url: '', detail_url: '' });
+                        setNewsForm({ title: '', summary: '', content: '', category: 'Tin tức', image_url: '', document_url: '', detail_url: '' });
                       }}
                       className="px-6 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
                     >
@@ -1194,7 +1193,6 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                   value={admissionForm.content}
                   onChange={e => setAdmissionForm({...admissionForm, content: e.target.value})}
                   className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-32 mb-4 border-t-0"
-                  required
                 />
                 <div className="flex gap-3">
                   <button type="submit" className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors">
@@ -1957,7 +1955,6 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                             value={activityForm.content}
                             onChange={e => setActivityForm({...activityForm, content: e.target.value})}
                             className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-48 border-t-0"
-                            required
                           />
                           <input 
                             type="url" 
@@ -1983,7 +1980,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                               type="button" 
                               onClick={() => {
                                 setEditingActivityId(null);
-                                setActivityForm({ title: '', date: '', summary: '', description: '', document_url: '', content: '', detail_url: '' });
+                                setActivityForm({ title: '', date: '', summary: '', description: '', document_url: '', content: '', image_url: '', detail_url: '' });
                               }}
                               className="px-6 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
                             >
@@ -2154,7 +2151,6 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       value={youthUnionForm.content}
                       onChange={e => setYouthUnionForm({...youthUnionForm, content: e.target.value})}
                       className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-64 border-t-0"
-                      required
                     />
                   </div>
                   <div>
@@ -2186,7 +2182,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       type="button" 
                       onClick={() => {
                         setEditingYouthUnionId(null);
-                        setYouthUnionForm({ title: '', summary: '', content: '', date: '', detail_url: '' });
+                        setYouthUnionForm({ title: '', summary: '', content: '', date: '', image_url: '', detail_url: '' });
                       }}
                       className="px-8 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-all"
                     >
@@ -2278,7 +2274,6 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       value={achievementForm.description}
                       onChange={e => setAchievementForm({...achievementForm, description: e.target.value})}
                       className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-32"
-                      required
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -2300,7 +2295,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       type="button" 
                       onClick={() => {
                         setEditingAchievementId(null);
-                        setAchievementForm({ title: '', student_name: '', class: '', year: '2025-2026', award: '', type: 'academic', description: '', detail_url: '' });
+                        setAchievementForm({ title: '', student_name: '', class: '', year: '2025-2026', award: '', type: 'academic', description: '', image_url: '', detail_url: '' });
                       }}
                       className="px-8 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-all"
                     >
@@ -2401,7 +2396,6 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       value={scheduleForm.content}
                       onChange={e => setScheduleForm({...scheduleForm, content: e.target.value})}
                       className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-64 font-mono text-sm border-t-0"
-                      required
                     />
                   </div>
                   <div className="md:col-span-2">
