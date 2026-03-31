@@ -13,6 +13,7 @@ import {
   Phone, 
   ChevronRight, 
   ChevronLeft,
+  ArrowLeft,
   Award, 
   Globe, 
   Maximize2,
@@ -60,6 +61,7 @@ export default function App() {
   const [schoolInfo, setSchoolInfo] = useState<any>(null);
   const [selectedNews, setSelectedNews] = useState<any>(null);
   const [selectedAdmission, setSelectedAdmission] = useState<any>(null);
+  const [selectedSchedule, setSelectedSchedule] = useState<any>(null);
   const [selectedYouthUnion, setSelectedYouthUnion] = useState<any>(null);
   const [selectedDepartment, setSelectedDepartment] = useState<any>(null);
   const [selectedDeptActivity, setSelectedDeptActivity] = useState<any>(null);
@@ -338,17 +340,17 @@ export default function App() {
                       </div>
                     )}
 
-                    {selectedNews.detailUrl && (
+                    {selectedNews.detail_url && (
                       <div className="p-4 bg-green-50 border border-green-100 rounded-2xl flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <Icons.ExternalLink className="w-6 h-6 text-green-600" />
                           <div>
                             <p className="font-bold text-green-900">Xem chi tiết bên ngoài</p>
-                            <p className="text-sm text-green-600 truncate max-w-[200px] md:max-w-md">{selectedNews.detailUrl}</p>
+                            <p className="text-sm text-green-600 truncate max-w-[200px] md:max-w-md">{selectedNews.detail_url}</p>
                           </div>
                         </div>
                         <a 
-                          href={selectedNews.detailUrl} 
+                          href={selectedNews.detail_url} 
                           target="_blank" 
                           rel="noopener noreferrer"
                           className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-colors"
@@ -409,17 +411,17 @@ export default function App() {
                   </div>
                 )}
 
-                {selectedAdmission.detailUrl && (
+                {selectedAdmission.detail_url && (
                   <div className="p-4 bg-green-50 border border-green-100 rounded-2xl flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Icons.ExternalLink className="w-6 h-6 text-green-600" />
                       <div>
                         <p className="font-bold text-green-900">Xem chi tiết bên ngoài</p>
-                        <p className="text-sm text-green-600 truncate max-w-[200px] md:max-w-md">{selectedAdmission.detailUrl}</p>
+                        <p className="text-sm text-green-600 truncate max-w-[200px] md:max-w-md">{selectedAdmission.detail_url}</p>
                       </div>
                     </div>
                     <a 
-                      href={selectedAdmission.detailUrl} 
+                      href={selectedAdmission.detail_url} 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-colors"
@@ -517,7 +519,10 @@ export default function App() {
                     </span>
                   </div>
                   <button 
-                    onClick={() => setSelectedAdmission(item)}
+                    onClick={() => {
+                      setSelectedAdmission(item);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
                     className="text-blue-600 font-bold hover:underline shrink-0"
                   >
                     &lt;xem chi tiết&gt;
@@ -554,7 +559,10 @@ export default function App() {
                     </span>
                   </div>
                   <button 
-                    onClick={() => setSelectedNews(item)}
+                    onClick={() => {
+                      setSelectedNews(item);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
                     className="text-blue-600 font-bold hover:underline shrink-0"
                   >
                     &lt;xem chi tiết&gt;
@@ -628,9 +636,9 @@ export default function App() {
                   <h2 className="text-4xl font-black text-slate-900 mb-6 leading-tight">{selectedDeptActivity.title}</h2>
                   <div className="h-1.5 w-24 bg-blue-800 rounded-full mb-10"></div>
                   
-                  {selectedDeptActivity.imageUrl && (
+                  {selectedDeptActivity.image_url && (
                     <div className="mb-10 rounded-3xl overflow-hidden shadow-lg">
-                      <img src={selectedDeptActivity.imageUrl} className="w-full h-auto max-h-[600px] object-cover" referrerPolicy="no-referrer" />
+                      <img src={selectedDeptActivity.image_url} className="w-full h-auto max-h-[600px] object-cover" referrerPolicy="no-referrer" />
                     </div>
                   )}
 
@@ -726,7 +734,7 @@ export default function App() {
                               <div key={p.id} className="bg-slate-50 p-6 rounded-3xl border border-slate-100 flex flex-col items-center text-center group hover:bg-white hover:shadow-xl transition-all duration-300">
                                 <div className="w-24 h-24 rounded-full overflow-hidden mb-4 border-4 border-white shadow-md group-hover:scale-105 transition-transform">
                                   <img 
-                                    src={p.imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=random`} 
+                                    src={p.image_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=random`} 
                                     className="w-full h-full object-cover"
                                     referrerPolicy="no-referrer"
                                   />
@@ -757,9 +765,9 @@ export default function App() {
                           <div className="space-y-6">
                             {deptActivities.map((a) => (
                               <div key={a.id} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col md:flex-row gap-6 hover:shadow-md transition-shadow">
-                                {a.imageUrl && (
+                                {a.image_url && (
                                   <div className="w-full md:w-48 h-48 md:h-auto rounded-2xl overflow-hidden shrink-0">
-                                    <img src={a.imageUrl} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                    <img src={a.image_url} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                                   </div>
                                 )}
                                 <div className="flex-1">
@@ -919,10 +927,10 @@ export default function App() {
                   <MarkdownContent content={selectedYouthUnion.content} />
                 </div>
 
-                {selectedYouthUnion.detailUrl && (
+                {selectedYouthUnion.detail_url && (
                   <div className="mt-12 pt-8 border-t border-slate-100">
                     <a 
-                      href={selectedYouthUnion.detailUrl} 
+                      href={selectedYouthUnion.detail_url} 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-3 px-8 py-4 bg-blue-800 text-white font-bold rounded-2xl hover:bg-blue-900 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1"
@@ -1015,6 +1023,62 @@ export default function App() {
           </div>
         );
       case 'Lịch công tác':
+        if (selectedSchedule && activeMenu === 'Lịch công tác') {
+          return (
+            <div className="space-y-8 animate-in slide-in-from-right duration-500">
+              <button 
+                onClick={() => setSelectedSchedule(null)}
+                className="flex items-center gap-2 text-blue-600 font-bold hover:gap-3 transition-all mb-6"
+              >
+                <ArrowLeft className="w-5 h-5" /> QUAY LẠI DANH SÁCH
+              </button>
+
+              <div className="bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden">
+                <div className="p-8 md:p-12">
+                  <div className="flex flex-wrap items-center gap-3 mb-6">
+                    <span className="px-4 py-1.5 bg-blue-100 text-blue-700 rounded-full text-xs font-bold uppercase tracking-wider">
+                      Lịch công tác
+                    </span>
+                    <span className="flex items-center gap-1.5 text-slate-400 text-sm font-medium">
+                      <Calendar className="w-4 h-4" />
+                      {selectedSchedule.start_date ? new Date(selectedSchedule.start_date).toLocaleDateString('vi-VN') : 'Mới'}
+                    </span>
+                  </div>
+
+                  <h1 className="text-3xl md:text-4xl font-black text-slate-900 mb-8 leading-tight">
+                    {selectedSchedule.title}
+                  </h1>
+
+                  <div className="prose prose-slate max-w-none mb-10">
+                    <MarkdownContent content={selectedSchedule.content || 'Đang cập nhật nội dung...'} />
+                  </div>
+
+                  {selectedSchedule.detail_url && (
+                    <div className="p-6 bg-green-50 rounded-2xl border border-green-100 flex flex-col md:flex-row items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                          <ExternalLink className="w-6 h-6 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-green-900">Link chi tiết bên ngoài</p>
+                          <p className="text-sm text-green-600 truncate max-w-[200px] md:max-w-md">{selectedSchedule.detail_url}</p>
+                        </div>
+                      </div>
+                      <a 
+                        href={selectedSchedule.detail_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="px-6 py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-all shadow-lg shadow-green-200 flex items-center gap-2 whitespace-nowrap"
+                      >
+                        MỞ LIÊN KẾT <ExternalLink className="w-4 h-4" />
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        }
         return (
           <div className="space-y-8 animate-in fade-in duration-500">
             <h2 className="text-3xl font-black text-slate-900 uppercase">Lịch công tác</h2>
@@ -1037,9 +1101,12 @@ export default function App() {
                   </div>
                   <button 
                     onClick={() => {
-                      // Scroll to the item or show in modal
-                      const element = document.getElementById(`schedule-${item.id}`);
-                      if (element) element.scrollIntoView({ behavior: 'smooth' });
+                      if (item.detail_url && (!item.content || item.content.trim() === "")) {
+                        window.open(item.detail_url, '_blank');
+                      } else {
+                        setSelectedSchedule(item);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }
                     }}
                     className="text-blue-600 font-bold hover:underline shrink-0"
                   >
@@ -1209,7 +1276,10 @@ export default function App() {
     setActiveMenu(menu);
     setSelectedNews(null);
     setSelectedAdmission(null);
+    setSelectedSchedule(null);
+    setSelectedYouthUnion(null);
     setSelectedDepartment(null);
+    setSelectedDeptActivity(null);
     setActiveDeptTab('personnel');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -1218,7 +1288,10 @@ export default function App() {
     setActiveMenu('Tin tức');
     setSelectedNews(item);
     setSelectedAdmission(null);
+    setSelectedSchedule(null);
+    setSelectedYouthUnion(null);
     setSelectedDepartment(null);
+    setSelectedDeptActivity(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
