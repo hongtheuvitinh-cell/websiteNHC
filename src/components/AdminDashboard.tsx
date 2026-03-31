@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { 
   Plus, 
@@ -346,79 +346,96 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
     { id: 'tin', name: 'Tổ Tin học - CN', icon: 'Monitor' }
   ];
 
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    if (activeTab === 'news') {
+      const { data } = await supabase.from('news').select('*').order('date', { ascending: false });
+      if (data) setNews(data);
+    } else if (activeTab === 'admissions') {
+      const { data } = await supabase.from('admissions').select('*').order('year', { ascending: false });
+      if (data) setAdmissions(data);
+    } else if (activeTab === 'home') {
+      const { data } = await supabase.from('home_content').select('*').eq('id', 'main').maybeSingle();
+      if (data) setHomeForm(prev => ({ ...prev, ...data }));
+    } else if (activeTab === 'about') {
+      const { data } = await supabase.from('about_content').select('*').eq('id', 'main').maybeSingle();
+      if (data) setAboutForm(prev => ({ ...prev, ...data }));
+    } else if (activeTab === 'contact') {
+      const { data } = await supabase.from('school_info').select('*').eq('id', 'main').maybeSingle();
+      if (data) setContactForm(prev => ({ ...prev, ...data }));
+    } else if (activeTab === 'admissions_page') {
+      const { data } = await supabase.from('admissions_content').select('*').eq('id', 'main').maybeSingle();
+      if (data) setAdmissionsPageForm(prev => ({ ...prev, ...data }));
+    } else if (activeTab === 'news_page') {
+      const { data } = await supabase.from('news_content').select('*').eq('id', 'main').maybeSingle();
+      if (data) setNewsPageForm(prev => ({ ...prev, ...data }));
+    } else if (activeTab === 'departments') {
+      const { data } = await supabase.from('departments').select('*');
+      if (data) setDepartmentsList(data);
+    } else if (activeTab === 'youth_union') {
+      const { data } = await supabase.from('youth_union').select('*').order('date', { ascending: false });
+      if (data) setYouthUnion(data);
+    } else if (activeTab === 'achievements') {
+      const { data } = await supabase.from('achievements').select('*').order('year', { ascending: false });
+      if (data) setAchievements(data);
+    } else if (activeTab === 'schedule') {
+      const { data } = await supabase.from('schedules').select('*').order('start_date', { ascending: false });
+      if (data) setSchedule(data);
+    } else if (activeTab === 'gallery') {
+      const { data } = await supabase.from('gallery').select('*').order('title', { ascending: true });
+      if (data) setGallery(data);
+    }
+    setLoading(false);
+  }, [activeTab]);
+
   useEffect(() => {
     let channel: any = null;
-    setLoading(true);
+    fetchData();
 
-    const fetchData = async () => {
-      if (activeTab === 'news') {
-        const { data } = await supabase.from('news').select('*').order('date', { ascending: false });
-        if (data) setNews(data);
-        channel = supabase.channel('news_admin').on('postgres_changes', { event: '*', schema: 'public', table: 'news' }, fetchData).subscribe();
-      } else if (activeTab === 'admissions') {
-        const { data } = await supabase.from('admissions').select('*').order('year', { ascending: false });
-        if (data) setAdmissions(data);
-        channel = supabase.channel('adm_admin').on('postgres_changes', { event: '*', schema: 'public', table: 'admissions' }, fetchData).subscribe();
-      } else if (activeTab === 'home') {
-        const { data } = await supabase.from('home_content').select('*').eq('id', 'main').maybeSingle();
-        if (data) setHomeForm(prev => ({ ...prev, ...data }));
-      } else if (activeTab === 'about') {
-        const { data } = await supabase.from('about_content').select('*').eq('id', 'main').maybeSingle();
-        if (data) setAboutForm(prev => ({ ...prev, ...data }));
-      } else if (activeTab === 'contact') {
-        const { data } = await supabase.from('school_info').select('*').eq('id', 'main').maybeSingle();
-        if (data) setContactForm(prev => ({ ...prev, ...data }));
-      } else if (activeTab === 'admissions_page') {
-        const { data } = await supabase.from('admissions_content').select('*').eq('id', 'main').maybeSingle();
-        if (data) setAdmissionsPageForm(prev => ({ ...prev, ...data }));
-      } else if (activeTab === 'news_page') {
-        const { data } = await supabase.from('news_content').select('*').eq('id', 'main').maybeSingle();
-        if (data) setNewsPageForm(prev => ({ ...prev, ...data }));
-      } else if (activeTab === 'departments') {
-        const { data } = await supabase.from('departments').select('*');
-        if (data) setDepartmentsList(data);
-        channel = supabase.channel('depts_admin').on('postgres_changes', { event: '*', schema: 'public', table: 'departments' }, fetchData).subscribe();
-      } else if (activeTab === 'youth_union') {
-        const { data } = await supabase.from('youth_union').select('*').order('date', { ascending: false });
-        if (data) setYouthUnion(data);
-        channel = supabase.channel('yu_admin').on('postgres_changes', { event: '*', schema: 'public', table: 'youth_union' }, fetchData).subscribe();
-      } else if (activeTab === 'achievements') {
-        const { data } = await supabase.from('achievements').select('*').order('year', { ascending: false });
-        if (data) setAchievements(data);
-        channel = supabase.channel('ach_admin').on('postgres_changes', { event: '*', schema: 'public', table: 'achievements' }, fetchData).subscribe();
-      } else if (activeTab === 'schedule') {
-        const { data } = await supabase.from('schedules').select('*').order('start_date', { ascending: false });
-        if (data) setSchedule(data);
-        channel = supabase.channel('sch_admin').on('postgres_changes', { event: '*', schema: 'public', table: 'schedules' }, fetchData).subscribe();
-      } else if (activeTab === 'gallery') {
-        const { data } = await supabase.from('gallery').select('*').order('title', { ascending: true });
-        if (data) setGallery(data);
-        channel = supabase.channel('gal_admin').on('postgres_changes', { event: '*', schema: 'public', table: 'gallery' }, fetchData).subscribe();
-      }
-      setLoading(false);
+    // Setup real-time listener
+    const tableMap: Record<string, string> = {
+      'news': 'news',
+      'admissions': 'admissions',
+      'home': 'home_content',
+      'about': 'about_content',
+      'contact': 'school_info',
+      'admissions_page': 'admissions_content',
+      'news_page': 'news_content',
+      'departments': 'departments',
+      'youth_union': 'youth_union',
+      'achievements': 'achievements',
+      'schedule': 'schedules',
+      'gallery': 'gallery'
     };
 
-    fetchData();
+    const tableName = tableMap[activeTab];
+    if (tableName) {
+      channel = supabase.channel(`${activeTab}_admin`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: tableName }, () => {
+          fetchData();
+        })
+        .subscribe();
+    }
 
     return () => {
       if (channel) supabase.removeChannel(channel);
     };
-  }, [activeTab]);
+  }, [activeTab, fetchData]);
+
+  const fetchDeptData = useCallback(async () => {
+    if (!selectedDeptId) return;
+    setLoading(true);
+    const { data: personnel } = await supabase.from('personnel').select('*').eq('dept_id', selectedDeptId);
+    if (personnel) setDeptPersonnel(personnel);
+    const { data: activities } = await supabase.from('activities').select('*').eq('dept_id', selectedDeptId).order('date', { ascending: false });
+    if (activities) setDeptActivities(activities);
+    const { data: docs } = await supabase.from('dept_documents').select('*').eq('dept_id', selectedDeptId).order('created_at', { ascending: false });
+    if (docs) setDeptDocuments(docs);
+    setLoading(false);
+  }, [selectedDeptId]);
 
   useEffect(() => {
     if (selectedDeptId && isManagingDeptContent) {
-      setLoading(true);
-      
-      const fetchDeptData = async () => {
-        const { data: personnel } = await supabase.from('personnel').select('*').eq('dept_id', selectedDeptId);
-        if (personnel) setDeptPersonnel(personnel);
-        const { data: activities } = await supabase.from('activities').select('*').eq('dept_id', selectedDeptId).order('date', { ascending: false });
-        if (activities) setDeptActivities(activities);
-        const { data: docs } = await supabase.from('dept_documents').select('*').eq('dept_id', selectedDeptId).order('created_at', { ascending: false });
-        if (docs) setDeptDocuments(docs);
-        setLoading(false);
-      };
-
       fetchDeptData();
 
       const pChannel = supabase.channel('p_admin').on('postgres_changes', { event: '*', schema: 'public', table: 'personnel', filter: `dept_id=eq.${selectedDeptId}` }, fetchDeptData).subscribe();
@@ -431,7 +448,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
         supabase.removeChannel(dChannel);
       };
     }
-  }, [selectedDeptId, isManagingDeptContent]);
+  }, [selectedDeptId, isManagingDeptContent, fetchDeptData]);
 
   const showSuccess = () => {
     setSaveStatus('Đã lưu thành công!');
@@ -451,6 +468,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
       }
       setNewsForm({ title: '', summary: '', content: '', category: 'Tin tức', image_url: '', document_url: '', detail_url: '' });
       showSuccess();
+      fetchData();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi khi lưu tin tức: " + error.message);
     }
@@ -473,7 +491,11 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
   const handleDeleteNews = async (id: string) => {
     showConfirm("Xác nhận xóa", "Bạn có chắc chắn muốn xóa tin này?", async () => {
       const { error } = await supabase.from('news').delete().eq('id', id);
-      if (error) showAlert("Lỗi", "Lỗi khi xóa: " + error.message);
+      if (error) {
+        showAlert("Lỗi", "Lỗi khi xóa: " + error.message);
+      } else {
+        fetchData();
+      }
     });
   };
 
@@ -490,6 +512,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
       }
       setAdmissionForm({ title: '', summary: '', content: '', deadline: '', year: 2026, document_url: '', detail_url: '' });
       showSuccess();
+      fetchData();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi khi lưu thông tin tuyển sinh: " + error.message);
     }
@@ -512,7 +535,11 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
   const handleDeleteAdmission = async (id: string) => {
     showConfirm("Xác nhận xóa", "Bạn có chắc chắn muốn xóa thông tin này?", async () => {
       const { error } = await supabase.from('admissions').delete().eq('id', id);
-      if (error) showAlert("Lỗi", "Lỗi khi xóa: " + error.message);
+      if (error) {
+        showAlert("Lỗi", "Lỗi khi xóa: " + error.message);
+      } else {
+        fetchData();
+      }
     });
   };
 
@@ -522,6 +549,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
       const { error } = await supabase.from('home_content').upsert({ id: 'main', ...homeForm, updated_at: new Date() });
       if (error) throw error;
       showSuccess();
+      fetchData();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi: " + error.message);
     }
@@ -533,6 +561,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
       const { error } = await supabase.from('about_content').upsert({ id: 'main', ...aboutForm, updated_at: new Date() });
       if (error) throw error;
       showSuccess();
+      fetchData();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi: " + error.message);
     }
@@ -544,6 +573,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
       const { error } = await supabase.from('school_info').upsert({ id: 'main', ...contactForm, updated_at: new Date() });
       if (error) throw error;
       showSuccess();
+      fetchData();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi: " + error.message);
     }
@@ -555,6 +585,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
       const { error } = await supabase.from('admissions_content').upsert({ id: 'main', ...admissionsPageForm, updated_at: new Date() });
       if (error) throw error;
       showSuccess();
+      fetchData();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi: " + error.message);
     }
@@ -566,6 +597,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
       const { error } = await supabase.from('news_content').upsert({ id: 'main', ...newsPageForm, updated_at: new Date() });
       if (error) throw error;
       showSuccess();
+      fetchData();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi: " + error.message);
     }
@@ -584,6 +616,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
       }
       setFeatureForm({ title: '', description: '', icon: 'BookOpen', color: 'bg-blue-100 text-blue-700', order_num: 0, detail_url: '' });
       showSuccess();
+      fetchData();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi khi lưu tính năng: " + error.message);
     }
@@ -605,7 +638,11 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
   const handleDeleteFeature = async (id: string) => {
     showConfirm("Xác nhận xóa", "Xóa thẻ này?", async () => {
       const { error } = await supabase.from('features').delete().eq('id', id);
-      if (error) showAlert("Lỗi", "Lỗi khi xóa: " + error.message);
+      if (error) {
+        showAlert("Lỗi", "Lỗi khi xóa: " + error.message);
+      } else {
+        fetchData();
+      }
     });
   };
 
@@ -622,6 +659,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
       }
       setDeptForm({ name: '', icon: 'BookOpen', description: '', detail_url: '' });
       showSuccess();
+      fetchData();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi khi lưu tổ chuyên môn: " + error.message);
     }
@@ -630,7 +668,11 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
   const handleDeleteDept = async (id: string) => {
     showConfirm("Xác nhận xóa", "Xóa tổ này sẽ không xóa các dữ liệu con (nhân sự, hoạt động) nhưng tổ sẽ không hiển thị. Tiếp tục?", async () => {
       const { error } = await supabase.from('departments').delete().eq('id', id);
-      if (error) showAlert("Lỗi", "Lỗi khi xóa: " + error.message);
+      if (error) {
+        showAlert("Lỗi", "Lỗi khi xóa: " + error.message);
+      } else {
+        fetchData();
+      }
     });
   };
 
@@ -660,6 +702,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
       }
       setYouthUnionForm({ title: '', summary: '', content: '', date: '', image_url: '', detail_url: '' });
       showSuccess();
+      fetchData();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi: " + error.message);
     }
@@ -701,6 +744,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
       }
       setAchievementForm({ title: '', student_name: '', class: '', year: '2025-2026', award: '', type: 'academic', description: '', image_url: '', detail_url: '' });
       showSuccess();
+      fetchData();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi: " + error.message);
     }
@@ -709,7 +753,11 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
   const handleDeleteAchievement = async (id: string) => {
     showConfirm("Xác nhận xóa", "Xóa thành tích này?", async () => {
       const { error } = await supabase.from('achievements').delete().eq('id', id);
-      if (error) showAlert("Lỗi", "Lỗi khi xóa: " + error.message);
+      if (error) {
+        showAlert("Lỗi", "Lỗi khi xóa: " + error.message);
+      } else {
+        fetchData();
+      }
     });
   };
 
@@ -741,6 +789,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
       }
       setScheduleForm({ title: '', week: '', date_range: '', content: '', file_url: '', start_date: '', end_date: '', detail_url: '' });
       showSuccess();
+      fetchData();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi: " + error.message);
     }
@@ -786,6 +835,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
       setGalleryForm({ title: '', image_url: '', category: 'Hoạt động trường', description: '', detail_url: '', images_json: '[]' });
       setGalleryImages([]);
       showSuccess();
+      fetchData();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi: " + error.message);
     }
@@ -812,6 +862,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
       }
       setPersonnelForm({ name: '', position: '', bio: '', image_url: '' });
       showSuccess();
+      fetchDeptData();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi: " + error.message);
     }
@@ -821,7 +872,11 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
     if (!selectedDeptId) return;
     showConfirm("Xác nhận xóa", "Xóa nhân sự này?", async () => {
       const { error } = await supabase.from('personnel').delete().eq('id', id);
-      if (error) showAlert("Lỗi", "Lỗi khi xóa: " + error.message);
+      if (error) {
+        showAlert("Lỗi", "Lỗi khi xóa: " + error.message);
+      } else {
+        fetchDeptData();
+      }
     });
   };
 
@@ -854,6 +909,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
       }
       setActivityForm({ title: '', date: '', summary: '', description: '', document_url: '', content: '', image_url: '', detail_url: '' });
       showSuccess();
+      fetchDeptData();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi: " + error.message);
     }
@@ -863,7 +919,11 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
     if (!selectedDeptId) return;
     showConfirm("Xác nhận xóa", "Xóa hoạt động này?", async () => {
       const { error } = await supabase.from('activities').delete().eq('id', id);
-      if (error) showAlert("Lỗi", "Lỗi khi xóa: " + error.message);
+      if (error) {
+        showAlert("Lỗi", "Lỗi khi xóa: " + error.message);
+      } else {
+        fetchDeptData();
+      }
     });
   };
 
@@ -881,6 +941,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
       }
       setDocumentForm({ title: '', description: '', file_url: '', category: 'Giáo án' });
       showSuccess();
+      fetchDeptData();
     } catch (error: any) {
       showAlert("Lỗi", "Lỗi: " + error.message);
     }
@@ -890,7 +951,11 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
     if (!selectedDeptId) return;
     showConfirm("Xác nhận xóa", "Xóa tài liệu này?", async () => {
       const { error } = await supabase.from('dept_documents').delete().eq('id', id);
-      if (error) showAlert("Lỗi", "Lỗi khi xóa: " + error.message);
+      if (error) {
+        showAlert("Lỗi", "Lỗi khi xóa: " + error.message);
+      } else {
+        fetchDeptData();
+      }
     });
   };
 
