@@ -201,6 +201,11 @@ export default function App() {
       if (info) setSchoolInfo(info);
     };
     fetchStatic();
+    const homeChannel = supabase.channel('home_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'home_content' }, fetchStatic).subscribe();
+    const aboutChannel = supabase.channel('about_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'about_content' }, fetchStatic).subscribe();
+    const admContentChannel = supabase.channel('adm_content_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'admissions_content' }, fetchStatic).subscribe();
+    const newsContentChannel = supabase.channel('news_content_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'news_content' }, fetchStatic).subscribe();
+    const infoChannel = supabase.channel('info_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'school_info' }, fetchStatic).subscribe();
 
     return () => {
       supabase.removeChannel(newsChannel);
@@ -211,6 +216,11 @@ export default function App() {
       supabase.removeChannel(achievementsChannel);
       supabase.removeChannel(schedulesChannel);
       supabase.removeChannel(galleryChannel);
+      supabase.removeChannel(homeChannel);
+      supabase.removeChannel(aboutChannel);
+      supabase.removeChannel(admContentChannel);
+      supabase.removeChannel(newsContentChannel);
+      supabase.removeChannel(infoChannel);
     };
   }, []);
 
