@@ -63,6 +63,7 @@ export default function App() {
   const [selectedAdmission, setSelectedAdmission] = useState<any>(null);
   const [selectedSchedule, setSelectedSchedule] = useState<any>(null);
   const [selectedYouthUnion, setSelectedYouthUnion] = useState<any>(null);
+  const [selectedAchievement, setSelectedAchievement] = useState<any>(null);
   const [selectedDepartment, setSelectedDepartment] = useState<any>(null);
   const [selectedDeptActivity, setSelectedDeptActivity] = useState<any>(null);
   const [deptPersonnel, setDeptPersonnel] = useState<any[]>([]);
@@ -89,6 +90,14 @@ export default function App() {
               className="max-w-full h-auto rounded-xl shadow-sm my-2 mx-auto block" 
               referrerPolicy="no-referrer"
               loading="lazy"
+            />
+          ),
+          a: ({ node, ...props }) => (
+            <a 
+              {...props} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="text-blue-600 hover:underline font-medium"
             />
           )
         }}
@@ -319,57 +328,8 @@ export default function App() {
               <div className="h-1.5 w-24 bg-blue-800 rounded-full"></div>
               
               <div className="text-lg text-slate-600 leading-relaxed">
-                <div className="float-left mr-8 mb-6 w-full md:w-1/2 lg:w-2/5">
-                  <img 
-                    src={selectedNews.image_url || `https://picsum.photos/seed/${selectedNews.id}/1200/800`} 
-                    className="w-full rounded-2xl shadow-md border border-slate-100" 
-                    referrerPolicy="no-referrer" 
-                  />
-                </div>
                 <div className="space-y-6">
                   <MarkdownContent content={selectedNews.content} />
-                  
-                  <div className="flex flex-col gap-4 mt-8">
-                    {selectedNews.document_url && (
-                      <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Icons.FileText className="w-6 h-6 text-blue-600" />
-                          <div>
-                            <p className="font-bold text-blue-900">Tài liệu đính kèm</p>
-                            <p className="text-sm text-blue-600 truncate max-w-[200px] md:max-w-md">{selectedNews.document_url}</p>
-                          </div>
-                        </div>
-                        <a 
-                          href={selectedNews.document_url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors"
-                        >
-                          <Icons.ExternalLink className="w-4 h-4" /> Tải về
-                        </a>
-                      </div>
-                    )}
-
-                    {selectedNews.detail_url && (
-                      <div className="p-4 bg-green-50 border border-green-100 rounded-2xl flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Icons.ExternalLink className="w-6 h-6 text-green-600" />
-                          <div>
-                            <p className="font-bold text-green-900">Xem chi tiết bên ngoài</p>
-                            <p className="text-sm text-green-600 truncate max-w-[200px] md:max-w-md">{selectedNews.detail_url}</p>
-                          </div>
-                        </div>
-                        <a 
-                          href={selectedNews.detail_url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-colors"
-                        >
-                          Mở link <ExternalLink className="w-4 h-4" />
-                        </a>
-                      </div>
-                    )}
-                  </div>
                 </div>
               </div>
             </div>
@@ -421,25 +381,6 @@ export default function App() {
                   </div>
                 )}
 
-                {selectedAdmission.detail_url && (
-                  <div className="p-4 bg-green-50 border border-green-100 rounded-2xl flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Icons.ExternalLink className="w-6 h-6 text-green-600" />
-                      <div>
-                        <p className="font-bold text-green-900">Xem chi tiết bên ngoài</p>
-                        <p className="text-sm text-green-600 truncate max-w-[200px] md:max-w-md">{selectedAdmission.detail_url}</p>
-                      </div>
-                    </div>
-                    <a 
-                      href={selectedAdmission.detail_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-colors"
-                    >
-                      Mở link <ExternalLink className="w-4 h-4" />
-                    </a>
-                  </div>
-                )}
               </div>
             </div>
             <div className="flex items-center gap-3 text-red-600 font-black text-xl p-6 bg-red-50 rounded-2xl border border-red-100">
@@ -672,20 +613,10 @@ export default function App() {
                         Tài liệu đính kèm <Icons.FileText className="w-5 h-5" />
                       </a>
                     )}
-                    {selectedDeptActivity.detail_url && (
-                      <a 
-                        href={selectedDeptActivity.detail_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-3 px-8 py-4 bg-slate-100 text-slate-700 font-bold rounded-2xl hover:bg-slate-200 transition-all"
-                      >
-                        Link xem thêm <Icons.ExternalLink className="w-5 h-5" />
-                      </a>
-                    )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
+              );
           }
           const IconComponent = (Icons as any)[selectedDepartment.icon] || Icons.BookOpen;
           return (
@@ -809,16 +740,6 @@ export default function App() {
                                         <Icons.FileText className="w-4 h-4" /> Tài liệu đính kèm
                                       </a>
                                     )}
-                                    {a.detail_url && (
-                                      <a 
-                                        href={a.detail_url} 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-2 text-green-600 font-bold hover:text-green-800 transition-colors"
-                                      >
-                                        <Icons.ExternalLink className="w-4 h-4" /> Xem chi tiết bên ngoài
-                                      </a>
-                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -937,18 +858,6 @@ export default function App() {
                   <MarkdownContent content={selectedYouthUnion.content} />
                 </div>
 
-                {selectedYouthUnion.detail_url && (
-                  <div className="mt-12 pt-8 border-t border-slate-100">
-                    <a 
-                      href={selectedYouthUnion.detail_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-3 px-8 py-4 bg-blue-800 text-white font-bold rounded-2xl hover:bg-blue-900 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1"
-                    >
-                      Xem tài liệu/link đính kèm <ExternalLink className="w-5 h-5" />
-                    </a>
-                  </div>
-                )}
               </div>
             </div>
           );
@@ -994,6 +903,49 @@ export default function App() {
           </div>
         );
       case 'Thành tích học tập':
+        if (selectedAchievement) {
+          return (
+            <div className="animate-in slide-in-from-right duration-500 space-y-8">
+              <button 
+                onClick={() => setSelectedAchievement(null)}
+                className="flex items-center gap-2 text-blue-600 font-bold hover:text-blue-800 transition-colors"
+              >
+                <Icons.ArrowLeft className="w-5 h-5" /> Quay lại danh sách
+              </button>
+
+              <div className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm p-8 md:p-12">
+                <div className="flex flex-wrap items-center gap-3 mb-6">
+                  <span className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider ${
+                    selectedAchievement.type === 'academic' ? 'bg-blue-100 text-blue-700' :
+                    selectedAchievement.type === 'sport' ? 'bg-green-100 text-green-700' :
+                    selectedAchievement.type === 'art' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-700'
+                  }`}>
+                    {selectedAchievement.type === 'academic' ? 'Học thuật' :
+                     selectedAchievement.type === 'sport' ? 'Thể thao' :
+                     selectedAchievement.type === 'art' ? 'Nghệ thuật' : 'Thành tích khác'}
+                  </span>
+                  <span className="flex items-center gap-1.5 text-slate-400 text-sm font-medium">
+                    <Icons.Calendar className="w-4 h-4" />
+                    Năm học {selectedAchievement.year}
+                  </span>
+                </div>
+
+                <h2 className="text-4xl font-black text-slate-900 mb-6 leading-tight">{selectedAchievement.title}</h2>
+                <div className="h-1.5 w-24 bg-blue-800 rounded-full mb-10"></div>
+                
+                {selectedAchievement.image_url && (
+                  <div className="mb-10 rounded-3xl overflow-hidden shadow-lg border border-slate-100">
+                    <img src={selectedAchievement.image_url} className="w-full h-auto max-h-[600px] object-cover" referrerPolicy="no-referrer" />
+                  </div>
+                )}
+
+                <div className="prose prose-slate max-w-none text-lg text-slate-600 leading-relaxed">
+                  <MarkdownContent content={selectedAchievement.description} />
+                </div>
+              </div>
+            </div>
+          );
+        }
         return (
           <div className="space-y-8 animate-in fade-in duration-500">
             <h2 className="text-3xl font-black text-slate-900 uppercase">Thành tích học tập</h2>
@@ -1014,8 +966,8 @@ export default function App() {
                   </div>
                   <button 
                     onClick={() => {
-                      // Achievements don't have a detail view currently, but we can show description in a modal or just leave it
-                      alert(item.description);
+                      setSelectedAchievement(item);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
                     }}
                     className="text-blue-600 font-bold hover:underline shrink-0"
                   >
@@ -1063,27 +1015,6 @@ export default function App() {
                     <MarkdownContent content={selectedSchedule.content || 'Đang cập nhật nội dung...'} />
                   </div>
 
-                  {selectedSchedule.detail_url && (
-                    <div className="p-6 bg-green-50 rounded-2xl border border-green-100 flex flex-col md:flex-row items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                          <ExternalLink className="w-6 h-6 text-green-600" />
-                        </div>
-                        <div>
-                          <p className="font-bold text-green-900">Link chi tiết bên ngoài</p>
-                          <p className="text-sm text-green-600 truncate max-w-[200px] md:max-w-md">{selectedSchedule.detail_url}</p>
-                        </div>
-                      </div>
-                      <a 
-                        href={selectedSchedule.detail_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="px-6 py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-all shadow-lg shadow-green-200 flex items-center gap-2 whitespace-nowrap"
-                      >
-                        MỞ LIÊN KẾT <ExternalLink className="w-4 h-4" />
-                      </a>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -1111,12 +1042,8 @@ export default function App() {
                   </div>
                   <button 
                     onClick={() => {
-                      if (item.detail_url && (!item.content || item.content.trim() === "")) {
-                        window.open(item.detail_url, '_blank');
-                      } else {
-                        setSelectedSchedule(item);
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }
+                      setSelectedSchedule(item);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
                     }}
                     className="text-blue-600 font-bold hover:underline shrink-0"
                   >
@@ -1168,17 +1095,6 @@ export default function App() {
                     <h3 className="font-bold text-slate-900 mb-1 group-hover:text-blue-800 transition-colors">{item.title}</h3>
                     {item.description && <p className="text-xs text-slate-500 line-clamp-2 italic mb-3">{item.description}</p>}
                     <div className="flex items-center justify-between mt-auto">
-                      {item.detail_url && (
-                        <a 
-                          href={item.detail_url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center gap-1 text-blue-600 text-xs font-bold hover:text-blue-800 transition-colors"
-                        >
-                          Xem chi tiết <Icons.ExternalLink className="w-3 h-3" />
-                        </a>
-                      )}
                       {item.images_json && JSON.parse(item.images_json).length > 0 && (
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
                           <Icons.Maximize2 className="w-3 h-3" /> Xem bộ ảnh
@@ -1288,6 +1204,7 @@ export default function App() {
     setSelectedAdmission(null);
     setSelectedSchedule(null);
     setSelectedYouthUnion(null);
+    setSelectedAchievement(null);
     setSelectedDepartment(null);
     setSelectedDeptActivity(null);
     setActiveDeptTab('personnel');
@@ -1300,6 +1217,7 @@ export default function App() {
     setSelectedAdmission(null);
     setSelectedSchedule(null);
     setSelectedYouthUnion(null);
+    setSelectedAchievement(null);
     setSelectedDepartment(null);
     setSelectedDeptActivity(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
