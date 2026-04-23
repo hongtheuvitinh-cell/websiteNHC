@@ -46,7 +46,8 @@ import {
   List,
   Table2,
   Image as ImageIcon,
-  Type
+  Type,
+  Link as LinkIcon
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
@@ -54,6 +55,7 @@ import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import 'katex/dist/katex.min.css';
+import { Loader2 } from 'lucide-react';
 
 type TabType = 'news' | 'admissions' | 'home' | 'about' | 'contact' | 'admissions_page' | 'news_page' | 'features' | 'departments' | 'youth_union' | 'achievements' | 'schedule' | 'gallery';
 
@@ -94,6 +96,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
   const admissionTextareaRef = useRef<HTMLTextAreaElement>(null);
   const youthUnionTextareaRef = useRef<HTMLTextAreaElement>(null);
   const activityTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const achievementTextareaRef = useRef<HTMLTextAreaElement>(null);
   const aboutMainTextareaRef = useRef<HTMLTextAreaElement>(null);
   const aboutHistoryTextareaRef = useRef<HTMLTextAreaElement>(null);
   const aboutCoreValuesTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -137,6 +140,10 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
         insertion = `\n| Tiêu đề 1 | Tiêu đề 2 |\n|---|---|\n| Nội dung 1 | Nội dung 2 |\n`;
         newCursorPos = start + 2;
         break;
+      case 'link':
+        insertion = `[${selectedText || 'tên liên kết'}](https://example.com)`;
+        newCursorPos = start + 1;
+        break;
       default:
         return;
     }
@@ -150,31 +157,72 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
     }, 0);
   };
 
-  const handleImageUpload = (
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleImageUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
     setter: React.Dispatch<React.SetStateAction<any>>,
     form: any,
     field: string,
-    ref: React.RefObject<HTMLTextAreaElement>
+    refTextarea: React.RefObject<HTMLTextAreaElement>
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string;
-      const textarea = ref.current;
+    // Check if file is image
+    if (!file.type.startsWith('image/')) {
+      alert('Vui lòng chọn file hình ảnh (jpg, png, webp...)');
+      return;
+    }
+
+    // Limit size to 5MB
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File quá lớn. Vui lòng chọn ảnh dưới 5MB.');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+      
+      const { data, error } = await supabase.storage
+        .from('images')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('images')
+        .getPublicUrl(data.path);
+
+      const downloadURL = publicUrl;
+
+      const textarea = refTextarea.current;
       if (!textarea) return;
 
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
       const text = form[field];
       
-      const insertion = `\n![${file.name}](${base64})\n`;
+      const insertion = `\n![${file.name}](${downloadURL})\n`;
       const newText = text.substring(0, start) + insertion + text.substring(end);
       setter({ ...form, [field]: newText });
-    };
-    reader.readAsDataURL(file);
+      
+      setTimeout(() => {
+        textarea.focus();
+        const newPos = start + insertion.length;
+        textarea.setSelectionRange(newPos, newPos);
+      }, 0);
+    } catch (error) {
+      console.error('Upload failed:', error);
+      alert('Tải ảnh thất bại. Lỗi: ' + (error instanceof Error ? error.message : 'Không xác định'));
+    } finally {
+      setIsUploading(false);
+      e.target.value = '';
+    }
   };
 
   const MarkdownToolbar = ({ 
@@ -187,53 +235,83 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
     setter: React.Dispatch<React.SetStateAction<any>>, 
     form: any, 
     field: string 
-  }) => (
-    <div className="flex flex-wrap gap-2 mb-0 p-2 bg-slate-50 rounded-t-xl border border-slate-200">
-      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'bold')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Đậm">
-        <Bold className="w-4 h-4" />
-      </button>
-      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'italic')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Nghiêng">
-        <Italic className="w-4 h-4" />
-      </button>
-      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'heading')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Tiêu đề">
-        <Heading3 className="w-4 h-4" />
-      </button>
-      <div className="w-px h-6 bg-slate-300 mx-1 self-center" />
-      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'list')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Danh sách">
-        <List className="w-4 h-4" />
-      </button>
-      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'table')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Bảng biểu">
-        <Table2 className="w-4 h-4" />
-      </button>
-      <div className="w-px h-6 bg-slate-300 mx-1 self-center" />
-      <button 
-        type="button" 
-        onClick={() => {
-          const url = prompt('Nhập link ảnh:');
-          if (url) {
-            const textarea = textareaRef.current;
-            if (!textarea) return;
-            const start = textarea.selectionStart;
-            const end = textarea.selectionEnd;
-            const text = form[field];
-            const insertion = `\n![hình ảnh](${url})\n`;
-            const newText = text.substring(0, start) + insertion + text.substring(end);
-            setter({ ...form, [field]: newText });
-            
-            setTimeout(() => {
-              textarea.focus();
-              const newPos = start + insertion.length;
-              textarea.setSelectionRange(newPos, newPos);
-            }, 0);
-          }
-        }} 
-        className="p-2 hover:bg-slate-200 rounded transition-colors" 
-        title="Chèn link ảnh"
-      >
-        <ImageIcon className="w-4 h-4" />
-      </button>
-    </div>
-  );
+  }) => {
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    return (
+      <div className="flex flex-wrap gap-2 mb-0 p-2 bg-slate-50 rounded-t-xl border border-slate-200">
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'bold')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Đậm">
+          <Bold className="w-4 h-4" />
+        </button>
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'italic')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Nghiêng">
+          <Italic className="w-4 h-4" />
+        </button>
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'heading')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Tiêu đề">
+          <Heading3 className="w-4 h-4" />
+        </button>
+        <div className="w-px h-6 bg-slate-300 mx-1 self-center" />
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'list')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Danh sách">
+          <List className="w-4 h-4" />
+        </button>
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'table')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Bảng biểu">
+          <Table2 className="w-4 h-4" />
+        </button>
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'link')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Chèn liên kết">
+          <LinkIcon className="w-4 h-4" />
+        </button>
+        <div className="w-px h-6 bg-slate-300 mx-1 self-center" />
+        
+        <input 
+          type="file" 
+          ref={fileInputRef}
+          className="hidden" 
+          accept="image/*"
+          onChange={(e) => handleImageUpload(e, setter, form, field, textareaRef)}
+        />
+        
+        <button 
+          type="button" 
+          disabled={isUploading}
+          onClick={() => fileInputRef.current?.click()} 
+          className="p-2 hover:bg-slate-200 rounded transition-colors relative flex items-center justify-center" 
+          title="Tải ảnh lên"
+        >
+          {isUploading ? (
+            <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+          ) : (
+            <ImageIcon className="w-4 h-4" />
+          )}
+        </button>
+        
+        <button 
+          type="button" 
+          onClick={() => {
+            const url = prompt('Nhập link ảnh:');
+            if (url) {
+              const textarea = textareaRef.current;
+              if (!textarea) return;
+              const start = textarea.selectionStart;
+              const end = textarea.selectionEnd;
+              const text = form[field];
+              const insertion = `\n![hình ảnh](${url})\n`;
+              const newText = text.substring(0, start) + insertion + text.substring(end);
+              setter({ ...form, [field]: newText });
+              
+              setTimeout(() => {
+                textarea.focus();
+                const newPos = start + insertion.length;
+                textarea.setSelectionRange(newPos, newPos);
+              }, 0);
+            }
+          }} 
+          className="p-2 hover:bg-slate-200 rounded transition-colors" 
+          title="Chèn link từ URL"
+        >
+          <LinkIcon className="w-4 h-3 opacity-60" />
+        </button>
+      </div>
+    );
+  };
 
   const MarkdownContent = ({ content }: { content: string }) => (
     <div className="markdown-body prose prose-slate prose-sm max-w-none prose-p:my-0.5 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-0.5 prose-li:my-0">
@@ -247,6 +325,14 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
               className="max-w-full h-auto rounded-xl shadow-sm my-2 mx-auto block" 
               referrerPolicy="no-referrer"
               loading="lazy"
+            />
+          ),
+          a: ({ node, ...props }) => (
+            <a 
+              {...props} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="text-blue-600 hover:underline font-medium"
             />
           )
         }}
@@ -283,43 +369,39 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
   };
 
   // Form states
-  const [newsForm, setNewsForm] = useState({ title: '', summary: '', content: '', category: 'Tin tức', image_url: '', document_url: '', detail_url: '' });
-  const [admissionForm, setAdmissionForm] = useState({ title: '', summary: '', content: '', deadline: '', year: 2026, document_url: '', detail_url: '' });
-  const [featureForm, setFeatureForm] = useState({ title: '', description: '', icon: 'BookOpen', color: 'bg-blue-100 text-blue-700', order_num: 0, detail_url: '' });
-  const [deptForm, setDeptForm] = useState({ name: '', icon: 'BookOpen', description: '', detail_url: '' });
-  const [youthUnionForm, setYouthUnionForm] = useState({ title: '', summary: '', content: '', date: '', image_url: '', detail_url: '' });
-  const [achievementForm, setAchievementForm] = useState({ title: '', student_name: '', class: '', year: '2025-2026', award: '', type: 'academic', description: '', image_url: '', detail_url: '' });
-  const [scheduleForm, setScheduleForm] = useState({ title: '', week: '', date_range: '', content: '', file_url: '', start_date: '', end_date: '', detail_url: '' });
-  const [galleryForm, setGalleryForm] = useState({ title: '', image_url: '', category: 'Hoạt động trường', description: '', detail_url: '', images_json: '[]' });
+  const [newsForm, setNewsForm] = useState({ title: '', content: '', category: 'Tin tức', image_url: '' });
+  const [admissionForm, setAdmissionForm] = useState({ title: '', summary: '', content: '', deadline: '', year: 2026, document_url: '' });
+  const [featureForm, setFeatureForm] = useState({ title: '', description: '', icon: 'BookOpen', color: 'bg-blue-100 text-blue-700', order_num: 0 });
+  const [deptForm, setDeptForm] = useState({ name: '', icon: 'BookOpen', description: '' });
+  const [youthUnionForm, setYouthUnionForm] = useState({ title: '', summary: '', content: '', date: '', image_url: '' });
+  const [achievementForm, setAchievementForm] = useState({ title: '', student_name: '', class: '', year: '2025-2026', award: '', type: 'academic', description: '', image_url: '' });
+  const [scheduleForm, setScheduleForm] = useState({ title: '', week: '', date_range: '', content: '', file_url: '', start_date: '', end_date: '' });
+  const [galleryForm, setGalleryForm] = useState({ title: '', image_url: '', category: 'Hoạt động trường', description: '', images_json: '[]' });
   const [galleryImages, setGalleryImages] = useState<{ url: string, caption: string }[]>([]);
   const [personnelForm, setPersonnelForm] = useState({ name: '', position: '', bio: '', image_url: '' });
-  const [activityForm, setActivityForm] = useState({ title: '', date: '', summary: '', description: '', document_url: '', content: '', image_url: '', detail_url: '' });
+  const [activityForm, setActivityForm] = useState({ title: '', date: '', summary: '', description: '', document_url: '', content: '', image_url: '' });
   const [documentForm, setDocumentForm] = useState({ title: '', description: '', file_url: '', category: 'Giáo án' });
   
   const [homeForm, setHomeForm] = useState({ 
     banner_title: 'Môi trường giáo dục hiện đại & thân thiện', 
     banner_description: 'Với đội ngũ giáo viên tâm huyết và cơ sở vật chất khang trang, chúng tôi cam kết mang lại chất lượng giáo dục tốt nhất cho học sinh.',
-    banner_image: 'https://picsum.photos/seed/school/1200/600',
-    render_type: 'standard',
-    html_content: ''
+    banner_image: 'https://picsum.photos/seed/school/1200/600'
   });
 
   const [aboutForm, setAboutForm] = useState({
     main_text: '',
     history: '',
-    core_values: '',
-    render_type: 'standard',
-    html_content: ''
+    core_values: ''
   });
 
   const [admissionsPageForm, setAdmissionsPageForm] = useState({
-    render_type: 'standard',
-    html_content: ''
+    banner_title: 'Thông tin tuyển sinh',
+    banner_description: 'Cập nhật các thông tin mới nhất về tuyển sinh tại trường.'
   });
 
   const [newsPageForm, setNewsPageForm] = useState({
-    render_type: 'standard',
-    html_content: ''
+    banner_title: 'Tin tức & Thông báo',
+    banner_description: 'Nơi cập nhật những tin tức, hoạt động mới nhất của nhà trường.'
   });
 
   const [contactForm, setContactForm] = useState({
@@ -327,9 +409,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
     slogan: '',
     address: '',
     phone: '',
-    email: '',
-    render_type: 'standard',
-    html_content: ''
+    email: ''
   });
 
   const departments = [
@@ -466,7 +546,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
         const { error } = await supabase.from('news').insert([{ ...newsForm, date: new Date() }]);
         if (error) throw error;
       }
-      setNewsForm({ title: '', summary: '', content: '', category: 'Tin tức', image_url: '', document_url: '', detail_url: '' });
+      setNewsForm({ title: '', content: '', category: 'Tin tức', image_url: '' });
       showSuccess();
       fetchData();
     } catch (error: any) {
@@ -478,12 +558,9 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
     setEditingNewsId(item.id);
     setNewsForm({
       title: item.title,
-      summary: item.summary || '',
       content: item.content,
       category: item.category,
-      image_url: item.image_url || '',
-      document_url: item.document_url || '',
-      detail_url: item.detail_url || ''
+      image_url: item.image_url || ''
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -510,7 +587,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
         const { error } = await supabase.from('admissions').insert([{ ...admissionForm }]);
         if (error) throw error;
       }
-      setAdmissionForm({ title: '', summary: '', content: '', deadline: '', year: 2026, document_url: '', detail_url: '' });
+      setAdmissionForm({ title: '', summary: '', content: '', deadline: '', year: 2026, document_url: '' });
       showSuccess();
       fetchData();
     } catch (error: any) {
@@ -526,8 +603,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
       content: item.content,
       deadline: item.deadline,
       year: item.year,
-      document_url: item.document_url || '',
-      detail_url: item.detail_url || ''
+      document_url: item.document_url || ''
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -614,7 +690,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
         const { error } = await supabase.from('features').insert([{ ...featureForm }]);
         if (error) throw error;
       }
-      setFeatureForm({ title: '', description: '', icon: 'BookOpen', color: 'bg-blue-100 text-blue-700', order_num: 0, detail_url: '' });
+      setFeatureForm({ title: '', description: '', icon: 'BookOpen', color: 'bg-blue-100 text-blue-700', order_num: 0 });
       showSuccess();
       fetchData();
     } catch (error: any) {
@@ -629,8 +705,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
       description: item.description,
       icon: item.icon,
       color: item.color,
-      order_num: item.order_num || 0,
-      detail_url: item.detail_url || ''
+      order_num: item.order_num || 0
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -657,7 +732,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
         const { error } = await supabase.from('departments').insert([{ ...deptForm }]);
         if (error) throw error;
       }
-      setDeptForm({ name: '', icon: 'BookOpen', description: '', detail_url: '' });
+      setDeptForm({ name: '', icon: 'BookOpen', description: '' });
       showSuccess();
       fetchData();
     } catch (error: any) {
@@ -683,8 +758,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
       summary: item.summary || '',
       content: item.content,
       date: item.date || '',
-      image_url: item.image_url || '',
-      detail_url: item.detail_url || ''
+      image_url: item.image_url || ''
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -700,7 +774,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
         const { error } = await supabase.from('youth_union').insert([{ ...youthUnionForm }]);
         if (error) throw error;
       }
-      setYouthUnionForm({ title: '', summary: '', content: '', date: '', image_url: '', detail_url: '' });
+      setYouthUnionForm({ title: '', summary: '', content: '', date: '', image_url: '' });
       showSuccess();
       fetchData();
     } catch (error: any) {
@@ -725,8 +799,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
       award: item.award || '',
       image_url: item.image_url || '',
       type: item.type || 'academic',
-      description: item.description || '',
-      detail_url: item.detail_url || ''
+      description: item.description || ''
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -742,7 +815,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
         const { error } = await supabase.from('achievements').insert([{ ...achievementForm }]);
         if (error) throw error;
       }
-      setAchievementForm({ title: '', student_name: '', class: '', year: '2025-2026', award: '', type: 'academic', description: '', image_url: '', detail_url: '' });
+      setAchievementForm({ title: '', student_name: '', class: '', year: '2025-2026', award: '', type: 'academic', description: '', image_url: '' });
       showSuccess();
       fetchData();
     } catch (error: any) {
@@ -770,8 +843,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
       content: item.content || '',
       file_url: item.file_url || '',
       start_date: item.start_date || '',
-      end_date: item.end_date || '',
-      detail_url: item.detail_url || ''
+      end_date: item.end_date || ''
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -787,7 +859,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
         const { error } = await supabase.from('schedules').insert([{ ...scheduleForm }]);
         if (error) throw error;
       }
-      setScheduleForm({ title: '', week: '', date_range: '', content: '', file_url: '', start_date: '', end_date: '', detail_url: '' });
+      setScheduleForm({ title: '', week: '', date_range: '', content: '', file_url: '', start_date: '', end_date: '' });
       showSuccess();
       fetchData();
     } catch (error: any) {
@@ -809,7 +881,6 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
       image_url: item.image_url || '',
       category: item.category || 'Hoạt động trường',
       description: item.description || '',
-      detail_url: item.detail_url || '',
       images_json: item.images_json || '[]'
     });
     try {
@@ -832,7 +903,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
         const { error } = await supabase.from('gallery').insert([{ ...finalData }]);
         if (error) throw error;
       }
-      setGalleryForm({ title: '', image_url: '', category: 'Hoạt động trường', description: '', detail_url: '', images_json: '[]' });
+      setGalleryForm({ title: '', image_url: '', category: 'Hoạt động trường', description: '', images_json: '[]' });
       setGalleryImages([]);
       showSuccess();
       fetchData();
@@ -889,8 +960,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
       description: item.description || '',
       image_url: item.image_url || '',
       document_url: item.document_url || '',
-      content: item.content || '',
-      detail_url: item.detail_url || ''
+      content: item.content || ''
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -907,7 +977,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
         const { error } = await supabase.from('activities').insert([{ ...activityForm, dept_id: selectedDeptId }]);
         if (error) throw error;
       }
-      setActivityForm({ title: '', date: '', summary: '', description: '', document_url: '', content: '', image_url: '', detail_url: '' });
+      setActivityForm({ title: '', date: '', summary: '', description: '', document_url: '', content: '', image_url: '' });
       showSuccess();
       fetchDeptData();
     } catch (error: any) {
@@ -1111,27 +1181,6 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                     <option>Thông báo</option>
                     <option>Sự kiện</option>
                   </select>
-                  <input 
-                    type="text" 
-                    placeholder="Tóm tắt ngắn (hiển thị ở danh sách)" 
-                    value={newsForm.summary}
-                    onChange={e => setNewsForm({...newsForm, summary: e.target.value})}
-                    className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 md:col-span-2"
-                  />
-                  <input 
-                    type="url" 
-                    placeholder="Link tài liệu đính kèm (tùy chọn)" 
-                    value={newsForm.document_url}
-                    onChange={e => setNewsForm({...newsForm, document_url: e.target.value})}
-                    className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <input 
-                    type="url" 
-                    placeholder="Link chi tiết bên ngoài (Google Doc, Sheet, HTML...)" 
-                    value={newsForm.detail_url}
-                    onChange={e => setNewsForm({...newsForm, detail_url: e.target.value})}
-                    className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 md:col-span-2"
-                  />
                 </div>
                 <MarkdownToolbar 
                   textareaRef={newsTextareaRef} 
@@ -1155,7 +1204,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       type="button" 
                       onClick={() => {
                         setEditingNewsId(null);
-                        setNewsForm({ title: '', summary: '', content: '', category: 'Tin tức', image_url: '', document_url: '', detail_url: '' });
+                        setNewsForm({ title: '', content: '', category: 'Tin tức', image_url: '' });
                       }}
                       className="px-6 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
                     >
@@ -1236,14 +1285,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                     placeholder="Link tài liệu đính kèm (tùy chọn)" 
                     value={admissionForm.document_url}
                     onChange={e => setAdmissionForm({...admissionForm, document_url: e.target.value})}
-                    className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 md:col-span-2"
-                  />
-                  <input 
-                    type="url" 
-                    placeholder="Link chi tiết bên ngoài (Google Doc, Sheet, HTML...)" 
-                    value={admissionForm.detail_url}
-                    onChange={e => setAdmissionForm({...admissionForm, detail_url: e.target.value})}
-                    className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                    className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 md:col-span-3"
                   />
                 </div>
                 <MarkdownToolbar 
@@ -1268,7 +1310,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       type="button" 
                       onClick={() => {
                         setEditingAdmissionId(null);
-                        setAdmissionForm({ title: '', summary: '', content: '', deadline: '', year: 2026, document_url: '', detail_url: '' });
+                        setAdmissionForm({ title: '', summary: '', content: '', deadline: '', year: 2026, document_url: '' });
                       }}
                       className="px-6 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
                     >
@@ -1369,7 +1411,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       type="button" 
                       onClick={() => {
                         setEditingFeatureId(null);
-                        setFeatureForm({ title: '', description: '', icon: 'BookOpen', color: 'bg-blue-100 text-blue-700', order_num: 0, detail_url: '' });
+                        setFeatureForm({ title: '', description: '', icon: 'BookOpen', color: 'bg-blue-100 text-blue-700', order_num: 0 });
                       }}
                       className="px-6 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
                     >
@@ -1427,64 +1469,42 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
           )}
           {activeTab === 'home' && (
             <form onSubmit={handleSaveHome} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
-              <div className="flex gap-4 p-1 bg-slate-100 rounded-xl w-fit mb-6">
-                <button 
-                  type="button"
-                  onClick={() => setHomeForm({...homeForm, render_type: 'standard'})}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${homeForm.render_type === 'standard' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
-                >
-                  Giao diện chuẩn
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => setHomeForm({...homeForm, render_type: 'html'})}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${homeForm.render_type === 'html' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
-                >
-                  Nhúng HTML
-                </button>
+              <div className="flex items-center gap-3 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <Settings className="w-6 h-6 text-blue-600" />
+                <div>
+                  <h2 className="text-lg font-bold text-slate-800">Cấu hình Trang chủ</h2>
+                  <p className="text-sm text-slate-500">Chỉnh sửa nội dung banner và giao diện trang chủ</p>
+                </div>
               </div>
 
-              {homeForm.render_type === 'standard' ? (
-                <>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Tiêu đề Banner</label>
-                    <input 
-                      type="text" 
-                      value={homeForm.banner_title}
-                      onChange={e => setHomeForm({...homeForm, banner_title: e.target.value})}
-                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Mô tả Banner</label>
-                    <textarea 
-                      value={homeForm.banner_description}
-                      onChange={e => setHomeForm({...homeForm, banner_description: e.target.value})}
-                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-24"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">URL Hình ảnh Banner</label>
-                    <input 
-                      type="text" 
-                      value={homeForm.banner_image}
-                      onChange={e => setHomeForm({...homeForm, banner_image: e.target.value})}
-                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </>
-              ) : (
+              <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Nội dung HTML (Nhúng toàn bộ trang chủ)</label>
-                  <textarea 
-                    value={homeForm.html_content}
-                    onChange={e => setHomeForm({...homeForm, html_content: e.target.value})}
-                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-96 font-mono text-sm"
-                    placeholder="<div class='custom-home'>...</div>"
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Tiêu đề Banner</label>
+                  <input 
+                    type="text" 
+                    value={homeForm.banner_title}
+                    onChange={e => setHomeForm({...homeForm, banner_title: e.target.value})}
+                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                  <p className="text-xs text-slate-500 mt-2 italic">* Lưu ý: HTML này sẽ thay thế toàn bộ phần nội dung chính của trang chủ.</p>
                 </div>
-              )}
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Mô tả Banner</label>
+                  <textarea 
+                    value={homeForm.banner_description}
+                    onChange={e => setHomeForm({...homeForm, banner_description: e.target.value})}
+                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-24"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">URL Hình ảnh Banner</label>
+                  <input 
+                    type="text" 
+                    value={homeForm.banner_image}
+                    onChange={e => setHomeForm({...homeForm, banner_image: e.target.value})}
+                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
               
               <button type="submit" className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2">
                 <Save className="w-5 h-5" /> Lưu thay đổi
@@ -1494,82 +1514,61 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
 
           {activeTab === 'about' && (
             <form onSubmit={handleSaveAbout} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
-              <div className="flex gap-4 p-1 bg-slate-100 rounded-xl w-fit mb-6">
-                <button 
-                  type="button"
-                  onClick={() => setAboutForm({...aboutForm, render_type: 'standard'})}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${aboutForm.render_type === 'standard' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
-                >
-                  Giao diện chuẩn
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => setAboutForm({...aboutForm, render_type: 'html'})}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${aboutForm.render_type === 'html' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
-                >
-                  Nhúng HTML
-                </button>
+              <div className="flex items-center gap-3 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <Info className="w-6 h-6 text-blue-600" />
+                <div>
+                  <h2 className="text-lg font-bold text-slate-800">Cấu hình Trang Giới thiệu</h2>
+                  <p className="text-sm text-slate-500">Chỉnh sửa nội dung giới thiệu, lịch sử và giá trị cốt lõi</p>
+                </div>
               </div>
 
-              {aboutForm.render_type === 'standard' ? (
-                <>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Văn bản giới thiệu chính</label>
-                    <MarkdownToolbar 
-                      textareaRef={aboutMainTextareaRef} 
-                      setter={setAboutForm} 
-                      form={aboutForm} 
-                      field="main_text" 
-                    />
-                    <textarea 
-                      ref={aboutMainTextareaRef}
-                      value={aboutForm.main_text}
-                      onChange={e => setAboutForm({...aboutForm, main_text: e.target.value})}
-                      className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-32 border-t-0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Lịch sử hình thành</label>
-                    <MarkdownToolbar 
-                      textareaRef={aboutHistoryTextareaRef} 
-                      setter={setAboutForm} 
-                      form={aboutForm} 
-                      field="history" 
-                    />
-                    <textarea 
-                      ref={aboutHistoryTextareaRef}
-                      value={aboutForm.history}
-                      onChange={e => setAboutForm({...aboutForm, history: e.target.value})}
-                      className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-32 border-t-0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Giá trị cốt lõi</label>
-                    <MarkdownToolbar 
-                      textareaRef={aboutCoreValuesTextareaRef} 
-                      setter={setAboutForm} 
-                      form={aboutForm} 
-                      field="core_values" 
-                    />
-                    <textarea 
-                      ref={aboutCoreValuesTextareaRef}
-                      value={aboutForm.core_values}
-                      onChange={e => setAboutForm({...aboutForm, core_values: e.target.value})}
-                      className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-32 border-t-0"
-                    />
-                  </div>
-                </>
-              ) : (
+              <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Nội dung HTML (Nhúng trang giới thiệu)</label>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Văn bản giới thiệu chính</label>
+                  <MarkdownToolbar 
+                    textareaRef={aboutMainTextareaRef} 
+                    setter={setAboutForm} 
+                    form={aboutForm} 
+                    field="main_text" 
+                  />
                   <textarea 
-                    value={aboutForm.html_content}
-                    onChange={e => setAboutForm({...aboutForm, html_content: e.target.value})}
-                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-96 font-mono text-sm"
-                    placeholder="<section>...</section>"
+                    ref={aboutMainTextareaRef}
+                    value={aboutForm.main_text}
+                    onChange={e => setAboutForm({...aboutForm, main_text: e.target.value})}
+                    className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-48 border-t-0"
                   />
                 </div>
-              )}
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Lịch sử hình thành</label>
+                  <MarkdownToolbar 
+                    textareaRef={aboutHistoryTextareaRef} 
+                    setter={setAboutForm} 
+                    form={aboutForm} 
+                    field="history" 
+                  />
+                  <textarea 
+                    ref={aboutHistoryTextareaRef}
+                    value={aboutForm.history}
+                    onChange={e => setAboutForm({...aboutForm, history: e.target.value})}
+                    className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-48 border-t-0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Giá trị cốt lõi</label>
+                  <MarkdownToolbar 
+                    textareaRef={aboutCoreValuesTextareaRef} 
+                    setter={setAboutForm} 
+                    form={aboutForm} 
+                    field="core_values" 
+                  />
+                  <textarea 
+                    ref={aboutCoreValuesTextareaRef}
+                    value={aboutForm.core_values}
+                    onChange={e => setAboutForm({...aboutForm, core_values: e.target.value})}
+                    className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-48 border-t-0"
+                  />
+                </div>
+              </div>
               
               <button type="submit" className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2">
                 <Save className="w-5 h-5" /> Lưu thay đổi
@@ -1579,40 +1578,36 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
 
           {activeTab === 'admissions_page' && (
             <form onSubmit={handleSaveAdmissionsPage} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
-              <div className="flex gap-4 p-1 bg-slate-100 rounded-xl w-fit mb-6">
-                <button 
-                  type="button"
-                  onClick={() => setAdmissionsPageForm({...admissionsPageForm, render_type: 'standard'})}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${admissionsPageForm.render_type === 'standard' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
-                >
-                  Giao diện chuẩn (Danh sách)
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => setAdmissionsPageForm({...admissionsPageForm, render_type: 'html'})}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${admissionsPageForm.render_type === 'html' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
-                >
-                  Nhúng HTML
-                </button>
+              <div className="flex items-center gap-3 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <GraduationCap className="w-6 h-6 text-blue-600" />
+                <div>
+                  <h2 className="text-lg font-bold text-slate-800">Cấu hình Trang Tuyển sinh</h2>
+                  <p className="text-sm text-slate-500">Chỉnh sửa tiêu đề banner và mô tả trang tuyển sinh</p>
+                </div>
               </div>
 
-              {admissionsPageForm.render_type === 'html' && (
+              <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Nội dung HTML (Nhúng trang tuyển sinh)</label>
-                  <textarea 
-                    value={admissionsPageForm.html_content}
-                    onChange={e => setAdmissionsPageForm({...admissionsPageForm, html_content: e.target.value})}
-                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-96 font-mono text-sm"
-                    placeholder="<div class='admissions-page'>...</div>"
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Tiêu đề Banner</label>
+                  <input 
+                    type="text" 
+                    value={admissionsPageForm.banner_title}
+                    onChange={e => setAdmissionsPageForm({...admissionsPageForm, banner_title: e.target.value})}
+                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-              )}
-
-              {admissionsPageForm.render_type === 'standard' && (
-                <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100 text-blue-800">
-                  <p className="font-medium">Chế độ hiển thị chuẩn đang được kích hoạt. Hệ thống sẽ hiển thị danh sách các thông tin tuyển sinh từ tab "Danh sách Tuyển sinh".</p>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Mô tả Banner</label>
+                  <textarea 
+                    value={admissionsPageForm.banner_description}
+                    onChange={e => setAdmissionsPageForm({...admissionsPageForm, banner_description: e.target.value})}
+                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-24"
+                  />
                 </div>
-              )}
+                <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100 text-blue-800">
+                  <p className="font-medium text-sm">Hệ thống sẽ tự động hiển thị danh sách các bài đăng từ tab "Danh sách Tuyển sinh" bên dưới phần banner này.</p>
+                </div>
+              </div>
               
               <button type="submit" className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2">
                 <Save className="w-5 h-5" /> Lưu cấu hình
@@ -1622,40 +1617,36 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
 
           {activeTab === 'news_page' && (
             <form onSubmit={handleSaveNewsPage} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
-              <div className="flex gap-4 p-1 bg-slate-100 rounded-xl w-fit mb-6">
-                <button 
-                  type="button"
-                  onClick={() => setNewsPageForm({...newsPageForm, render_type: 'standard'})}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${newsPageForm.render_type === 'standard' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
-                >
-                  Giao diện chuẩn (Danh sách)
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => setNewsPageForm({...newsPageForm, render_type: 'html'})}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${newsPageForm.render_type === 'html' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
-                >
-                  Nhúng HTML
-                </button>
+              <div className="flex items-center gap-3 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <Bell className="w-6 h-6 text-blue-600" />
+                <div>
+                  <h2 className="text-lg font-bold text-slate-800">Cấu hình Trang Tin tức</h2>
+                  <p className="text-sm text-slate-500">Chỉnh sửa tiêu đề banner và mô tả trang tin tức</p>
+                </div>
               </div>
 
-              {newsPageForm.render_type === 'html' && (
+              <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Nội dung HTML (Nhúng trang tin tức)</label>
-                  <textarea 
-                    value={newsPageForm.html_content}
-                    onChange={e => setNewsPageForm({...newsPageForm, html_content: e.target.value})}
-                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-96 font-mono text-sm"
-                    placeholder="<div class='news-page'>...</div>"
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Tiêu đề Banner</label>
+                  <input 
+                    type="text" 
+                    value={newsPageForm.banner_title}
+                    onChange={e => setNewsPageForm({...newsPageForm, banner_title: e.target.value})}
+                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-              )}
-
-              {newsPageForm.render_type === 'standard' && (
-                <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100 text-blue-800">
-                  <p className="font-medium">Chế độ hiển thị chuẩn đang được kích hoạt. Hệ thống sẽ hiển thị danh sách các tin tức từ tab "Danh sách Tin tức".</p>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Mô tả Banner</label>
+                  <textarea 
+                    value={newsPageForm.banner_description}
+                    onChange={e => setNewsPageForm({...newsPageForm, banner_description: e.target.value})}
+                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-24"
+                  />
                 </div>
-              )}
+                <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100 text-blue-800">
+                  <p className="font-medium text-sm">Hệ thống sẽ tự động hiển thị danh sách các bài đăng từ tab "Danh sách Tin tức" bên dưới phần banner này.</p>
+                </div>
+              </div>
               
               <button type="submit" className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2">
                 <Save className="w-5 h-5" /> Lưu cấu hình
@@ -1665,84 +1656,61 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
 
           {activeTab === 'contact' && (
             <form onSubmit={handleSaveContact} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
-              <div className="flex gap-4 p-1 bg-slate-100 rounded-xl w-fit mb-6">
-                <button 
-                  type="button"
-                  onClick={() => setContactForm({...contactForm, render_type: 'standard'})}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${contactForm.render_type === 'standard' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
-                >
-                  Giao diện chuẩn
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => setContactForm({...contactForm, render_type: 'html'})}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${contactForm.render_type === 'html' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
-                >
-                  Nhúng HTML
-                </button>
+              <div className="flex items-center gap-3 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <Phone className="w-6 h-6 text-blue-600" />
+                <div>
+                  <h2 className="text-lg font-bold text-slate-800">Thông tin liên hệ & Nhà trường</h2>
+                  <p className="text-sm text-slate-500">Cập nhật thông tin cơ bản, địa chỉ và slogan</p>
+                </div>
               </div>
 
-              {contactForm.render_type === 'standard' ? (
-                <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-2">Tên trường</label>
-                      <input 
-                        type="text" 
-                        value={contactForm.name}
-                        onChange={e => setContactForm({...contactForm, name: e.target.value})}
-                        className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-2">Slogan</label>
-                      <input 
-                        type="text" 
-                        value={contactForm.slogan}
-                        onChange={e => setContactForm({...contactForm, slogan: e.target.value})}
-                        className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-2">Số điện thoại</label>
-                      <input 
-                        type="text" 
-                        value={contactForm.phone}
-                        onChange={e => setContactForm({...contactForm, phone: e.target.value})}
-                        className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-2">Email</label>
-                      <input 
-                        type="email" 
-                        value={contactForm.email}
-                        onChange={e => setContactForm({...contactForm, email: e.target.value})}
-                        className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Địa chỉ</label>
-                    <input 
-                      type="text" 
-                      value={contactForm.address}
-                      onChange={e => setContactForm({...contactForm, address: e.target.value})}
-                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </>
-              ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Nội dung HTML (Nhúng trang liên hệ)</label>
-                  <textarea 
-                    value={contactForm.html_content}
-                    onChange={e => setContactForm({...contactForm, html_content: e.target.value})}
-                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-96 font-mono text-sm"
-                    placeholder="<div class='contact-page'>...</div>"
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Tên trường</label>
+                  <input 
+                    type="text" 
+                    value={contactForm.name}
+                    onChange={e => setContactForm({...contactForm, name: e.target.value})}
+                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-              )}
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Slogan</label>
+                  <input 
+                    type="text" 
+                    value={contactForm.slogan}
+                    onChange={e => setContactForm({...contactForm, slogan: e.target.value})}
+                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Số điện thoại</label>
+                  <input 
+                    type="text" 
+                    value={contactForm.phone}
+                    onChange={e => setContactForm({...contactForm, phone: e.target.value})}
+                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Email</label>
+                  <input 
+                    type="email" 
+                    value={contactForm.email}
+                    onChange={e => setContactForm({...contactForm, email: e.target.value})}
+                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Địa chỉ</label>
+                <input 
+                  type="text" 
+                  value={contactForm.address}
+                  onChange={e => setContactForm({...contactForm, address: e.target.value})}
+                  className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
               
               <button type="submit" className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2">
                 <Save className="w-5 h-5" /> Lưu cấu hình
@@ -1776,13 +1744,6 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                         className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                         required
                       />
-                      <input 
-                        type="url" 
-                        placeholder="Link chi tiết bên ngoài (tùy chọn)" 
-                        value={deptForm.detail_url}
-                        onChange={e => setDeptForm({...deptForm, detail_url: e.target.value})}
-                        className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 md:col-span-2"
-                      />
                     </div>
                     <textarea 
                       placeholder="Mô tả ngắn về tổ" 
@@ -1800,7 +1761,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                           type="button" 
                           onClick={() => {
                             setEditingDeptId(null);
-                            setDeptForm({ name: '', icon: 'BookOpen', description: '', detail_url: '' });
+                            setDeptForm({ name: '', icon: 'BookOpen', description: '' });
                           }}
                           className="px-6 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
                         >
@@ -1825,8 +1786,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                                 setDeptForm({ 
                                   name: dept.name, 
                                   icon: dept.icon, 
-                                  description: dept.description,
-                                  detail_url: dept.detail_url || ''
+                                  description: dept.description
                                 });
                                 window.scrollTo({ top: 0, behavior: 'smooth' });
                               }}
@@ -2028,13 +1988,6 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                             onChange={e => setActivityForm({...activityForm, document_url: e.target.value})}
                             className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                           />
-                          <input 
-                            type="url" 
-                            placeholder="Link chi tiết bên ngoài (tùy chọn)" 
-                            value={activityForm.detail_url}
-                            onChange={e => setActivityForm({...activityForm, detail_url: e.target.value})}
-                            className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
-                          />
                         </div>
                         <div className="flex gap-3">
                           <button type="submit" className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors">
@@ -2045,7 +1998,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                               type="button" 
                               onClick={() => {
                                 setEditingActivityId(null);
-                                setActivityForm({ title: '', date: '', summary: '', description: '', document_url: '', content: '', image_url: '', detail_url: '' });
+                                setActivityForm({ title: '', date: '', summary: '', description: '', document_url: '', content: '', image_url: '' });
                               }}
                               className="px-6 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
                             >
@@ -2077,8 +2030,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                                       summary: a.summary || '',
                                       description: a.description || '', 
                                       image_url: a.image_url || '', 
-                                      document_url: a.document_url || '',
-                                      detail_url: a.detail_url || ''
+                                      document_url: a.document_url || ''
                                     });
                                   }}
                                   className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"
@@ -2228,15 +2180,6 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       required
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Link chi tiết bên ngoài (Google Doc, Sheet, HTML...)</label>
-                    <input 
-                      type="url" 
-                      value={youthUnionForm.detail_url}
-                      onChange={e => setYouthUnionForm({...youthUnionForm, detail_url: e.target.value})}
-                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
                 </div>
                 <div className="flex gap-3">
                   <button type="submit" className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2">
@@ -2247,7 +2190,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       type="button" 
                       onClick={() => {
                         setEditingYouthUnionId(null);
-                        setYouthUnionForm({ title: '', summary: '', content: '', date: '', image_url: '', detail_url: '' });
+                        setYouthUnionForm({ title: '', summary: '', content: '', date: '', image_url: '' });
                       }}
                       className="px-8 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-all"
                     >
@@ -2275,7 +2218,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       <button 
                         onClick={() => {
                           setEditingYouthUnionId(item.id);
-                          setYouthUnionForm({ title: item.title, summary: item.summary || '', content: item.content, date: item.date || '', image_url: item.image_url || '', detail_url: item.detail_url || '' });
+                          setYouthUnionForm({ title: item.title, summary: item.summary || '', content: item.content, date: item.date || '', image_url: item.image_url || '' });
                           window.scrollTo({ top: 0, behavior: 'smooth' });
                         }}
                         className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"
@@ -2334,20 +2277,18 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                     </select>
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Mô tả chi tiết</label>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Mô tả chi tiết (Markdown)</label>
+                    <MarkdownToolbar 
+                      textareaRef={achievementTextareaRef} 
+                      setter={setAchievementForm} 
+                      form={achievementForm} 
+                      field="description" 
+                    />
                     <textarea 
+                      ref={achievementTextareaRef}
                       value={achievementForm.description}
                       onChange={e => setAchievementForm({...achievementForm, description: e.target.value})}
-                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-32"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Link chi tiết bên ngoài (tùy chọn)</label>
-                    <input 
-                      type="url" 
-                      value={achievementForm.detail_url}
-                      onChange={e => setAchievementForm({...achievementForm, detail_url: e.target.value})}
-                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-64 font-mono text-sm border-t-0"
                     />
                   </div>
                 </div>
@@ -2360,7 +2301,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       type="button" 
                       onClick={() => {
                         setEditingAchievementId(null);
-                        setAchievementForm({ title: '', student_name: '', class: '', year: '2025-2026', award: '', type: 'academic', description: '', image_url: '', detail_url: '' });
+                        setAchievementForm({ title: '', student_name: '', class: '', year: '2025-2026', award: '', type: 'academic', description: '', image_url: '' });
                       }}
                       className="px-8 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-all"
                     >
@@ -2391,7 +2332,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       <button 
                         onClick={() => {
                           setEditingAchievementId(item.id);
-                          setAchievementForm({ title: item.title, description: item.description, year: item.year, type: item.type, student_name: item.student_name || '', class: item.class || '', award: item.award || '', image_url: item.image_url || '', detail_url: item.detail_url || '' });
+                          setAchievementForm({ title: item.title, description: item.description, year: item.year, type: item.type, student_name: item.student_name || '', class: item.class || '', award: item.award || '', image_url: item.image_url || '' });
                           window.scrollTo({ top: 0, behavior: 'smooth' });
                         }}
                         className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"
@@ -2463,15 +2404,6 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-64 font-mono text-sm border-t-0"
                     />
                   </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Link chi tiết bên ngoài (tùy chọn)</label>
-                    <input 
-                      type="url" 
-                      value={scheduleForm.detail_url}
-                      onChange={e => setScheduleForm({...scheduleForm, detail_url: e.target.value})}
-                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
                 </div>
                 <div className="flex gap-3">
                   <button type="submit" className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2">
@@ -2482,7 +2414,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       type="button" 
                       onClick={() => {
                         setEditingScheduleId(null);
-                        setScheduleForm({ title: '', week: '', date_range: '', content: '', file_url: '', start_date: '', end_date: '', detail_url: '' });
+                        setScheduleForm({ title: '', week: '', date_range: '', content: '', file_url: '', start_date: '', end_date: '' });
                       }}
                       className="px-8 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-all"
                     >
@@ -2506,7 +2438,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       <button 
                         onClick={() => {
                           setEditingScheduleId(item.id);
-                          setScheduleForm({ title: item.title, content: item.content, start_date: item.start_date, end_date: item.end_date, week: item.week || '', date_range: item.date_range || '', file_url: item.file_url || '', detail_url: item.detail_url || '' });
+                          setScheduleForm({ title: item.title, content: item.content, start_date: item.start_date, end_date: item.end_date, week: item.week || '', date_range: item.date_range || '', file_url: item.file_url || '' });
                           window.scrollTo({ top: 0, behavior: 'smooth' });
                         }}
                         className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"
@@ -2567,15 +2499,6 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       type="text" 
                       value={galleryForm.description}
                       onChange={e => setGalleryForm({...galleryForm, description: e.target.value})}
-                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Link chi tiết bên ngoài (tùy chọn)</label>
-                    <input 
-                      type="url" 
-                      value={galleryForm.detail_url}
-                      onChange={e => setGalleryForm({...galleryForm, detail_url: e.target.value})}
                       className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
@@ -2651,7 +2574,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       type="button" 
                       onClick={() => {
                         setEditingGalleryId(null);
-                        setGalleryForm({ title: '', image_url: '', description: '', category: 'Hoạt động trường', detail_url: '', images_json: '[]' });
+                        setGalleryForm({ title: '', image_url: '', description: '', category: 'Hoạt động trường', images_json: '[]' });
                         setGalleryImages([]);
                       }}
                       className="px-8 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-all"
@@ -2678,7 +2601,6 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                               image_url: item.image_url, 
                               description: item.description || '', 
                               category: item.category || '', 
-                              detail_url: item.detail_url || '',
                               images_json: item.images_json || '[]'
                             });
                             try {
