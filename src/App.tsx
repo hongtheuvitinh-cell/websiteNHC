@@ -75,6 +75,7 @@ export default function App() {
   const [departmentsList, setDepartmentsList] = useState<any[]>([]);
   const [youthUnion, setYouthUnion] = useState<any[]>([]);
   const [achievements, setAchievements] = useState<any[]>([]);
+  const [archiveDocuments, setArchiveDocuments] = useState<any[]>([]);
   const [schedules, setSchedules] = useState<any[]>([]);
   const [gallery, setGallery] = useState<any[]>([]);
 
@@ -201,6 +202,14 @@ export default function App() {
     fetchGallery();
     const galleryChannel = supabase.channel('gallery_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'gallery' }, fetchGallery).subscribe();
 
+    // Archive Documents
+    const fetchArchive = async () => {
+      const { data } = await supabase.from('archive_documents').select('*').order('year', { ascending: false }).order('created_at', { ascending: false });
+      if (data) setArchiveDocuments(data);
+    };
+    fetchArchive();
+    const archiveChannel = supabase.channel('archive_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'archive_documents' }, fetchArchive).subscribe();
+
     // Static contents
     const fetchStatic = async () => {
       const { data: home } = await supabase.from('home_content').select('*').eq('id', 'main').maybeSingle();
@@ -230,6 +239,7 @@ export default function App() {
       supabase.removeChannel(achievementsChannel);
       supabase.removeChannel(schedulesChannel);
       supabase.removeChannel(galleryChannel);
+      supabase.removeChannel(archiveChannel);
       supabase.removeChannel(homeChannel);
       supabase.removeChannel(aboutChannel);
       supabase.removeChannel(admContentChannel);
@@ -440,6 +450,95 @@ export default function App() {
       return (
         <div className="animate-in fade-in duration-500 prose prose-slate max-w-none" 
              dangerouslySetInnerHTML={{ __html: newsContent.html_content }} />
+      );
+    }
+
+    if (activeMenu === 'Lưu trữ văn bản') {
+      return (
+        <div className="animate-in fade-in duration-500 space-y-12">
+          <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
+            <h2 className="text-2xl font-black text-blue-900 mb-6 flex items-center gap-3">
+              <Icons.Archive className="w-8 h-8 text-blue-600" /> Lưu trữ văn bản & Tài liệu
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Nội bộ Group */}
+              <div className="space-y-6">
+                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2 border-b-2 border-emerald-500 pb-2 w-fit">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Văn bản Nội bộ
+                </h3>
+                <div className="space-y-4">
+                  {archiveDocuments.filter(d => d.category === 'Nội bộ').length > 0 ? (
+                    archiveDocuments.filter(d => d.category === 'Nội bộ').map((doc) => (
+                      <div key={doc.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-white hover:shadow-md transition-all group">
+                        <div className="flex justify-between items-start gap-3">
+                          <div className="min-w-0">
+                            <span className="text-[10px] font-black uppercase text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded mb-1 inline-block">{doc.type} {doc.year ? `- ${doc.year}` : ''}</span>
+                            <h4 className="font-bold text-slate-900 line-clamp-2 leading-tight mb-1">{doc.title}</h4>
+                            <p className="text-xs text-slate-500 line-clamp-2">{doc.description}</p>
+                          </div>
+                          {doc.file_url && (
+                            <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="p-2 bg-white text-blue-600 rounded-xl shadow-sm border border-slate-100 hover:bg-blue-600 hover:text-white transition-all transform group-hover:scale-110">
+                              <Icons.ExternalLink className="w-4 h-4" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-slate-400 text-sm italic">Đang cập nhật...</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Số, Bộ Group */}
+              <div className="space-y-6">
+                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2 border-b-2 border-purple-500 pb-2 w-fit">
+                  <span className="w-2 h-2 rounded-full bg-purple-500"></span> Văn bản Số, Bộ
+                </h3>
+                <div className="space-y-4">
+                  {archiveDocuments.filter(d => d.category === 'Số, Bộ').length > 0 ? (
+                    archiveDocuments.filter(d => d.category === 'Số, Bộ').map((doc) => (
+                      <div key={doc.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-white hover:shadow-md transition-all group">
+                        <div className="flex justify-between items-start gap-3">
+                          <div className="min-w-0">
+                            <span className="text-[10px] font-black uppercase text-purple-600 bg-purple-50 px-2 py-0.5 rounded mb-1 inline-block">{doc.type} {doc.year ? `- ${doc.year}` : ''}</span>
+                            <h4 className="font-bold text-slate-900 line-clamp-2 leading-tight mb-1">{doc.title}</h4>
+                            <p className="text-xs text-slate-500 line-clamp-2">{doc.description}</p>
+                          </div>
+                          {doc.file_url && (
+                            <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="p-2 bg-white text-blue-600 rounded-xl shadow-sm border border-slate-100 hover:bg-blue-600 hover:text-white transition-all transform group-hover:scale-110">
+                              <Icons.ExternalLink className="w-4 h-4" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-slate-400 text-sm italic">Đang cập nhật...</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="p-6 bg-blue-900 text-white rounded-3xl space-y-4">
+              <Icons.ShieldCheck className="w-10 h-10 text-blue-400" />
+              <h4 className="text-lg font-bold">Lưu ý</h4>
+              <p className="text-sm text-blue-100 leading-relaxed font-medium">Toàn bộ văn bản được đăng tải đều là bản sao từ văn bản gốc, có giá trị nội bộ tại nhà trường.</p>
+            </div>
+            <div className="md:col-span-2 p-8 bg-white border border-slate-200 rounded-3xl flex flex-col md:flex-row items-center gap-6">
+               <div className="w-20 h-20 bg-slate-100 rounded-2xl flex items-center justify-center shrink-0">
+                 <Icons.Search className="w-8 h-8 text-blue-800" />
+               </div>
+               <div>
+                 <h4 className="text-xl font-black text-blue-900 mb-2">Tra cứu văn bản nhanh chóng</h4>
+                 <p className="text-slate-600 text-sm font-medium mb-4">Bạn đang tìm kiếm một nghị định hay nội quy cụ thể? Hãy sử dụng công cụ tìm kiếm trên thanh điều hướng hoặc liên hệ VP nhà trường để được hỗ trợ.</p>
+               </div>
+            </div>
+          </div>
+        </div>
       );
     }
 
@@ -1256,7 +1355,7 @@ export default function App() {
         );
     }
   };
-  const topMenuItems = ['Trang chủ', 'Giới thiệu', 'Tuyển sinh', 'Tin tức', 'Liên hệ'];
+  const topMenuItems = ['Trang chủ', 'Giới thiệu', 'Tuyển sinh', 'Tin tức', 'Lưu trữ văn bản', 'Liên hệ'];
   const subMenuItems = [
     { name: 'Tổ chuyên môn', icon: BookOpen },
     { name: 'Hoạt động Đoàn', icon: Users },
