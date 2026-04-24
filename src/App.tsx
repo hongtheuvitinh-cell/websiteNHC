@@ -69,7 +69,7 @@ export default function App() {
   const [deptPersonnel, setDeptPersonnel] = useState<any[]>([]);
   const [deptActivities, setDeptActivities] = useState<any[]>([]);
   const [deptDocuments, setDeptDocuments] = useState<any[]>([]);
-  const [activeDeptTab, setActiveDeptTab] = useState<'personnel' | 'activities' | 'documents'>('personnel');
+  const [activeDeptTab, setActiveDeptTab] = useState<'personnel' | 'activities' | 'documents' | 'introduction'>('introduction');
   const [loginError, setLoginError] = useState<string | null>(null);
 
   const [departmentsList, setDepartmentsList] = useState<any[]>([]);
@@ -674,28 +674,43 @@ export default function App() {
                   <p className="font-bold text-xl text-blue-900 mb-8">{selectedDepartment.description}</p>
                   
                   {/* Tabs Navigation */}
-                  <div className="flex border-b border-slate-200 mb-8">
+                  <div className="flex border-b border-slate-200 mb-8 overflow-x-auto no-scrollbar">
+                    <button 
+                      onClick={() => setActiveDeptTab('introduction')}
+                      className={`px-6 py-3 font-bold text-sm uppercase tracking-wider transition-all border-b-2 shrink-0 ${activeDeptTab === 'introduction' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                    >
+                      Giới thiệu
+                    </button>
                     <button 
                       onClick={() => setActiveDeptTab('personnel')}
-                      className={`px-6 py-3 font-bold text-sm uppercase tracking-wider transition-all border-b-2 ${activeDeptTab === 'personnel' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                      className={`px-6 py-3 font-bold text-sm uppercase tracking-wider transition-all border-b-2 shrink-0 ${activeDeptTab === 'personnel' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
                     >
                       Nhân sự
                     </button>
                     <button 
                       onClick={() => setActiveDeptTab('activities')}
-                      className={`px-6 py-3 font-bold text-sm uppercase tracking-wider transition-all border-b-2 ${activeDeptTab === 'activities' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                      className={`px-6 py-3 font-bold text-sm uppercase tracking-wider transition-all border-b-2 shrink-0 ${activeDeptTab === 'activities' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
                     >
                       Hoạt động
                     </button>
                     <button 
                       onClick={() => setActiveDeptTab('documents')}
-                      className={`px-6 py-3 font-bold text-sm uppercase tracking-wider transition-all border-b-2 ${activeDeptTab === 'documents' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                      className={`px-6 py-3 font-bold text-sm uppercase tracking-wider transition-all border-b-2 shrink-0 ${activeDeptTab === 'documents' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
                     >
                       Tài liệu
                     </button>
                   </div>
 
                   <div className="mt-8">
+                    {/* Introduction Tab */}
+                    {activeDeptTab === 'introduction' && (
+                      <div className="animate-in fade-in duration-300">
+                        <div className="prose prose-slate max-w-none text-slate-600 leading-relaxed">
+                          <MarkdownContent content={selectedDepartment.content || 'Nội dung giới thiệu đang được cập nhật...'} />
+                        </div>
+                      </div>
+                    )}
+
                     {/* Personnel Tab */}
                     {activeDeptTab === 'personnel' && (
                       <div className="animate-in fade-in duration-300">
@@ -703,23 +718,45 @@ export default function App() {
                           <Icons.Users className="w-7 h-7 text-blue-600" /> Nhân sự của tổ
                         </h4>
                         {deptPersonnel.length > 0 ? (
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {deptPersonnel.map((p) => (
-                              <div key={p.id} className="bg-slate-50 p-6 rounded-3xl border border-slate-100 flex flex-col items-center text-center group hover:bg-white hover:shadow-xl transition-all duration-300">
-                                <div className="w-24 h-24 rounded-full overflow-hidden mb-4 border-4 border-white shadow-md group-hover:scale-105 transition-transform">
-                                  <img 
-                                    src={p.image_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=random`} 
-                                    className="w-full h-full object-cover"
-                                    referrerPolicy="no-referrer"
-                                  />
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                            {deptPersonnel.map((p) => {
+                              const initials = p.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(-2);
+                              return (
+                                <div key={p.id} className="bg-white p-6 rounded-2xl border border-slate-100 flex flex-col items-center text-center group hover:shadow-xl transition-all duration-300">
+                                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-black shadow-lg mb-4 group-hover:scale-105 transition-transform duration-500 border-4 border-white">
+                                    {initials}
+                                  </div>
+                                  
+                                  <div className="min-w-0">
+                                    <h5 className="font-bold text-slate-900 text-lg leading-tight mb-1">{p.name}</h5>
+                                    <p className="text-blue-600 font-extrabold text-[10px] uppercase tracking-[0.2em] mb-4">{p.position}</p>
+                                    
+                                    <div className="flex flex-col items-center gap-1.5 mb-5">
+                                      {p.birth_date && (
+                                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 bg-slate-50 px-3 py-1 rounded-full border border-slate-100">
+                                          <Calendar className="w-3 h-3 text-blue-500" />
+                                          <span>Sinh: {p.birth_date}</span>
+                                        </div>
+                                      )}
+                                      {p.education && (
+                                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 px-3">
+                                          <GraduationCap className="w-3.5 h-3.5 text-blue-400" />
+                                          <span className="line-clamp-1">{p.education}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                  
+                                  {p.bio && (
+                                    <div className="pt-4 border-t border-slate-50 mt-auto w-full">
+                                      <p className="text-[11px] text-slate-500 italic leading-relaxed leading-snug px-2">
+                                        "{p.bio}"
+                                      </p>
+                                    </div>
+                                  )}
                                 </div>
-                                <h5 className="font-bold text-slate-900 text-lg">{p.name}</h5>
-                                <p className="text-blue-600 font-bold text-sm uppercase tracking-wider mb-3">{p.position}</p>
-                                <div className="text-sm text-slate-500 line-clamp-3 italic">
-                                  <MarkdownContent content={p.bio || 'Giáo viên tâm huyết của nhà trường.'} />
-                                </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         ) : (
                           <div className="p-8 bg-slate-50 rounded-3xl border border-dashed border-slate-200 text-center">
@@ -845,7 +882,7 @@ export default function App() {
                     className="p-6 bg-white border border-slate-100 rounded-3xl hover:shadow-xl transition-all cursor-pointer group hover:-translate-y-1"
                     onClick={() => {
                       setSelectedDepartment(dept);
-                      setActiveDeptTab('personnel');
+                      setActiveDeptTab('introduction');
                       window.scrollTo({ top: 0, behavior: 'smooth' });
                     }}
                   >
