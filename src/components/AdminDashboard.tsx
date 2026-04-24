@@ -369,7 +369,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
   };
 
   // Form states
-  const [newsForm, setNewsForm] = useState({ title: '', content: '', category: 'Tin tức', image_url: '' });
+  const [newsForm, setNewsForm] = useState({ title: '', content: '', category: 'Tin tức', image_url: '', is_new: true });
   const [admissionForm, setAdmissionForm] = useState({ title: '', summary: '', content: '', deadline: '', year: 2026, document_url: '' });
   const [featureForm, setFeatureForm] = useState({ title: '', description: '', icon: 'BookOpen', color: 'bg-blue-100 text-blue-700', order_num: 0 });
   const [deptForm, setDeptForm] = useState({ name: '', icon: 'BookOpen', description: '' });
@@ -546,7 +546,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
         const { error } = await supabase.from('news').insert([{ ...newsForm, date: new Date() }]);
         if (error) throw error;
       }
-      setNewsForm({ title: '', content: '', category: 'Tin tức', image_url: '' });
+      setNewsForm({ title: '', content: '', category: 'Tin tức', image_url: '', is_new: true });
       showSuccess();
       fetchData();
     } catch (error: any) {
@@ -560,7 +560,8 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
       title: item.title,
       content: item.content,
       category: item.category,
-      image_url: item.image_url || ''
+      image_url: item.image_url || '',
+      is_new: item.is_new ?? false
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -1172,15 +1173,26 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                     className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   />
-                  <select 
-                    value={newsForm.category}
-                    onChange={e => setNewsForm({...newsForm, category: e.target.value})}
-                    className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option>Tin tức</option>
-                    <option>Thông báo</option>
-                    <option>Sự kiện</option>
-                  </select>
+                  <div className="flex gap-4">
+                    <select 
+                      value={newsForm.category}
+                      onChange={e => setNewsForm({...newsForm, category: e.target.value})}
+                      className="flex-1 p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option>Tin tức</option>
+                      <option>Thông báo</option>
+                      <option>Sự kiện</option>
+                    </select>
+                    <label className="flex items-center gap-2 px-4 border rounded-xl bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors">
+                      <input 
+                        type="checkbox" 
+                        checked={newsForm.is_new}
+                        onChange={e => setNewsForm({...newsForm, is_new: e.target.checked})}
+                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-sm font-bold text-slate-700">Hiện "NEW"</span>
+                    </label>
+                  </div>
                 </div>
                 <MarkdownToolbar 
                   textareaRef={newsTextareaRef} 
