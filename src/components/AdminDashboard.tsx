@@ -2853,7 +2853,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       className="flex-1 p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option>Nội bộ</option>
-                      <option>Sổ, Bộ</option>
+                      <option>Sở, Bộ</option>
                     </select>
                     <select 
                       value={archiveForm.type}
