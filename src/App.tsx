@@ -78,34 +78,46 @@ export default function App() {
   const [schedules, setSchedules] = useState<any[]>([]);
   const [gallery, setGallery] = useState<any[]>([]);
 
-  const MarkdownContent = ({ content }: { content: string }) => (
-    <div className="markdown-body prose prose-slate prose-sm max-w-none prose-p:my-0.5 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-0.5 prose-li:my-0">
-      <ReactMarkdown 
-        remarkPlugins={[remarkMath, remarkGfm, remarkBreaks]} 
-        rehypePlugins={[rehypeKatex]}
-        components={{
-          img: ({ node, ...props }) => (
-            <img 
-              {...props} 
-              className="max-w-full h-auto rounded-xl shadow-sm my-2 mx-auto block" 
-              referrerPolicy="no-referrer"
-              loading="lazy"
-            />
-          ),
-          a: ({ node, ...props }) => (
-            <a 
-              {...props} 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="text-blue-600 hover:underline font-medium"
-            />
-          )
-        }}
-      >
-        {content}
-      </ReactMarkdown>
-    </div>
-  );
+  const MarkdownContent = ({ content }: { content: string }) => {
+    // Tự động sửa lỗi khoảng trắng trong cú pháp bold/italic phổ biến
+    const sanitizedContent = content
+      ?.replace(/\*\*\s+/g, '**') // Xóa dấu cách sau ** cho bold
+      ?.replace(/\s+\*\*/g, '**') // Xóa dấu cách trước ** cho bold
+      ?.replace(/\*\s+/g, '*')   // Xóa dấu cách sau * cho italic
+      ?.replace(/\s+\*/g, '*');  // Xóa dấu cách trước * cho italic
+
+    return (
+      <div className="markdown-body prose prose-slate prose-lg max-w-none prose-p:leading-relaxed prose-li:my-1 prose-headings:text-blue-900 prose-strong:text-slate-900 prose-strong:font-black">
+        <ReactMarkdown 
+          remarkPlugins={[remarkMath, remarkGfm, remarkBreaks]} 
+          rehypePlugins={[rehypeKatex]}
+          components={{
+            img: ({ node, ...props }) => (
+              <img 
+                {...props} 
+                className="max-w-full h-auto rounded-2xl shadow-md my-6 mx-auto block border border-slate-100" 
+                referrerPolicy="no-referrer"
+                loading="lazy"
+              />
+            ),
+            a: ({ node, ...props }) => (
+              <a 
+                {...props} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-blue-600 hover:text-blue-800 underline decoration-blue-300 underline-offset-4 font-bold"
+              />
+            ),
+            p: ({ node, ...props }) => (
+              <p className="mb-4 whitespace-pre-wrap" {...props} />
+            )
+          }}
+        >
+          {sanitizedContent}
+        </ReactMarkdown>
+      </div>
+    );
+  };
 
   const adminEmail = "trieuhaminh@gmail.com";
 
