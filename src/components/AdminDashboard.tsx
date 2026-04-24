@@ -161,16 +161,16 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
         newCursorPos = start + 1;
         break;
       case 'align-left':
-        insertion = `<div style="text-align: left">\n\n${selectedText || 'văn bản canh trái'}\n\n</div>`;
-        newCursorPos = start + 27;
+        insertion = `<span style="display: block; text-align: left">\n\n${selectedText || 'văn bản canh trái'}\n\n</span>`;
+        newCursorPos = start + 37;
         break;
       case 'align-center':
-        insertion = `<div style="text-align: center">\n\n${selectedText || 'văn bản canh giữa'}\n\n</div>`;
-        newCursorPos = start + 29;
+        insertion = `<span style="display: block; text-align: center">\n\n${selectedText || 'văn bản canh giữa'}\n\n</span>`;
+        newCursorPos = start + 39;
         break;
       case 'align-right':
-        insertion = `<div style="text-align: right">\n\n${selectedText || 'văn bản canh phải'}\n\n</div>`;
-        newCursorPos = start + 28;
+        insertion = `<span style="display: block; text-align: right">\n\n${selectedText || 'văn bản canh phải'}\n\n</span>`;
+        newCursorPos = start + 38;
         break;
       default:
         return;
@@ -203,13 +203,13 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
     const isPdf = file.type === 'application/pdf';
 
     if (!isImage && !isPdf) {
-      alert('Vui lòng chọn file hình ảnh hoặc PDF.');
+      showAlert('Lỗi định dạng', 'Vui lòng chọn file hình ảnh (JPG, PNG, GIF,...) hoặc PDF.');
       return;
     }
 
     // Limit size to 10MB
     if (file.size > 10 * 1024 * 1024) {
-      alert('File quá lớn. Vui lòng chọn file dưới 10MB.');
+      showAlert('File quá lớn', 'Vui lòng chọn file dưới 10MB.');
       return;
     }
 
@@ -2906,8 +2906,24 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                 </div>
               </form>
 
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+                <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center gap-2">
+                  <Search className="w-5 h-5 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder="Tìm kiếm bộ ảnh..." 
+                    className="bg-transparent border-none outline-none text-sm w-full"
+                    value={adminSearch}
+                    onChange={(e) => setAdminSearch(e.target.value)}
+                  />
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {gallery.map(item => (
+                {gallery.filter(item => 
+                  item.title?.toLowerCase().includes(adminSearch.toLowerCase()) || 
+                  item.category?.toLowerCase().includes(adminSearch.toLowerCase())
+                ).map(item => (
                   <div key={item.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden group relative aspect-square">
                     <img src={item.image_url} className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-4 text-center">
@@ -2970,6 +2986,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                     >
                       <option>Nội bộ</option>
                       <option>Sở, Bộ</option>
+                      <option>Số bộ</option>
                     </select>
                     <select 
                       value={archiveForm.type}
@@ -3039,6 +3056,16 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
               </form>
 
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center gap-2">
+                  <Search className="w-5 h-5 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder="Tìm kiếm văn bản..." 
+                    className="bg-transparent border-none outline-none text-sm w-full"
+                    value={adminSearch}
+                    onChange={(e) => setAdminSearch(e.target.value)}
+                  />
+                </div>
                 <table className="w-full text-left">
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
@@ -3050,7 +3077,11 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                     </tr>
                   </thead>
                   <tbody>
-                    {archiveDocuments.map(item => (
+                    {archiveDocuments.filter(item => 
+                      item.title?.toLowerCase().includes(adminSearch.toLowerCase()) || 
+                      item.category?.toLowerCase().includes(adminSearch.toLowerCase()) ||
+                      item.type?.toLowerCase().includes(adminSearch.toLowerCase())
+                    ).map(item => (
                       <tr key={item.id} className="border-b border-slate-100 last:border-none">
                         <td className="p-4 text-sm font-medium">{item.title}</td>
                         <td className="p-4 text-sm">
