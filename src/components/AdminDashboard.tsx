@@ -77,6 +77,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
   const [deptPersonnel, setDeptPersonnel] = useState<any[]>([]);
   const [deptActivities, setDeptActivities] = useState<any[]>([]);
   const [deptDocuments, setDeptDocuments] = useState<any[]>([]);
+  const [deptActiveTab, setDeptActiveTab] = useState<'personnel' | 'activities' | 'documents' | 'introduction'>('introduction');
   const [loading, setLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const [editingNewsId, setEditingNewsId] = useState<string | null>(null);
@@ -100,6 +101,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
   const aboutMainTextareaRef = useRef<HTMLTextAreaElement>(null);
   const aboutHistoryTextareaRef = useRef<HTMLTextAreaElement>(null);
   const aboutCoreValuesTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const deptContentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const insertMarkdown = (
     ref: React.RefObject<HTMLTextAreaElement>, 
@@ -344,7 +346,6 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
 
   const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
   const [isManagingDeptContent, setIsManagingDeptContent] = useState(false);
-  const [deptActiveTab, setDeptActiveTab] = useState<'personnel' | 'activities' | 'documents'>('personnel');
 
   // Modal state
   const [modal, setModal] = useState<{
@@ -372,13 +373,13 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
   const [newsForm, setNewsForm] = useState({ title: '', content: '', category: 'Tin tức', image_url: '', is_new: true });
   const [admissionForm, setAdmissionForm] = useState({ title: '', summary: '', content: '', deadline: '', year: 2026, document_url: '' });
   const [featureForm, setFeatureForm] = useState({ title: '', description: '', icon: 'BookOpen', color: 'bg-blue-100 text-blue-700', order_num: 0 });
-  const [deptForm, setDeptForm] = useState({ name: '', icon: 'BookOpen', description: '' });
+  const [deptForm, setDeptForm] = useState({ name: '', icon: 'BookOpen', description: '', content: '' });
   const [youthUnionForm, setYouthUnionForm] = useState({ title: '', summary: '', content: '', date: '', image_url: '' });
   const [achievementForm, setAchievementForm] = useState({ title: '', student_name: '', class: '', year: '2025-2026', award: '', type: 'academic', description: '', image_url: '' });
   const [scheduleForm, setScheduleForm] = useState({ title: '', week: '', date_range: '', content: '', file_url: '', start_date: '', end_date: '' });
   const [galleryForm, setGalleryForm] = useState({ title: '', image_url: '', category: 'Hoạt động trường', description: '', images_json: '[]' });
   const [galleryImages, setGalleryImages] = useState<{ url: string, caption: string }[]>([]);
-  const [personnelForm, setPersonnelForm] = useState({ name: '', position: '', bio: '', image_url: '' });
+  const [personnelForm, setPersonnelForm] = useState({ name: '', position: '', bio: '', birth_date: '', education: '', image_url: '' });
   const [activityForm, setActivityForm] = useState({ title: '', date: '', summary: '', description: '', document_url: '', content: '', image_url: '' });
   const [documentForm, setDocumentForm] = useState({ title: '', description: '', file_url: '', category: 'Giáo án' });
   
@@ -739,17 +740,23 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
   };
 
   const handleSaveDept = async (e: React.FormEvent) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    const targetId = editingDeptId || (isManagingDeptContent ? selectedDeptId : null);
+    
     try {
-      if (editingDeptId) {
-        const { error } = await supabase.from('departments').update({ ...deptForm, updated_at: new Date() }).eq('id', editingDeptId);
+      if (targetId) {
+        const { error } = await supabase.from('departments').update({ ...deptForm, updated_at: new Date() }).eq('id', targetId);
         if (error) throw error;
         setEditingDeptId(null);
       } else {
         const { error } = await supabase.from('departments').insert([{ ...deptForm }]);
         if (error) throw error;
       }
-      setDeptForm({ name: '', icon: 'BookOpen', description: '' });
+      
+      if (!isManagingDeptContent) {
+        setDeptForm({ name: '', icon: 'BookOpen', description: '', content: '' });
+      }
+      
       showSuccess();
       fetchData();
     } catch (error: any) {
@@ -948,7 +955,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
         const { error } = await supabase.from('personnel').insert([{ ...personnelForm, dept_id: selectedDeptId }]);
         if (error) throw error;
       }
-      setPersonnelForm({ name: '', position: '', bio: '', image_url: '' });
+      setPersonnelForm({ name: '', position: '', bio: '', birth_date: '', education: '', image_url: '' });
       showSuccess();
       fetchDeptData();
     } catch (error: any) {
@@ -1803,7 +1810,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                           type="button" 
                           onClick={() => {
                             setEditingDeptId(null);
-                            setDeptForm({ name: '', icon: 'BookOpen', description: '' });
+                            setDeptForm({ name: '', icon: 'BookOpen', description: '', content: '' });
                           }}
                           className="px-6 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
                         >
@@ -1828,7 +1835,8 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                                 setDeptForm({ 
                                   name: dept.name, 
                                   icon: dept.icon, 
-                                  description: dept.description
+                                  description: dept.description,
+                                  content: dept.content || ''
                                 });
                                 window.scrollTo({ top: 0, behavior: 'smooth' });
                               }}
@@ -1844,8 +1852,18 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                         <p className="text-sm text-slate-500 mt-1 line-clamp-2">{dept.description}</p>
                         <button 
                           onClick={() => {
+                            const department = departmentsList.find(d => d.id === dept.id);
+                            if (department) {
+                              setDeptForm({
+                                name: department.name,
+                                icon: department.icon,
+                                description: department.description,
+                                content: department.content || ''
+                              });
+                            }
                             setSelectedDeptId(dept.id);
                             setIsManagingDeptContent(true);
+                            setDeptActiveTab('introduction');
                           }}
                           className="mt-4 flex items-center gap-1 text-blue-600 text-xs font-bold hover:underline"
                         >
@@ -1874,6 +1892,12 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                   {/* Tabs for Department Content */}
                   <div className="flex gap-4 p-1 bg-slate-100 rounded-xl w-fit mb-6">
                     <button 
+                      onClick={() => setDeptActiveTab('introduction')}
+                      className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${deptActiveTab === 'introduction' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
+                    >
+                      Giới thiệu
+                    </button>
+                    <button 
                       onClick={() => setDeptActiveTab('personnel')}
                       className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${deptActiveTab === 'personnel' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
                     >
@@ -1892,6 +1916,37 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       Tài liệu
                     </button>
                   </div>
+
+                  {deptActiveTab === 'introduction' && (
+                    <div className="space-y-6">
+                      <h4 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <Info className="w-6 h-6 text-blue-600" /> Giới thiệu tổ chuyên môn
+                      </h4>
+                      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <MarkdownToolbar 
+                          textareaRef={deptContentTextareaRef} 
+                          setter={setDeptForm} 
+                          form={deptForm} 
+                          field="content" 
+                        />
+                        <textarea 
+                          ref={deptContentTextareaRef}
+                          placeholder="Nội dung giới thiệu chi tiết về tổ chuyên môn (Markdown)" 
+                          value={deptForm.content}
+                          onChange={e => setDeptForm({...deptForm, content: e.target.value})}
+                          className="w-full p-4 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-96 border-t-0 font-sans leading-relaxed"
+                        />
+                        <div className="mt-4 flex justify-end">
+                          <button 
+                            onClick={handleSaveDept}
+                            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-md shadow-blue-200"
+                          >
+                            <Save className="w-4 h-4" /> Lưu thông tin giới thiệu
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {deptActiveTab === 'personnel' && (
                     <div className="space-y-6">
@@ -1917,11 +1972,18 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                             required
                           />
                           <input 
-                            type="url" 
-                            placeholder="Link ảnh chân dung (tùy chọn)" 
-                            value={personnelForm.image_url}
-                            onChange={e => setPersonnelForm({...personnelForm, image_url: e.target.value})}
-                            className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 md:col-span-2"
+                            type="text" 
+                            placeholder="Ngày sinh (ví dụ: 01/01/1980)" 
+                            value={personnelForm.birth_date}
+                            onChange={e => setPersonnelForm({...personnelForm, birth_date: e.target.value})}
+                            className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <input 
+                            type="text" 
+                            placeholder="Trình độ chuyên môn (ví dụ: Thạc sĩ Toán học)" 
+                            value={personnelForm.education}
+                            onChange={e => setPersonnelForm({...personnelForm, education: e.target.value})}
+                            className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                           />
                         </div>
                         <textarea 
@@ -1939,7 +2001,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                               type="button" 
                               onClick={() => {
                                 setEditingPersonnelId(null);
-                                setPersonnelForm({ name: '', position: '', bio: '', image_url: '' });
+                                setPersonnelForm({ name: '', position: '', bio: '', birth_date: '', education: '', image_url: '' });
                               }}
                               className="px-6 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
                             >
@@ -1949,32 +2011,68 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                         </div>
                       </form>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {deptPersonnel.map(p => (
-                          <div key={p.id} className="bg-white p-4 rounded-xl border border-slate-200 flex items-center gap-4 group">
-                            <div className="w-12 h-12 bg-slate-100 rounded-full overflow-hidden flex-shrink-0">
-                              <img src={p.image_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=random`} className="w-full h-full object-cover" />
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {deptPersonnel.map(p => {
+                          const initials = p.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(-2);
+                          return (
+                            <div key={p.id} className="bg-white p-5 rounded-2xl border border-slate-200 flex flex-col group relative overflow-hidden items-center text-center">
+                              <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                <button 
+                                  onClick={() => {
+                                    setEditingPersonnelId(p.id);
+                                    setPersonnelForm({ 
+                                      name: p.name, 
+                                      position: p.position, 
+                                      bio: p.bio || '', 
+                                      birth_date: p.birth_date || '',
+                                      education: p.education || '',
+                                      image_url: p.image_url || '' 
+                                    });
+                                  }}
+                                  className="p-1.5 bg-blue-50 text-blue-500 hover:bg-blue-100 rounded-lg shadow-sm border border-blue-200"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </button>
+                                <button 
+                                  onClick={() => handleDeletePersonnel(p.id)} 
+                                  className="p-1.5 bg-red-50 text-red-500 hover:bg-red-100 rounded-lg shadow-sm border border-red-200"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                              
+                              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white text-xl font-black shadow-md mb-4 border-2 border-white">
+                                {initials}
+                              </div>
+                              
+                              <div className="flex-1 min-w-0">
+                                <h5 className="font-bold text-slate-900 leading-tight mb-1">{p.name}</h5>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-3">{p.position}</p>
+                                
+                                <div className="flex flex-col items-center gap-1">
+                                  {p.birth_date && (
+                                    <div className="flex items-center gap-1.5 text-[10px] text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100">
+                                      <Calendar className="w-3 h-3 text-slate-400" />
+                                      <span>NS: {p.birth_date}</span>
+                                    </div>
+                                  )}
+                                  {p.education && (
+                                    <div className="flex items-center gap-1.5 text-[10px] text-slate-500 max-w-full">
+                                      <GraduationCap className="w-3 h-3 text-slate-400" />
+                                      <span className="line-clamp-1">{p.education}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {p.bio && (
+                                <div className="mt-4 pt-4 border-t border-slate-50 w-full">
+                                  <p className="text-[11px] text-slate-500 italic line-clamp-2 leading-relaxed">"{p.bio}"</p>
+                                </div>
+                              )}
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <h5 className="font-bold text-slate-800 truncate">{p.name}</h5>
-                              <p className="text-xs text-slate-500">{p.position}</p>
-                            </div>
-                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button 
-                                onClick={() => {
-                                  setEditingPersonnelId(p.id);
-                                  setPersonnelForm({ name: p.name, position: p.position, bio: p.bio || '', image_url: p.image_url || '' });
-                                }}
-                                className="p-1 text-blue-500 hover:bg-blue-50 rounded"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </button>
-                              <button onClick={() => handleDeletePersonnel(p.id)} className="p-1 text-red-500 hover:bg-red-50 rounded">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}
