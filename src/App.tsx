@@ -327,13 +327,10 @@ export default function App() {
                    (selectedNews.date ? new Date(selectedNews.date).toLocaleDateString('vi-VN') : 'Mới')}
                 </span>
               </div>
-              <h2 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight flex items-center gap-3 flex-wrap">
+              <h2 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight flex items-center gap-2 flex-wrap">
                 {selectedNews.title}
                 {(selectedNews.is_new || !selectedNews.date || isNaN(new Date(selectedNews.date).getTime())) && (
-                  <span className="relative flex h-8 w-8 items-center justify-center shrink-0">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-20"></span>
-                    <span className="relative inline-flex items-center justify-center bg-orange-500 text-white text-[9px] font-black w-8 h-8 rounded-full border-2 border-white shadow-sm rotate-12">NEW</span>
-                  </span>
+                  <span className="px-2 py-0.5 bg-gradient-to-r from-orange-500 to-red-600 text-white text-[10px] font-black rounded shadow-sm animate-pulse shrink-0 tracking-wider">NEW</span>
                 )}
               </h2>
               <div className="h-1.5 w-20 bg-blue-800 rounded-full"></div>
@@ -536,7 +533,7 @@ export default function App() {
                     <span className="font-bold text-slate-900 shrink-0">Tiêu đề:</span>
                     <span className="text-slate-700 truncate">{item.title}</span>
                     {(item.is_new || !item.date || isNaN(new Date(item.date).getTime())) && (
-                      <span className="ml-1.5 px-1.5 py-0.5 bg-orange-500 text-white text-[8px] font-black rounded shadow-sm">NEW</span>
+                      <span className="ml-1 px-1.5 py-0.5 bg-orange-600 text-white text-[8px] font-black rounded shadow-sm shrink-0">NEW</span>
                     )}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
@@ -1370,11 +1367,13 @@ export default function App() {
                         {item.date?.toDate ? item.date.toDate().toLocaleDateString('vi-VN') : 
                          (item.date && !isNaN(new Date(item.date).getTime()) ? new Date(item.date).toLocaleDateString('vi-VN') : '')}
                       </span>
-                      {(item.is_new || !item.date || isNaN(new Date(item.date).getTime())) && (
-                        <span className="px-1.5 py-0.5 bg-orange-500 text-white text-[8px] font-black rounded-sm shadow-sm">NEW</span>
-                      )}
                     </div>
-                    <p className="font-medium line-clamp-2">{item.title}</p>
+                    <p className="font-medium line-clamp-2 flex items-center gap-1 flex-wrap">
+                      {item.title}
+                      {(item.is_new || !item.date || isNaN(new Date(item.date).getTime())) && (
+                        <span className="px-1 py-0.5 bg-orange-600 text-white text-[7px] font-black rounded-sm shadow-sm leading-none shrink-0 uppercase">NEW</span>
+                      )}
+                    </p>
                   </div>
                 )) : (
                   <p className="text-xs text-slate-400 italic">Chưa có thông báo mới</p>
