@@ -311,9 +311,9 @@ export default function App() {
         <div className="animate-in slide-in-from-right duration-500 space-y-4">
           <button 
             onClick={() => setSelectedNews(null)}
-            className="flex items-center gap-1.5 text-blue-600 text-sm font-bold hover:text-blue-800 transition-colors mb-2"
+            className="group flex items-center gap-1.5 text-blue-600 text-xs font-black uppercase tracking-wider hover:text-blue-800 transition-all mb-4 bg-white px-3 py-1.5 rounded-full border border-blue-100 shadow-sm"
           >
-            <Icons.ArrowLeft className="w-4 h-4" /> Quay lại danh sách
+            <Icons.ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" /> Quay lại
           </button>
           <div className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm p-6 md:p-10">
             <div className="space-y-6">
@@ -329,8 +329,11 @@ export default function App() {
               </div>
               <h2 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight flex items-center gap-3 flex-wrap">
                 {selectedNews.title}
-                {(!selectedNews.date || isNaN(new Date(selectedNews.date).getTime())) && (
-                  <span className="px-2 py-0.5 bg-orange-500 text-white text-[10px] font-black rounded uppercase animate-pulse shrink-0">NEW</span>
+                {(selectedNews.is_new || !selectedNews.date || isNaN(new Date(selectedNews.date).getTime())) && (
+                  <span className="relative flex h-8 w-8 items-center justify-center shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-20"></span>
+                    <span className="relative inline-flex items-center justify-center bg-orange-500 text-white text-[9px] font-black w-8 h-8 rounded-full border-2 border-white shadow-sm rotate-12">NEW</span>
+                  </span>
                 )}
               </h2>
               <div className="h-1.5 w-20 bg-blue-800 rounded-full"></div>
@@ -532,8 +535,8 @@ export default function App() {
                   <div className="flex items-center gap-1 min-w-0 flex-1">
                     <span className="font-bold text-slate-900 shrink-0">Tiêu đề:</span>
                     <span className="text-slate-700 truncate">{item.title}</span>
-                    {(!item.date || isNaN(new Date(item.date).getTime())) && (
-                      <span className="ml-1 px-1.5 py-0.5 bg-orange-500 text-white text-[10px] font-black rounded uppercase animate-pulse">NEW</span>
+                    {(item.is_new || !item.date || isNaN(new Date(item.date).getTime())) && (
+                      <span className="ml-1.5 px-1.5 py-0.5 bg-orange-500 text-white text-[8px] font-black rounded shadow-sm">NEW</span>
                     )}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
@@ -1362,13 +1365,13 @@ export default function App() {
                     className="text-xs border-b border-slate-100 pb-2 hover:text-blue-600 cursor-pointer transition-colors"
                     onClick={() => handleNewsDetailClick(item)}
                   >
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center justify-between gap-2 mb-1">
                       <span className="text-slate-400">
                         {item.date?.toDate ? item.date.toDate().toLocaleDateString('vi-VN') : 
                          (item.date && !isNaN(new Date(item.date).getTime()) ? new Date(item.date).toLocaleDateString('vi-VN') : '')}
                       </span>
-                      {(!item.date || isNaN(new Date(item.date).getTime())) && (
-                        <span className="px-1 py-0.5 bg-orange-500 text-white text-[8px] font-black rounded uppercase">NEW</span>
+                      {(item.is_new || !item.date || isNaN(new Date(item.date).getTime())) && (
+                        <span className="px-1.5 py-0.5 bg-orange-500 text-white text-[8px] font-black rounded-sm shadow-sm">NEW</span>
                       )}
                     </div>
                     <p className="font-medium line-clamp-2">{item.title}</p>
