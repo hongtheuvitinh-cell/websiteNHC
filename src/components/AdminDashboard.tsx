@@ -167,25 +167,28 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
 
   const [isUploading, setIsUploading] = useState(false);
 
-  const handleImageUpload = async (
+  const handleFileUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
     setter: React.Dispatch<React.SetStateAction<any>>,
     form: any,
     field: string,
-    refTextarea: React.RefObject<HTMLTextAreaElement>
+    refTextarea?: React.RefObject<HTMLTextAreaElement>
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check if file is image
-    if (!file.type.startsWith('image/')) {
-      alert('Vui lòng chọn file hình ảnh (jpg, png, webp...)');
+    // Check if file is image or pdf
+    const isImage = file.type.startsWith('image/');
+    const isPdf = file.type === 'application/pdf';
+
+    if (!isImage && !isPdf) {
+      alert('Vui lòng chọn file hình ảnh hoặc PDF.');
       return;
     }
 
-    // Limit size to 5MB
-    if (file.size > 5 * 1024 * 1024) {
-      alert('File quá lớn. Vui lòng chọn ảnh dưới 5MB.');
+    // Limit size to 10MB
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File quá lớn. Vui lòng chọn file dưới 10MB.');
       return;
     }
 
@@ -208,25 +211,27 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
 
       const downloadURL = publicUrl;
 
-      const textarea = refTextarea.current;
-      if (!textarea) return;
-
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const text = form[field];
-      
-      const insertion = `\n![${file.name}](${downloadURL})\n`;
-      const newText = text.substring(0, start) + insertion + text.substring(end);
-      setter({ ...form, [field]: newText });
-      
-      setTimeout(() => {
-        textarea.focus();
-        const newPos = start + insertion.length;
-        textarea.setSelectionRange(newPos, newPos);
-      }, 0);
+      if (refTextarea && refTextarea.current) {
+        const textarea = refTextarea.current;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const text = form[field];
+        
+        const insertion = isPdf ? `\n[Tải file: ${file.name}](${downloadURL})\n` : `\n![${file.name}](${downloadURL})\n`;
+        const newText = text.substring(0, start) + insertion + text.substring(end);
+        setter({ ...form, [field]: newText });
+        
+        setTimeout(() => {
+          textarea.focus();
+          const newPos = start + insertion.length;
+          textarea.setSelectionRange(newPos, newPos);
+        }, 0);
+      } else {
+        setter({ ...form, [field]: downloadURL });
+      }
     } catch (error) {
       console.error('Upload failed:', error);
-      alert('Tải ảnh thất bại. Lỗi: ' + (error instanceof Error ? error.message : 'Không xác định'));
+      alert('Tải file thất bại. Lỗi: ' + (error instanceof Error ? error.message : 'Không xác định'));
     } finally {
       setIsUploading(false);
       e.target.value = '';
@@ -273,8 +278,8 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
           type="file" 
           ref={fileInputRef}
           className="hidden" 
-          accept="image/*"
-          onChange={(e) => handleImageUpload(e, setter, form, field, textareaRef)}
+          accept="image/*,application/pdf"
+          onChange={(e) => handleFileUpload(e, setter, form, field, textareaRef)}
         />
         
         <button 
@@ -2881,7 +2886,8 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       <div className="relative">
                         <input 
                           type="file" 
-                          onChange={(e) => handleImageUpload(e, setArchiveForm, archiveForm, 'file_url')}
+                          accept="image/*,application/pdf"
+                          onChange={(e) => handleFileUpload(e, setArchiveForm, archiveForm, 'file_url')}
                           className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                         />
                         <button type="button" className="p-3 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-colors">
