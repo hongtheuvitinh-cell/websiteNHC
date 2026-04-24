@@ -535,6 +535,22 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
     setTimeout(() => setSaveStatus(null), 3000);
   };
 
+  const handleClearAllNew = async () => {
+    showConfirm("Xác nhận gỡ tất cả", "Bạn có chắc chắn muốn gỡ tất cả biểu tượng 'NEW' khỏi toàn bộ tin tức?", async () => {
+      setLoading(true);
+      try {
+        const { error } = await supabase.from('news').update({ is_new: false }).eq('is_new', true);
+        if (error) throw error;
+        showSuccess();
+        fetchData();
+      } catch (error: any) {
+        showAlert("Lỗi", "Không thể gỡ danh hiệu: " + error.message);
+      } finally {
+        setLoading(false);
+      }
+    });
+  };
+
   const handleAddNews = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -1160,10 +1176,19 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
           {activeTab === 'news' && (
             <div className="space-y-8">
               <form onSubmit={handleAddNews} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                  {editingNewsId ? <Edit className="w-5 h-5 text-amber-600" /> : <Plus className="w-5 h-5 text-blue-600" />}
-                  {editingNewsId ? 'Hiệu chỉnh tin tức' : 'Thêm tin mới'}
-                </h3>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-bold flex items-center gap-2">
+                    {editingNewsId ? <Edit className="w-5 h-5 text-amber-600" /> : <Plus className="w-5 h-5 text-blue-600" />}
+                    {editingNewsId ? 'Hiệu chỉnh tin tức' : 'Thêm tin mới'}
+                  </h3>
+                  <button 
+                    type="button"
+                    onClick={handleClearAllNew}
+                    className="text-xs bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg hover:bg-slate-200 transition-colors font-bold flex items-center gap-1.5 border border-slate-200"
+                  >
+                    <Zap className="w-3.5 h-3.5 text-orange-500" /> Gỡ toàn bộ "NEW"
+                  </button>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <input 
                     type="text" 
@@ -1216,7 +1241,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       type="button" 
                       onClick={() => {
                         setEditingNewsId(null);
-                        setNewsForm({ title: '', content: '', category: 'Tin tức', image_url: '' });
+                        setNewsForm({ title: '', content: '', category: 'Tin tức', image_url: '', is_new: true });
                       }}
                       className="px-6 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
                     >
@@ -1239,7 +1264,12 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                   <tbody>
                     {news.map(item => (
                       <tr key={item.id} className="border-b border-slate-100 last:border-none">
-                        <td className="p-4 text-sm font-medium">{item.title}</td>
+                        <td className="p-4 text-sm font-medium">
+                          <div className="flex items-center gap-2">
+                            {item.title}
+                            {item.is_new && <span className="px-1.5 py-0.5 bg-orange-600 text-white text-[8px] font-black rounded shadow-sm shrink-0">NEW</span>}
+                          </div>
+                        </td>
                         <td className="p-4 text-sm">
                           <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold">{item.category}</span>
                         </td>
