@@ -51,11 +51,15 @@ import {
   Filter,
   Image as ImageIcon,
   Type,
-  Link as LinkIcon
+  Link as LinkIcon,
+  AlignLeft,
+  AlignCenter,
+  AlignRight
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import 'katex/dist/katex.min.css';
@@ -70,6 +74,10 @@ interface AdminDashboardProps {
 
 export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabType>('news');
+
+  useEffect(() => {
+    setAdminSearch('');
+  }, [activeTab]);
   const [news, setNews] = useState<any[]>([]);
   const [admissions, setAdmissions] = useState<any[]>([]);
   const [features, setFeatures] = useState<any[]>([]);
@@ -152,6 +160,18 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
         insertion = `[${selectedText || 'tên liên kết'}](https://example.com)`;
         newCursorPos = start + 1;
         break;
+      case 'align-left':
+        insertion = `<div style="text-align: left">\n\n${selectedText || 'văn bản canh trái'}\n\n</div>`;
+        newCursorPos = start + 27;
+        break;
+      case 'align-center':
+        insertion = `<div style="text-align: center">\n\n${selectedText || 'văn bản canh giữa'}\n\n</div>`;
+        newCursorPos = start + 29;
+        break;
+      case 'align-right':
+        insertion = `<div style="text-align: right">\n\n${selectedText || 'văn bản canh phải'}\n\n</div>`;
+        newCursorPos = start + 28;
+        break;
       default:
         return;
     }
@@ -166,6 +186,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
   };
 
   const [isUploading, setIsUploading] = useState(false);
+  const [adminSearch, setAdminSearch] = useState('');
 
   const handleFileUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -273,6 +294,16 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
           <LinkIcon className="w-4 h-4" />
         </button>
         <div className="w-px h-6 bg-slate-300 mx-1 self-center" />
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'align-left')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Canh trái">
+          <AlignLeft className="w-4 h-4" />
+        </button>
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'align-center')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Canh giữa">
+          <AlignCenter className="w-4 h-4" />
+        </button>
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'align-right')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Canh phải">
+          <AlignRight className="w-4 h-4" />
+        </button>
+        <div className="w-px h-6 bg-slate-300 mx-1 self-center" />
         
         <input 
           type="file" 
@@ -330,7 +361,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
     <div className="markdown-body prose prose-slate prose-sm max-w-none prose-p:my-0.5 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-0.5 prose-li:my-0">
       <ReactMarkdown 
         remarkPlugins={[remarkMath, remarkGfm, remarkBreaks]} 
-        rehypePlugins={[rehypeKatex]}
+        rehypePlugins={[rehypeKatex, rehypeRaw]}
         components={{
           img: ({ node, ...props }) => (
             <img 
@@ -1324,6 +1355,16 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
               </form>
 
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center gap-2">
+                  <Search className="w-5 h-5 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder="Tìm kiếm tin tức..." 
+                    className="bg-transparent border-none outline-none text-sm w-full"
+                    value={adminSearch}
+                    onChange={(e) => setAdminSearch(e.target.value)}
+                  />
+                </div>
                 <table className="w-full text-left">
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
@@ -1334,7 +1375,10 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                     </tr>
                   </thead>
                   <tbody>
-                    {news.map(item => (
+                    {news.filter(item => 
+                      item.title?.toLowerCase().includes(adminSearch.toLowerCase()) || 
+                      item.category?.toLowerCase().includes(adminSearch.toLowerCase())
+                    ).map(item => (
                       <tr key={item.id} className="border-b border-slate-100 last:border-none">
                         <td className="p-4 text-sm font-medium">
                           <div className="flex items-center gap-2">
@@ -1435,6 +1479,16 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
               </form>
 
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center gap-2">
+                  <Search className="w-5 h-5 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder="Tìm kiếm tuyển sinh..." 
+                    className="bg-transparent border-none outline-none text-sm w-full"
+                    value={adminSearch}
+                    onChange={(e) => setAdminSearch(e.target.value)}
+                  />
+                </div>
                 <table className="w-full text-left">
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
@@ -1445,7 +1499,10 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                     </tr>
                   </thead>
                   <tbody>
-                    {admissions.map(item => (
+                    {admissions.filter(item => 
+                      item.title?.toLowerCase().includes(adminSearch.toLowerCase()) || 
+                      item.summary?.toLowerCase().includes(adminSearch.toLowerCase())
+                    ).map(item => (
                       <tr key={item.id} className="border-b border-slate-100 last:border-none">
                         <td className="p-4 text-sm font-medium">{item.title}</td>
                         <td className="p-4 text-sm">{item.year}</td>
@@ -1885,8 +1942,21 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                     </div>
                   </form>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {departmentsList.map(dept => (
+                  <div className="flex flex-col gap-6">
+                    <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-200">
+                      <Search className="w-5 h-5 text-slate-400" />
+                      <input 
+                        type="text" 
+                        placeholder="Tìm tên tổ chuyên môn..." 
+                        className="bg-transparent border-none outline-none text-sm w-full"
+                        value={adminSearch}
+                        onChange={(e) => setAdminSearch(e.target.value)}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {departmentsList.filter(dept => 
+                        dept.name?.toLowerCase().includes(adminSearch.toLowerCase())
+                      ).map(dept => (
                       <div 
                         key={dept.id}
                         className="p-6 bg-white rounded-2xl border border-slate-200 hover:border-blue-500 hover:shadow-md transition-all text-left group"
@@ -1938,6 +2008,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                     ))}
                   </div>
                 </div>
+              </div>
               ) : (
                 <div className="space-y-10">
                   <button 
@@ -2405,8 +2476,22 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                 </div>
               </form>
 
-              <div className="grid grid-cols-1 gap-4">
-                {youthUnion.map(item => (
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center gap-2">
+                  <Search className="w-5 h-5 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder="Tìm kiếm hoạt động Đoàn..." 
+                    className="bg-transparent border-none outline-none text-sm w-full"
+                    value={adminSearch}
+                    onChange={(e) => setAdminSearch(e.target.value)}
+                  />
+                </div>
+                <div className="grid grid-cols-1 gap-4 p-4">
+                  {youthUnion.filter(item => 
+                    item.title?.toLowerCase().includes(adminSearch.toLowerCase()) || 
+                    item.content?.toLowerCase().includes(adminSearch.toLowerCase())
+                  ).map(item => (
                   <div key={item.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center group">
                     <div className="flex items-center gap-4">
                       {item.image_url && <img src={item.image_url} className="w-16 h-16 rounded-lg object-cover" />}
@@ -2438,7 +2523,8 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                 ))}
               </div>
             </div>
-          )}
+          </div>
+        )}
 
           {activeTab === 'achievements' && (
             <div className="space-y-8">
@@ -2516,8 +2602,22 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                 </div>
               </form>
 
-              <div className="grid grid-cols-1 gap-4">
-                {achievements.map(item => (
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center gap-2">
+                  <Search className="w-5 h-5 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder="Tìm kiếm thành tích..." 
+                    className="bg-transparent border-none outline-none text-sm w-full"
+                    value={adminSearch}
+                    onChange={(e) => setAdminSearch(e.target.value)}
+                  />
+                </div>
+                <div className="grid grid-cols-1 gap-4 p-4">
+                  {achievements.filter(item => 
+                    item.title?.toLowerCase().includes(adminSearch.toLowerCase()) || 
+                    item.content?.toLowerCase().includes(adminSearch.toLowerCase())
+                  ).map(item => (
                   <div key={item.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center group">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
@@ -2552,7 +2652,8 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                 ))}
               </div>
             </div>
-          )}
+          </div>
+        )}
 
           {activeTab === 'schedule' && (
             <div className="space-y-8">
@@ -2629,8 +2730,22 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                 </div>
               </form>
 
-              <div className="grid grid-cols-1 gap-4">
-                {schedule.map(item => (
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center gap-2">
+                  <Search className="w-5 h-5 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder="Tìm kiếm lịch công tác..." 
+                    className="bg-transparent border-none outline-none text-sm w-full"
+                    value={adminSearch}
+                    onChange={(e) => setAdminSearch(e.target.value)}
+                  />
+                </div>
+                <div className="grid grid-cols-1 gap-4 p-4">
+                  {schedule.filter(item => 
+                    item.title?.toLowerCase().includes(adminSearch.toLowerCase()) || 
+                    item.content?.toLowerCase().includes(adminSearch.toLowerCase())
+                  ).map(item => (
                   <div key={item.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center group">
                     <div>
                       <h4 className="font-bold text-slate-800">{item.title}</h4>
@@ -2658,7 +2773,8 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                 ))}
               </div>
             </div>
-          )}
+          </div>
+        )}
 
           {activeTab === 'gallery' && (
             <div className="space-y-8">
