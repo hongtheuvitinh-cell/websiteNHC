@@ -497,8 +497,8 @@ export default function App() {
                   <span className="w-2 h-2 rounded-full bg-purple-500"></span> Văn bản Số, Bộ
                 </h3>
                 <div className="space-y-4">
-                  {archiveDocuments.filter(d => d.category === 'Số, Bộ').length > 0 ? (
-                    archiveDocuments.filter(d => d.category === 'Số, Bộ').map((doc) => (
+                  {archiveDocuments.filter(d => d.category === 'Sở, Bộ').length > 0 ? (
+                    archiveDocuments.filter(d => d.category === 'Sở, Bộ').map((doc) => (
                       <div key={doc.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-white hover:shadow-md transition-all group">
                         <div className="flex justify-between items-start gap-3">
                           <div className="min-w-0">
