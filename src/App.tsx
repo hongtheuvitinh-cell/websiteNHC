@@ -37,6 +37,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import 'katex/dist/katex.min.css';
@@ -72,6 +73,10 @@ export default function App() {
   const [activeDeptTab, setActiveDeptTab] = useState<'personnel' | 'activities' | 'documents' | 'introduction'>('introduction');
   const [loginError, setLoginError] = useState<string | null>(null);
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [archiveSearch, setArchiveSearch] = useState('');
+  const [archiveTypeFilter, setArchiveTypeFilter] = useState('Tất cả');
+
   const [departmentsList, setDepartmentsList] = useState<any[]>([]);
   const [youthUnion, setYouthUnion] = useState<any[]>([]);
   const [achievements, setAchievements] = useState<any[]>([]);
@@ -84,7 +89,7 @@ export default function App() {
       <div className="markdown-body prose prose-slate prose-lg max-w-none prose-p:leading-relaxed prose-li:my-1 prose-headings:text-blue-900 prose-strong:text-slate-900 prose-strong:font-black">
         <ReactMarkdown 
           remarkPlugins={[remarkMath, remarkGfm, remarkBreaks]} 
-          rehypePlugins={[rehypeKatex]}
+          rehypePlugins={[rehypeKatex, rehypeRaw]}
           components={{
             img: ({ node, ...props }) => (
               <img 
@@ -454,12 +459,44 @@ export default function App() {
     }
 
     if (activeMenu === 'Lưu trữ văn bản') {
+      const filteredDocs = archiveDocuments.filter(d => {
+        const matchesSearch = d.title.toLowerCase().includes(archiveSearch.toLowerCase()) || 
+                             (d.description?.toLowerCase().includes(archiveSearch.toLowerCase()));
+        const matchesType = archiveTypeFilter === 'Tất cả' || d.type === archiveTypeFilter;
+        return matchesSearch && matchesType;
+      });
+
+      const docTypes = ['Tất cả', ...new Set(archiveDocuments.map(d => d.type))];
+
       return (
         <div className="animate-in fade-in duration-500 space-y-12">
           <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
-            <h2 className="text-2xl font-black text-blue-900 mb-6 flex items-center gap-3">
-              <Icons.Archive className="w-8 h-8 text-blue-600" /> Lưu trữ văn bản & Tài liệu
-            </h2>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+              <h2 className="text-2xl font-black text-blue-900 flex items-center gap-3">
+                <Icons.Archive className="w-8 h-8 text-blue-600" /> Lưu trữ văn bản & Tài liệu
+              </h2>
+              <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                 <div className="relative flex-1 sm:w-64">
+                    <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="text" 
+                      placeholder="Tìm tên văn bản..." 
+                      className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={archiveSearch}
+                      onChange={(e) => setArchiveSearch(e.target.value)}
+                    />
+                 </div>
+                 <select 
+                    className="py-2 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500"
+                    value={archiveTypeFilter}
+                    onChange={(e) => setArchiveTypeFilter(e.target.value)}
+                 >
+                   {docTypes.map(type => (
+                     <option key={type} value={type}>{type}</option>
+                   ))}
+                 </select>
+              </div>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Nội bộ Group */}
@@ -468,8 +505,8 @@ export default function App() {
                   <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Văn bản Nội bộ
                 </h3>
                 <div className="space-y-4">
-                  {archiveDocuments.filter(d => d.category === 'Nội bộ').length > 0 ? (
-                    archiveDocuments.filter(d => d.category === 'Nội bộ').map((doc) => (
+                  {filteredDocs.filter(d => d.category === 'Nội bộ').length > 0 ? (
+                    filteredDocs.filter(d => d.category === 'Nội bộ').map((doc) => (
                       <div key={doc.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-white hover:shadow-md transition-all group">
                         <div className="flex justify-between items-start gap-3">
                           <div className="min-w-0">
@@ -497,8 +534,8 @@ export default function App() {
                   <span className="w-2 h-2 rounded-full bg-purple-500"></span> Văn bản Sở, Bộ
                 </h3>
                 <div className="space-y-4">
-                  {archiveDocuments.filter(d => d.category === 'Sở, Bộ' || d.category === 'Số, Bộ').length > 0 ? (
-                    archiveDocuments.filter(d => d.category === 'Sở, Bộ' || d.category === 'Số, Bộ').map((doc) => (
+                  {filteredDocs.filter(d => ['Sở, Bộ', 'Số, Bộ', 'Sổ, Bộ'].includes(d.category)).length > 0 ? (
+                    filteredDocs.filter(d => ['Sở, Bộ', 'Số, Bộ', 'Sổ, Bộ'].includes(d.category)).map((doc) => (
                       <div key={doc.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-white hover:shadow-md transition-all group">
                         <div className="flex justify-between items-start gap-3">
                           <div className="min-w-0">
@@ -578,12 +615,13 @@ export default function App() {
           </div>
         );
       case 'Tuyển sinh':
+        const filteredAdmissions = admissions.filter(a => a.title.toLowerCase().includes(searchQuery.toLowerCase()));
         return (
           <div className="space-y-8 animate-in fade-in duration-500">
             <h2 className="text-3xl font-black text-slate-900 uppercase">Thông tin tuyển sinh</h2>
             <div className="h-1.5 w-24 bg-blue-800 rounded-full mb-8"></div>
             <div className="space-y-0.5 border-t border-slate-100 pt-4">
-              {admissions.length > 0 ? admissions.map(item => (
+              {filteredAdmissions.length > 0 ? filteredAdmissions.map(item => (
                 <div 
                   key={item.id} 
                   className="flex flex-wrap items-center gap-x-4 py-1 border-b border-slate-50 hover:bg-slate-50 transition-colors text-sm"
@@ -618,12 +656,13 @@ export default function App() {
           </div>
         );
       case 'Tin tức':
+        const filteredNews = news.filter(n => n.title.toLowerCase().includes(searchQuery.toLowerCase()));
         return (
           <div className="space-y-8 animate-in fade-in duration-500">
             <h2 className="text-3xl font-black text-slate-900 uppercase">Tin tức & Sự kiện</h2>
             <div className="h-1.5 w-24 bg-blue-800 rounded-full mb-8"></div>
             <div className="space-y-0.5 border-t border-slate-100 pt-4">
-              {news.map(item => (
+              {filteredNews.map(item => (
                 <div 
                   key={item.id} 
                   className="flex flex-wrap items-center gap-x-4 py-1 border-b border-slate-50 hover:bg-slate-50 transition-colors text-sm"
@@ -745,10 +784,10 @@ export default function App() {
                         Tài liệu đính kèm <Icons.FileText className="w-5 h-5" />
                       </a>
                     )}
-                    </div>
                   </div>
                 </div>
-              );
+              </div>
+            );
           }
           const IconComponent = (Icons as any)[selectedDepartment.icon] || Icons.BookOpen;
           return (
@@ -833,13 +872,13 @@ export default function App() {
                                     <div className="flex flex-col items-center gap-1.5 mb-5">
                                       {p.birth_date && (
                                         <div className="flex items-center gap-1.5 text-[11px] text-slate-500 bg-slate-50 px-3 py-1 rounded-full border border-slate-100">
-                                          <Calendar className="w-3 h-3 text-blue-500" />
+                                          <Icons.Calendar className="w-3 h-3 text-blue-500" />
                                           <span>Sinh: {p.birth_date}</span>
                                         </div>
                                       )}
                                       {p.education && (
                                         <div className="flex items-center gap-1.5 text-[11px] text-slate-500 px-3">
-                                          <GraduationCap className="w-3.5 h-3.5 text-blue-400" />
+                                          <Icons.GraduationCap className="w-3.5 h-3.5 text-blue-400" />
                                           <span className="line-clamp-1">{p.education}</span>
                                         </div>
                                       )}
@@ -895,7 +934,7 @@ export default function App() {
                                         setSelectedDeptActivity(a);
                                         window.scrollTo({ top: 0, behavior: 'smooth' });
                                       }}
-                                      className="inline-flex items-center gap-2 px-6 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-md"
+                                      className="inline-flex items-center gap-2 px-6 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-md"
                                     >
                                       Xem chi tiết <Icons.ChevronRight className="w-4 h-4" />
                                     </button>
@@ -968,12 +1007,13 @@ export default function App() {
             </div>
           );
         }
+        const filteredDepts = departmentsList.filter(d => d.name.toLowerCase().includes(searchQuery.toLowerCase()));
         return (
           <div className="space-y-8 animate-in fade-in duration-500">
             <h2 className="text-3xl font-black text-slate-900 uppercase">Tổ chuyên môn</h2>
             <div className="h-1.5 w-24 bg-blue-800 rounded-full mb-8"></div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {departmentsList.map((dept) => {
+              {filteredDepts.map((dept) => {
                 const IconComponent = (Icons as any)[dept.icon] || Icons.BookOpen;
                 return (
                   <div 
@@ -997,6 +1037,12 @@ export default function App() {
                 );
               })}
             </div>
+            {filteredDepts.length === 0 && (
+              <div className="text-center py-20 bg-slate-50 rounded-3xl border border-dashed border-slate-300">
+                <Icons.Search className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                <p className="text-slate-500">Không tìm thấy tổ chuyên môn phù hợp.</p>
+              </div>
+            )}
           </div>
         );
       case 'Hoạt động Đoàn':
@@ -1026,17 +1072,17 @@ export default function App() {
                   )}
                   <MarkdownContent content={selectedYouthUnion.content} />
                 </div>
-
               </div>
             </div>
           );
         }
+        const filteredYouth = youthUnion.filter(y => y.title.toLowerCase().includes(searchQuery.toLowerCase()));
         return (
           <div className="space-y-8 animate-in fade-in duration-500">
             <h2 className="text-3xl font-black text-slate-900 uppercase">Hoạt động Đoàn</h2>
             <div className="h-1.5 w-24 bg-blue-800 rounded-full mb-8"></div>
             <div className="space-y-0.5 border-t border-slate-100 pt-4">
-              {youthUnion.map(item => (
+              {filteredYouth.map(item => (
                 <div 
                   key={item.id} 
                   className="flex flex-wrap items-center gap-x-4 py-1 border-b border-slate-50 hover:bg-slate-50 transition-colors text-sm"
@@ -1062,10 +1108,10 @@ export default function App() {
                   </button>
                 </div>
               ))}
-              {youthUnion.length === 0 && (
+              {filteredYouth.length === 0 && (
                 <div className="text-center py-20 bg-slate-50 rounded-3xl border border-dashed border-slate-300">
                   <Icons.Users className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-500">Hiện chưa có hoạt động Đoàn mới.</p>
+                  <p className="text-slate-500">Không tìm thấy hoạt động Đoàn phù hợp.</p>
                 </div>
               )}
             </div>
@@ -1115,12 +1161,13 @@ export default function App() {
             </div>
           );
         }
+        const filteredAchievements = achievements.filter(a => a.title.toLowerCase().includes(searchQuery.toLowerCase()));
         return (
           <div className="space-y-8 animate-in fade-in duration-500">
             <h2 className="text-3xl font-black text-slate-900 uppercase">Thành tích học tập</h2>
             <div className="h-1.5 w-24 bg-blue-800 rounded-full mb-8"></div>
             <div className="space-y-0.5 border-t border-slate-100 pt-4">
-              {achievements.map(item => (
+              {filteredAchievements.map(item => (
                 <div 
                   key={item.id} 
                   className="flex flex-wrap items-center gap-x-4 py-1 border-b border-slate-50 hover:bg-slate-50 transition-colors text-sm"
@@ -1144,10 +1191,10 @@ export default function App() {
                   </button>
                 </div>
               ))}
-              {achievements.length === 0 && (
+              {filteredAchievements.length === 0 && (
                 <div className="col-span-full text-center py-20 bg-slate-50 rounded-3xl border border-dashed border-slate-300">
                   <Icons.Award className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-500">Dữ liệu thành tích đang được cập nhật...</p>
+                  <p className="text-slate-500">Không tìm thấy thành tích phù hợp.</p>
                 </div>
               )}
             </div>
@@ -1161,7 +1208,7 @@ export default function App() {
                 onClick={() => setSelectedSchedule(null)}
                 className="flex items-center gap-2 text-blue-600 font-bold hover:gap-3 transition-all mb-6"
               >
-                <ArrowLeft className="w-5 h-5" /> QUAY LẠI DANH SÁCH
+                <Icons.ArrowLeft className="w-5 h-5" /> QUAY LẠI DANH SÁCH
               </button>
 
               <div className="bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden">
@@ -1171,7 +1218,7 @@ export default function App() {
                       Lịch công tác
                     </span>
                     <span className="flex items-center gap-1.5 text-slate-400 text-sm font-medium">
-                      <Calendar className="w-4 h-4" />
+                      <Icons.Calendar className="w-4 h-4" />
                       {selectedSchedule.start_date ? new Date(selectedSchedule.start_date).toLocaleDateString('vi-VN') : 'Mới'}
                     </span>
                   </div>
@@ -1189,12 +1236,13 @@ export default function App() {
             </div>
           );
         }
+        const filteredSchedules = schedules.filter(s => s.title.toLowerCase().includes(searchQuery.toLowerCase()));
         return (
           <div className="space-y-8 animate-in fade-in duration-500">
             <h2 className="text-3xl font-black text-slate-900 uppercase">Lịch công tác</h2>
             <div className="h-1.5 w-24 bg-blue-800 rounded-full mb-8"></div>
             <div className="space-y-0.5 border-t border-slate-100 pt-4">
-              {schedules.map(item => (
+              {filteredSchedules.map(item => (
                 <div 
                   key={item.id} 
                   className="flex flex-wrap items-center gap-x-4 py-1 border-b border-slate-50 hover:bg-slate-50 transition-colors text-sm"
@@ -1220,10 +1268,10 @@ export default function App() {
                   </button>
                 </div>
               ))}
-              {schedules.length === 0 && (
+              {filteredSchedules.length === 0 && (
                 <div className="text-center py-20 bg-slate-50 rounded-3xl border border-dashed border-slate-300">
                   <Icons.Calendar className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-500">Lịch công tác đang được cập nhật...</p>
+                  <p className="text-slate-500">Không tìm thấy lịch công tác phù hợp.</p>
                 </div>
               )}
             </div>
@@ -1455,12 +1503,22 @@ export default function App() {
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-blue-900 uppercase">{schoolInfo?.name || 'Trường THPT'}</h1>
-            <p className="text-sm text-slate-500 italic font-medium">"{schoolInfo?.slogan || 'Trí tuệ - Đạo đức - Sáng tạo'}"</p>
+            <div className="flex items-center gap-6">
+              <p className="text-sm text-slate-500 italic font-medium">"{schoolInfo?.slogan || 'Trí tuệ - Đạo đức - Sáng tạo'}"</p>
+              
+              {/* Search Bar - Moved closer to title */}
+              <div className="hidden lg:flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200 focus-within:ring-2 focus-within:ring-blue-500 transition-all">
+                <Icons.Search className="w-3.5 h-3.5 text-slate-400" />
+                <input 
+                  type="text" 
+                  placeholder="Tìm kiếm..." 
+                  className="bg-transparent border-none outline-none text-xs w-32 font-medium"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="ml-auto hidden lg:flex items-center gap-2 bg-slate-100 px-4 py-2 rounded-full border border-slate-200">
-          <Search className="w-4 h-4 text-slate-400" />
-          <input type="text" placeholder="Tìm kiếm thông tin..." className="bg-transparent border-none outline-none text-sm w-48" />
         </div>
       </header>
 
