@@ -45,6 +45,10 @@ import {
   Heading3,
   List,
   Table2,
+  Archive,
+  Upload,
+  Search,
+  Filter,
   Image as ImageIcon,
   Type,
   Link as LinkIcon
@@ -57,7 +61,7 @@ import remarkBreaks from 'remark-breaks';
 import 'katex/dist/katex.min.css';
 import { Loader2 } from 'lucide-react';
 
-type TabType = 'news' | 'admissions' | 'home' | 'about' | 'contact' | 'admissions_page' | 'news_page' | 'features' | 'departments' | 'youth_union' | 'achievements' | 'schedule' | 'gallery';
+type TabType = 'news' | 'admissions' | 'home' | 'about' | 'contact' | 'admissions_page' | 'news_page' | 'features' | 'departments' | 'youth_union' | 'achievements' | 'schedule' | 'gallery' | 'archive';
 
 interface AdminDashboardProps {
   onLogout?: () => void;
@@ -74,6 +78,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
   const [achievements, setAchievements] = useState<any[]>([]);
   const [schedule, setSchedule] = useState<any[]>([]);
   const [gallery, setGallery] = useState<any[]>([]);
+  const [archiveDocuments, setArchiveDocuments] = useState<any[]>([]);
   const [deptPersonnel, setDeptPersonnel] = useState<any[]>([]);
   const [deptActivities, setDeptActivities] = useState<any[]>([]);
   const [deptDocuments, setDeptDocuments] = useState<any[]>([]);
@@ -88,6 +93,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
   const [editingAchievementId, setEditingAchievementId] = useState<string | null>(null);
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
   const [editingGalleryId, setEditingGalleryId] = useState<string | null>(null);
+  const [editingArchiveId, setEditingArchiveId] = useState<string | null>(null);
   const [editingPersonnelId, setEditingPersonnelId] = useState<string | null>(null);
   const [editingActivityId, setEditingActivityId] = useState<string | null>(null);
   const [editingDocumentId, setEditingDocumentId] = useState<string | null>(null);
@@ -379,6 +385,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
   const [scheduleForm, setScheduleForm] = useState({ title: '', week: '', date_range: '', content: '', file_url: '', start_date: '', end_date: '' });
   const [galleryForm, setGalleryForm] = useState({ title: '', image_url: '', category: 'Hoạt động trường', description: '', images_json: '[]' });
   const [galleryImages, setGalleryImages] = useState<{ url: string, caption: string }[]>([]);
+  const [archiveForm, setArchiveForm] = useState({ title: '', category: 'Nội bộ', year: new Date().getFullYear(), type: 'Chương trình', file_url: '', description: '' });
   const [personnelForm, setPersonnelForm] = useState({ name: '', position: '', bio: '', birth_date: '', education: '', image_url: '' });
   const [activityForm, setActivityForm] = useState({ title: '', date: '', summary: '', description: '', document_url: '', content: '', image_url: '' });
   const [documentForm, setDocumentForm] = useState({ title: '', description: '', file_url: '', category: 'Giáo án' });
@@ -465,6 +472,9 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
     } else if (activeTab === 'gallery') {
       const { data } = await supabase.from('gallery').select('*').order('title', { ascending: true });
       if (data) setGallery(data);
+    } else if (activeTab === 'archive') {
+      const { data } = await supabase.from('archive_documents').select('*').order('year', { ascending: false }).order('created_at', { ascending: false });
+      if (data) setArchiveDocuments(data);
     }
     setLoading(false);
   }, [activeTab]);
@@ -486,7 +496,8 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
       'youth_union': 'youth_union',
       'achievements': 'achievements',
       'schedule': 'schedules',
-      'gallery': 'gallery'
+      'gallery': 'gallery',
+      'archive': 'archive_documents'
     };
 
     const tableName = tableMap[activeTab];
@@ -943,6 +954,49 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
     });
   };
 
+  const handleSaveArchive = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingArchiveId) {
+        const { error } = await supabase.from('archive_documents').update({ ...archiveForm, updated_at: new Date() }).eq('id', editingArchiveId);
+        if (error) throw error;
+        setEditingArchiveId(null);
+      } else {
+        const { error } = await supabase.from('archive_documents').insert([{ ...archiveForm }]);
+        if (error) throw error;
+      }
+      setArchiveForm({ title: '', category: 'Nội bộ', year: new Date().getFullYear(), type: 'Chương trình', file_url: '', description: '' });
+      showSuccess();
+      fetchData();
+    } catch (error: any) {
+      showAlert("Lỗi", "Lỗi khi lưu văn bản: " + error.message);
+    }
+  };
+
+  const handleEditArchive = (item: any) => {
+    setEditingArchiveId(item.id);
+    setArchiveForm({
+      title: item.title,
+      category: item.category,
+      year: item.year,
+      type: item.type,
+      file_url: item.file_url || '',
+      description: item.description || ''
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeleteArchive = async (id: string) => {
+    showConfirm("Xác nhận xóa", "Bạn có chắc chắn muốn xóa văn bản này?", async () => {
+      const { error } = await supabase.from('archive_documents').delete().eq('id', id);
+      if (error) {
+        showAlert("Lỗi", "Lỗi khi xóa: " + error.message);
+      } else {
+        fetchData();
+      }
+    });
+  };
+
   const handleAddPersonnel = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedDeptId) return;
@@ -1140,6 +1194,12 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'gallery' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
           >
             <Globe className="w-5 h-5" /> Thư viện ảnh
+          </button>
+          <button 
+            onClick={() => setActiveTab('archive')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'archive' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+          >
+            <Archive className="w-5 h-5" /> Lưu trữ văn bản
           </button>
         </nav>
 
@@ -2761,6 +2821,135 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'archive' && (
+            <div className="space-y-8">
+              <form onSubmit={handleSaveArchive} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                  {editingArchiveId ? <Edit className="w-5 h-5 text-amber-600" /> : <Plus className="w-5 h-5 text-blue-600" />}
+                  {editingArchiveId ? 'Hiệu chỉnh văn bản' : 'Thêm văn bản mới'}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <input 
+                    type="text" 
+                    placeholder="Tiêu đề văn bản" 
+                    value={archiveForm.title}
+                    onChange={e => setArchiveForm({...archiveForm, title: e.target.value})}
+                    className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 col-span-2"
+                    required
+                  />
+                  <div className="flex gap-4">
+                    <select 
+                      value={archiveForm.category}
+                      onChange={e => setArchiveForm({...archiveForm, category: e.target.value})}
+                      className="flex-1 p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option>Nội bộ</option>
+                      <option>Số, Bộ</option>
+                    </select>
+                    <select 
+                      value={archiveForm.type}
+                      onChange={e => setArchiveForm({...archiveForm, type: e.target.value})}
+                      className="flex-1 p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option>Chương trình</option>
+                      <option>Nội quy</option>
+                      <option>Quy chế</option>
+                      <option>Nghị định</option>
+                      <option>Khác</option>
+                    </select>
+                  </div>
+                  <div className="flex gap-4">
+                    <input 
+                      type="number" 
+                      placeholder="Năm" 
+                      value={archiveForm.year}
+                      onChange={e => setArchiveForm({...archiveForm, year: parseInt(e.target.value) || 0})}
+                      className="flex-1 p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <div className="flex-[2] flex gap-2">
+                       <input 
+                        type="url" 
+                        placeholder="Link file đính kèm" 
+                        value={archiveForm.file_url}
+                        onChange={e => setArchiveForm({...archiveForm, file_url: e.target.value})}
+                        className="flex-1 p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <div className="relative">
+                        <input 
+                          type="file" 
+                          onChange={(e) => handleImageUpload(e, setArchiveForm, archiveForm, 'file_url')}
+                          className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                        />
+                        <button type="button" className="p-3 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-colors">
+                          <Upload className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <textarea 
+                    placeholder="Mô tả ngắn gọn" 
+                    value={archiveForm.description}
+                    onChange={e => setArchiveForm({...archiveForm, description: e.target.value})}
+                    className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 col-span-2 h-20"
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button type="submit" className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors">
+                    {editingArchiveId ? 'Cập nhật' : 'Lưu văn bản'}
+                  </button>
+                  {editingArchiveId && (
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        setEditingArchiveId(null);
+                        setArchiveForm({ title: '', category: 'Nội bộ', year: new Date().getFullYear(), type: 'Chương trình', file_url: '', description: '' });
+                      }}
+                      className="px-6 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
+                    >
+                      Hủy bỏ
+                    </button>
+                  )}
+                </div>
+              </form>
+
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <table className="w-full text-left">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="p-4 font-bold text-slate-600">Tiêu đề</th>
+                      <th className="p-4 font-bold text-slate-600">Nhóm</th>
+                      <th className="p-4 font-bold text-slate-600">Loại</th>
+                      <th className="p-4 font-bold text-slate-600">Năm</th>
+                      <th className="p-4 font-bold text-slate-600">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {archiveDocuments.map(item => (
+                      <tr key={item.id} className="border-b border-slate-100 last:border-none">
+                        <td className="p-4 text-sm font-medium">{item.title}</td>
+                        <td className="p-4 text-sm">
+                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${item.category === 'Nội bộ' ? 'bg-emerald-100 text-emerald-700' : 'bg-purple-100 text-purple-700'}`}>
+                            {item.category}
+                          </span>
+                        </td>
+                        <td className="p-4 text-sm text-slate-500">{item.type}</td>
+                        <td className="p-4 text-sm text-slate-500">{item.year}</td>
+                        <td className="p-4 flex gap-2">
+                          <button onClick={() => handleEditArchive(item)} className="text-blue-500 hover:text-blue-700 p-2">
+                            <Edit className="w-5 h-5" />
+                          </button>
+                          <button onClick={() => handleDeleteArchive(item.id)} className="text-red-500 hover:text-red-700 p-2">
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
