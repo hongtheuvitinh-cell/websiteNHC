@@ -79,13 +79,6 @@ export default function App() {
   const [gallery, setGallery] = useState<any[]>([]);
 
   const MarkdownContent = ({ content }: { content: string }) => {
-    // Tự động sửa lỗi khoảng trắng trong cú pháp bold/italic phổ biến
-    const sanitizedContent = content
-      ?.replace(/\*\*\s+/g, '**') // Xóa dấu cách sau ** cho bold
-      ?.replace(/\s+\*\*/g, '**') // Xóa dấu cách trước ** cho bold
-      ?.replace(/\*\s+/g, '*')   // Xóa dấu cách sau * cho italic
-      ?.replace(/\s+\*/g, '*');  // Xóa dấu cách trước * cho italic
-
     return (
       <div className="markdown-body prose prose-slate prose-lg max-w-none prose-p:leading-relaxed prose-li:my-1 prose-headings:text-blue-900 prose-strong:text-slate-900 prose-strong:font-black">
         <ReactMarkdown 
@@ -113,7 +106,7 @@ export default function App() {
             )
           }}
         >
-          {sanitizedContent}
+          {content}
         </ReactMarkdown>
       </div>
     );
@@ -342,6 +335,28 @@ export default function App() {
               <div className="text-lg text-slate-600 leading-relaxed">
                 <div className="space-y-6">
                   <MarkdownContent content={selectedNews.content} />
+                  
+                  <div className="flex flex-col gap-4 mt-8">
+                    {selectedNews.document_url && (
+                      <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Icons.FileText className="w-6 h-6 text-blue-600" />
+                          <div>
+                            <p className="font-bold text-blue-900">Tài liệu đính kèm</p>
+                            <p className="text-sm text-blue-600 truncate max-w-[200px] md:max-w-md">{selectedNews.document_url}</p>
+                          </div>
+                        </div>
+                        <a 
+                          href={selectedNews.document_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors"
+                        >
+                          <Icons.ExternalLink className="w-4 h-4" /> Tải về
+                        </a>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
