@@ -16,3 +16,19 @@
     background: #475569;
   }
 }
+
+/* Fix for aligned spans in Markdown */
+.prose span[style*="text-align: center"] {
+  display: block !important;
+  width: 100%;
+}
+.prose span[style*="text-align: right"] {
+  display: block !important;
+  width: 100%;
+}
+
+.markdown-body table {
+  margin-left: auto;
+  margin-right: auto;
+}
+
