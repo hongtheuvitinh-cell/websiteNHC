@@ -1151,6 +1151,9 @@ export default function App() {
                                               >
                                                 Tải về
                                               </a>
+                                              <span className="text-[9px] text-slate-400 font-medium opacity-70">
+                                                • {docItem.created_at ? new Date(docItem.created_at).toLocaleDateString('vi-VN') : '---'}
+                                              </span>
                                               {docItem.description && (
                                                 <span className="text-[10px] text-slate-400 italic truncate max-w-[150px]">
                                                   | {docItem.description}
