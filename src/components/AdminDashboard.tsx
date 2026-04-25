@@ -522,7 +522,8 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
   const [archiveForm, setArchiveForm] = useState({ title: '', category: 'Nội bộ', year: new Date().getFullYear(), type: 'Chương trình', file_url: '', description: '' });
   const [personnelForm, setPersonnelForm] = useState({ name: '', position: '', bio: '', birth_date: '', education: '', image_url: '' });
   const [activityForm, setActivityForm] = useState({ title: '', date: '', summary: '', description: '', document_url: '', content: '', image_url: '' });
-  const [documentForm, setDocumentForm] = useState({ title: '', description: '', file_url: '', category: 'Giáo án' });
+  const [documentForm, setDocumentForm] = useState({ title: '', description: '', file_url: '', category: 'Giáo án', is_new: true });
+  const [documentAdminFilter, setDocumentAdminFilter] = useState<'new' | 'old'>('new');
   
   const [homeForm, setHomeForm] = useState({ 
     banner_title: 'Môi trường giáo dục hiện đại & thân thiện', 
@@ -1221,7 +1222,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
         const { error } = await supabase.from('dept_documents').insert([{ ...documentForm, dept_id: selectedDeptId }]);
         if (error) throw error;
       }
-      setDocumentForm({ title: '', description: '', file_url: '', category: 'Giáo án' });
+      setDocumentForm({ title: '', description: '', file_url: '', category: 'Giáo án', is_new: true });
       showSuccess();
       fetchDeptData();
     } catch (error: any) {
@@ -2451,6 +2452,15 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                             <option value="Chuyên đề">Chuyên đề</option>
                             <option value="Hệ thống học tập">Hệ thống học tập</option>
                           </select>
+                          <label className="flex items-center gap-2 px-4 border rounded-xl bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors">
+                            <input 
+                              type="checkbox" 
+                              checked={documentForm.is_new}
+                              onChange={e => setDocumentForm({...documentForm, is_new: e.target.checked})}
+                              className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                            />
+                            <span className="text-sm font-bold text-slate-700">Hiện "NEW"</span>
+                          </label>
                         </div>
                         <div className="grid grid-cols-1 gap-4 mb-4">
                           <input 
@@ -2477,7 +2487,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                               type="button" 
                               onClick={() => {
                                 setEditingDocumentId(null);
-                                setDocumentForm({ title: '', description: '', file_url: '', category: 'Giáo án' });
+                                setDocumentForm({ title: '', description: '', file_url: '', category: 'Giáo án', is_new: true });
                               }}
                               className="px-6 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
                             >
@@ -2488,8 +2498,33 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       </form>
 
                       <div className="space-y-8">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                            <BookOpen className="w-6 h-6 text-blue-600" /> Tài liệu hiện có
+                          </h4>
+                          <div className="flex p-1 bg-slate-100 rounded-xl">
+                            <button 
+                              type="button"
+                              onClick={() => setDocumentAdminFilter('new')}
+                              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${documentAdminFilter === 'new' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}
+                            >
+                              TÀI LIỆU MỚI
+                            </button>
+                            <button 
+                              type="button"
+                              onClick={() => setDocumentAdminFilter('old')}
+                              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${documentAdminFilter === 'old' ? 'bg-white text-slate-600 shadow-sm' : 'text-slate-500'}`}
+                            >
+                              TÀI LIỆU CŨ
+                            </button>
+                          </div>
+                        </div>
+
                         {['Giáo án', 'Đề KT', 'Chuyên đề', 'Hệ thống học tập'].map(cat => {
-                          const catDocs = deptDocuments.filter(d => d.category === cat);
+                          const catDocs = deptDocuments.filter(d => 
+                            d.category === cat && 
+                            (documentAdminFilter === 'new' ? d.is_new : !d.is_new)
+                          );
                           if (catDocs.length === 0) return null;
                           
                           return (
@@ -2507,7 +2542,10 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                                         <FileText className="w-6 h-6" />
                                       </div>
                                       <div>
-                                        <h5 className="font-bold text-slate-800 line-clamp-1">{d.title}</h5>
+                                        <h5 className="font-bold text-slate-800 line-clamp-1 flex items-center gap-1.5">
+                                          {d.title}
+                                          {d.is_new && <span className="px-1.5 py-0.5 bg-orange-600 text-white text-[8px] font-black rounded shadow-sm shrink-0">NEW</span>}
+                                        </h5>
                                         <div className="flex items-center gap-2">
                                           <a href={d.file_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 font-bold hover:underline">TẢI XUỐNG</a>
                                           {d.description && <span className="text-[10px] text-slate-400 italic line-clamp-1">| {d.description}</span>}
@@ -2517,8 +2555,14 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                       <button 
                                         onClick={() => {
-                                          setEditingDocumentId(d.id);
-                                          setDocumentForm({ title: d.title, file_url: d.file_url, description: d.description || '', category: d.category || 'Giáo án' });
+                                        setEditingDocumentId(d.id);
+                                        setDocumentForm({ 
+                                          title: d.title, 
+                                          file_url: d.file_url, 
+                                          description: d.description || '', 
+                                          category: d.category || 'Giáo án',
+                                          is_new: !!d.is_new 
+                                        });
                                         }}
                                         className="p-1.5 bg-blue-50 text-blue-500 hover:bg-blue-100 rounded-lg"
                                       >
