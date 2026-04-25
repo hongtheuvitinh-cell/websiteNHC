@@ -1083,42 +1083,55 @@ export default function App() {
                     {/* Documents Tab */}
                     {activeDeptTab === 'documents' && (
                       <div className="animate-in fade-in duration-300">
-                        <h4 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-3">
+                        <h4 className="text-2xl font-bold text-slate-900 mb-8 flex items-center gap-3">
                           <Icons.BookOpen className="w-7 h-7 text-amber-600" /> Tài liệu tổ chuyên môn
                         </h4>
                         {deptDocuments.length > 0 ? (
-                          <div className="space-y-10">
+                          <div className="space-y-12">
                             {['Giáo án', 'Đề KT', 'Chuyên đề', 'Hệ thống học tập'].map(cat => {
                               const catDocs = deptDocuments.filter(d => d.category === cat);
                               if (catDocs.length === 0) return null;
                               
                               return (
                                 <div key={cat} className="space-y-4">
-                                  <div className="flex items-center gap-4">
-                                    <h5 className="text-sm font-black uppercase tracking-[0.2em] text-blue-900 bg-blue-50 px-4 py-1.5 rounded-full border border-blue-100 flex-shrink-0">
-                                      {cat}
-                                    </h5>
+                                  <h5 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 flex items-center gap-4">
                                     <div className="h-px bg-slate-100 flex-1"></div>
-                                  </div>
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {cat}
+                                    <div className="h-px bg-slate-100 flex-1"></div>
+                                  </h5>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {catDocs.map((docItem) => (
-                                      <div key={docItem.id} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-lg transition-all group border-b-4 border-b-transparent hover:border-b-blue-500">
-                                        <div className="flex items-start justify-between mb-4">
-                                          <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl group-hover:bg-amber-100 transition-colors">
-                                            <Icons.FileText className="w-6 h-6" />
+                                      <div key={docItem.id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group flex items-center justify-between border-l-4 border-l-transparent hover:border-l-blue-500">
+                                        <div className="flex items-center gap-4">
+                                          <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                            <Icons.FileText className="w-5 h-5" />
+                                          </div>
+                                          <div className="min-w-0">
+                                            <h5 className="font-bold text-slate-800 group-hover:text-blue-900 transition-colors truncate">{docItem.title}</h5>
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                              <a 
+                                                href={docItem.file_url} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                className="text-[10px] font-black text-blue-600 hover:underline uppercase tracking-wider"
+                                              >
+                                                Tải về
+                                              </a>
+                                              {docItem.description && (
+                                                <span className="text-[10px] text-slate-400 italic truncate max-w-[150px]">
+                                                  | {docItem.description}
+                                                </span>
+                                              )}
+                                            </div>
                                           </div>
                                         </div>
-                                        <h5 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-blue-800 transition-colors uppercase tracking-tight">{docItem.title}</h5>
-                                        {docItem.description && (
-                                          <p className="text-sm text-slate-500 mb-4 line-clamp-2 italic leading-relaxed">"{docItem.description}"</p>
-                                        )}
                                         <a 
-                                          href={docItem.file_url} 
-                                          target="_blank" 
+                                          href={docItem.file_url}
+                                          target="_blank"
                                           rel="noopener noreferrer"
-                                          className="flex items-center justify-center gap-2 w-full py-3 bg-blue-50 text-blue-700 font-bold rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                                          className="p-2 text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
                                         >
-                                          <Icons.Download className="w-4 h-4" /> Tải tài liệu
+                                          <Icons.ExternalLink className="w-4 h-4" />
                                         </a>
                                       </div>
                                     ))}
@@ -1128,7 +1141,7 @@ export default function App() {
                             })}
                           </div>
                         ) : (
-                          <div className="p-8 bg-slate-50 rounded-3xl border border-dashed border-slate-200 text-center">
+                          <div className="p-12 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 text-center">
                             <p className="text-slate-400 italic">Kho tài liệu đang được cập nhật...</p>
                           </div>
                         )}
@@ -1634,13 +1647,13 @@ export default function App() {
           <div className="w-16 h-16 bg-blue-800 rounded-full flex items-center justify-center text-white shadow-lg">
             <GraduationCap className="w-10 h-10" />
           </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-blue-900 uppercase">{schoolInfo?.name || 'Trường THPT'}</h1>
+          <div className="pb-2">
+            <h1 className="text-2xl font-bold tracking-tight text-blue-900 uppercase leading-none mb-2">{schoolInfo?.name || 'Trường THPT'}</h1>
             <div className="flex items-center gap-6">
-              <p className="text-sm text-slate-500 italic font-medium">"{schoolInfo?.slogan || 'Trí tuệ - Đạo đức - Sáng tạo'}"</p>
+              <p className="text-[11px] text-slate-400 italic font-bold tracking-wide uppercase opacity-80">"{schoolInfo?.slogan || 'Trí tuệ - Đạo đức - Sáng tạo'}"</p>
               
               {/* Search Bar - Moved closer to title */}
-              <div className="hidden lg:flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200 focus-within:ring-2 focus-within:ring-blue-500 transition-all group" title="Tìm kiếm theo tiêu đề Tin tức hoặc Tuyển sinh">
+              <div className="hidden lg:flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200 focus-within:ring-2 focus-within:ring-blue-500 transition-all group" title="Tìm kiếm theo tiêu đề Tin tức hoặc Tuyển sinh">
                 <Icons.Search className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-500 transition-colors" />
                 <input 
                   type="text" 
