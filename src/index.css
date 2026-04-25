@@ -17,18 +17,31 @@
   }
 }
 
-/* Fix for aligned spans in Markdown */
-.prose span[style*="text-align: center"] {
-  display: block !important;
-  width: 100%;
-}
-.prose span[style*="text-align: right"] {
-  display: block !important;
-  width: 100%;
+/* Fix for markdown alignment blocks */
+.markdown-body .flex-col {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
 }
 
 .markdown-body table {
   margin-left: auto;
   margin-right: auto;
 }
+
+/* Tighten paragraph spacing */
+.prose p {
+  margin-top: 4px !important;
+  margin-bottom: 4px !important;
+  line-height: 1.6 !important;
+}
+
+/* Ensure nested prose elements respect parent alignment */
+.text-center .prose, .text-center p, .text-center h1, .text-center h2, .text-center h3, .text-center h4 {
+  text-align: center;
+}
+
+.text-right .prose, .text-right p, .text-right h1, .text-right h2, .text-right h3, .text-right h4 {
+  text-align: right;
+}
+
 
