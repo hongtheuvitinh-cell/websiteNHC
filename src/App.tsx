@@ -919,17 +919,27 @@ export default function App() {
                 <Icons.ArrowLeft className="w-5 h-5" /> Quay lại danh sách tổ
               </button>
               <div className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm p-8 md:p-12">
-                <div className="flex items-center gap-6 mb-8">
-                  <div className="w-20 h-20 bg-blue-100 text-blue-800 rounded-2xl flex items-center justify-center shadow-sm">
-                    <IconComponent className="w-10 h-10" />
+                <div className="flex flex-col lg:flex-row lg:items-center gap-6 mb-10">
+                  <div className="flex items-center gap-6 shrink-0">
+                    <div className="w-20 h-20 bg-blue-100 text-blue-800 rounded-2xl flex items-center justify-center shadow-sm">
+                      <IconComponent className="w-10 h-10" />
+                    </div>
+                    <div>
+                      <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight">{selectedDepartment.name}</h2>
+                      <div className="h-1.5 w-20 bg-blue-800 rounded-full mt-2"></div>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="text-3xl font-black text-slate-900 uppercase">{selectedDepartment.name}</h2>
-                    <div className="h-1.5 w-24 bg-blue-800 rounded-full mt-2"></div>
-                  </div>
+                  
+                  {selectedDepartment.description && (
+                    <div className="flex-1 px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-3xl relative overflow-hidden group hover:border-blue-200 transition-colors">
+                      <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-600"></div>
+                      <p className="text-xs md:text-sm font-bold text-blue-900 italic leading-relaxed uppercase tracking-wide">
+                        {selectedDepartment.description}
+                      </p>
+                    </div>
+                  )}
                 </div>
                 <div className="prose prose-slate max-w-none text-lg text-slate-600 leading-relaxed">
-                  <p className="font-bold text-xl text-blue-900 mb-8">{selectedDepartment.description}</p>
                   
                   {/* Tabs Navigation */}
                   <div className="flex border-b border-slate-200 mb-8 overflow-x-auto no-scrollbar">
