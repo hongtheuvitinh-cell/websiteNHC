@@ -2548,6 +2548,9 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                                         </h5>
                                         <div className="flex items-center gap-2">
                                           <a href={d.file_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 font-bold hover:underline">TẢI XUỐNG</a>
+                                          <span className="text-[9px] text-slate-400 font-medium italic">
+                                            ({d.created_at ? new Date(d.created_at).toLocaleDateString('vi-VN') : '---'})
+                                          </span>
                                           {d.description && <span className="text-[10px] text-slate-400 italic line-clamp-1">| {d.description}</span>}
                                         </div>
                                       </div>
