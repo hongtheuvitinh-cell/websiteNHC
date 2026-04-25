@@ -54,7 +54,8 @@ import {
   Link as LinkIcon,
   AlignLeft,
   AlignCenter,
-  AlignRight
+  AlignRight,
+  Palette
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
@@ -172,6 +173,10 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
         insertion = `:::right\n${selectedText || 'văn bản canh phải'}\n:::`;
         newCursorPos = start + 9;
         break;
+      case 'align-justify':
+        insertion = `:::justify\n${selectedText || 'văn bản canh đều'}\n:::`;
+        newCursorPos = start + 11;
+        break;
       case 'font-size':
         insertion = `<span style="font-size: 20px">${selectedText || 'văn bản'}</span>`;
         newCursorPos = start + 25;
@@ -179,6 +184,10 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
       case 'font-family':
         insertion = `<span style="font-family: 'Times New Roman'">${selectedText || 'văn bản'}</span>`;
         newCursorPos = start + 40;
+        break;
+      case 'text-color':
+        insertion = `<span style="color:blue">${selectedText || 'văn bản màu xanh'}</span>`;
+        newCursorPos = start + 20;
         break;
       default:
         return;
@@ -311,6 +320,14 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
         <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'align-right')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Canh phải">
           <AlignRight className="w-4 h-4" />
         </button>
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'align-justify')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Canh đều">
+          <div className="flex flex-col gap-0.5 items-center">
+            <div className="w-4 h-[1px] bg-current"></div>
+            <div className="w-4 h-[1px] bg-current"></div>
+            <div className="w-4 h-[1px] bg-current"></div>
+            <div className="w-4 h-[1px] bg-current"></div>
+          </div>
+        </button>
         <div className="w-px h-6 bg-slate-300 mx-1 self-center" />
         
         <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'font-size')} className="p-2 hover:bg-slate-200 rounded transition-colors flex items-center gap-1 group" title="Kích cỡ chữ">
@@ -320,6 +337,10 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
         <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'font-family')} className="p-2 hover:bg-slate-200 rounded transition-colors flex items-center gap-1 group" title="Kiểu Font">
           <Type className="w-4 h-4 opacity-50" />
           <span className="text-[10px] font-black group-hover:text-blue-600">FONT</span>
+        </button>
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'text-color')} className="p-2 hover:bg-slate-200 rounded transition-colors flex items-center gap-1 group" title="Màu chữ">
+          <Palette className="w-4 h-4 text-blue-600" />
+          <span className="text-[10px] font-black group-hover:text-blue-600">COLOR</span>
         </button>
 
         <div className="w-px h-6 bg-slate-300 mx-1 self-center" />
@@ -380,7 +401,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
     if (!content) return null;
     
     // Split content into parts based on alignment markers :::center ... :::
-    const parts = content.split(/(:::(?:center|right|left)[\s\S]*?:::)/g);
+    const parts = content.split(/(:::(?:center|right|left|justify)[\s\S]*?:::)/g);
     
     const sharedComponents = {
       img: ({ node, ...props }: any) => (
@@ -398,6 +419,9 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
           rel="noopener noreferrer" 
           className="text-blue-600 hover:underline font-medium"
         />
+      ),
+      span: ({ node, ...props }: any) => (
+        <span {...props} style={props.style} />
       )
     };
 
@@ -433,6 +457,16 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
             const inner = part.replace(/^:::left\n?/, '').replace(/\n?:::$/, '').trim();
             return (
               <div key={index} className="flex flex-col items-start text-left w-full my-4">
+                <ReactMarkdown {...sharedPlugins} components={sharedComponents}>
+                  {inner}
+                </ReactMarkdown>
+              </div>
+            );
+          }
+          if (part.startsWith(':::justify')) {
+            const inner = part.replace(/^:::justify\n?/, '').replace(/\n?:::$/, '').trim();
+            return (
+              <div key={index} className="flex flex-col w-full my-4 text-justify">
                 <ReactMarkdown {...sharedPlugins} components={sharedComponents}>
                   {inner}
                 </ReactMarkdown>
