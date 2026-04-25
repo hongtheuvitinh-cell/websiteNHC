@@ -2440,6 +2440,19 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                             className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                             required
                           />
+                          <select 
+                            value={documentForm.category}
+                            onChange={e => setDocumentForm({...documentForm, category: e.target.value})}
+                            className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-slate-700 bg-white"
+                            required
+                          >
+                            <option value="Giáo án">Giáo án</option>
+                            <option value="Đề KT">Đề KT</option>
+                            <option value="Chuyên đề">Chuyên đề</option>
+                            <option value="Hệ thống học tập">Hệ thống học tập</option>
+                          </select>
+                        </div>
+                        <div className="grid grid-cols-1 gap-4 mb-4">
                           <input 
                             type="url" 
                             placeholder="Link tải tài liệu (Google Drive, Dropbox...)" 
@@ -2447,6 +2460,12 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                             onChange={e => setDocumentForm({...documentForm, file_url: e.target.value})}
                             className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                             required
+                          />
+                          <textarea 
+                            placeholder="Mô tả ngắn về tài liệu (tùy chọn)" 
+                            value={documentForm.description}
+                            onChange={e => setDocumentForm({...documentForm, description: e.target.value})}
+                            className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-20"
                           />
                         </div>
                         <div className="flex gap-3">
@@ -2468,32 +2487,59 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                         </div>
                       </form>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {deptDocuments.map(d => (
-                          <div key={d.id} className="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between group">
-                            <div className="flex items-center gap-3">
-                              <FileText className="w-8 h-8 text-blue-500" />
-                              <div>
-                                <h5 className="font-bold text-slate-800">{d.title}</h5>
-                                <a href={d.file_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">Xem tài liệu</a>
+                      <div className="space-y-8">
+                        {['Giáo án', 'Đề KT', 'Chuyên đề', 'Hệ thống học tập'].map(cat => {
+                          const catDocs = deptDocuments.filter(d => d.category === cat);
+                          if (catDocs.length === 0) return null;
+                          
+                          return (
+                            <div key={cat} className="space-y-4">
+                              <h5 className="text-sm font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                <div className="h-px bg-slate-200 flex-1"></div>
+                                {cat}
+                                <div className="h-px bg-slate-200 flex-1"></div>
+                              </h5>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {catDocs.map(d => (
+                                  <div key={d.id} className="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between group hover:shadow-md transition-all">
+                                    <div className="flex items-center gap-3">
+                                      <div className="p-2 bg-blue-50 text-blue-500 rounded-lg">
+                                        <FileText className="w-6 h-6" />
+                                      </div>
+                                      <div>
+                                        <h5 className="font-bold text-slate-800 line-clamp-1">{d.title}</h5>
+                                        <div className="flex items-center gap-2">
+                                          <a href={d.file_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 font-bold hover:underline">TẢI XUỐNG</a>
+                                          {d.description && <span className="text-[10px] text-slate-400 italic line-clamp-1">| {d.description}</span>}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <button 
+                                        onClick={() => {
+                                          setEditingDocumentId(d.id);
+                                          setDocumentForm({ title: d.title, file_url: d.file_url, description: d.description || '', category: d.category || 'Giáo án' });
+                                        }}
+                                        className="p-1.5 bg-blue-50 text-blue-500 hover:bg-blue-100 rounded-lg"
+                                      >
+                                        <Edit className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button onClick={() => handleDeleteDocument(d.id)} className="p-1.5 bg-red-50 text-red-500 hover:bg-red-100 rounded-lg">
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
                             </div>
-                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button 
-                                onClick={() => {
-                                  setEditingDocumentId(d.id);
-                                  setDocumentForm({ title: d.title, file_url: d.file_url, description: d.description || '', category: d.category || 'Giáo án' });
-                                }}
-                                className="p-1 text-blue-500 hover:bg-blue-50 rounded"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </button>
-                              <button onClick={() => handleDeleteDocument(d.id)} className="p-1 text-red-500 hover:bg-red-50 rounded">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
+                          );
+                        })}
+
+                        {deptDocuments.length === 0 && (
+                          <div className="text-center py-10 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                            <p className="text-slate-400 italic">Chưa có tài liệu nào trong tổ này.</p>
                           </div>
-                        ))}
+                        )}
                       </div>
                     </div>
                   )}
