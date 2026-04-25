@@ -1087,31 +1087,45 @@ export default function App() {
                           <Icons.BookOpen className="w-7 h-7 text-amber-600" /> Tài liệu tổ chuyên môn
                         </h4>
                         {deptDocuments.length > 0 ? (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {deptDocuments.map((docItem) => (
-                              <div key={docItem.id} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all group">
-                                <div className="flex items-start justify-between mb-4">
-                                  <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl group-hover:bg-amber-100 transition-colors">
-                                    <Icons.FileText className="w-6 h-6" />
+                          <div className="space-y-10">
+                            {['Giáo án', 'Đề KT', 'Chuyên đề', 'Hệ thống học tập'].map(cat => {
+                              const catDocs = deptDocuments.filter(d => d.category === cat);
+                              if (catDocs.length === 0) return null;
+                              
+                              return (
+                                <div key={cat} className="space-y-4">
+                                  <div className="flex items-center gap-4">
+                                    <h5 className="text-sm font-black uppercase tracking-[0.2em] text-blue-900 bg-blue-50 px-4 py-1.5 rounded-full border border-blue-100 flex-shrink-0">
+                                      {cat}
+                                    </h5>
+                                    <div className="h-px bg-slate-100 flex-1"></div>
                                   </div>
-                                  <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-bold uppercase">
-                                    {docItem.category}
-                                  </span>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {catDocs.map((docItem) => (
+                                      <div key={docItem.id} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-lg transition-all group border-b-4 border-b-transparent hover:border-b-blue-500">
+                                        <div className="flex items-start justify-between mb-4">
+                                          <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl group-hover:bg-amber-100 transition-colors">
+                                            <Icons.FileText className="w-6 h-6" />
+                                          </div>
+                                        </div>
+                                        <h5 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-blue-800 transition-colors uppercase tracking-tight">{docItem.title}</h5>
+                                        {docItem.description && (
+                                          <p className="text-sm text-slate-500 mb-4 line-clamp-2 italic leading-relaxed">"{docItem.description}"</p>
+                                        )}
+                                        <a 
+                                          href={docItem.file_url} 
+                                          target="_blank" 
+                                          rel="noopener noreferrer"
+                                          className="flex items-center justify-center gap-2 w-full py-3 bg-blue-50 text-blue-700 font-bold rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                                        >
+                                          <Icons.Download className="w-4 h-4" /> Tải tài liệu
+                                        </a>
+                                      </div>
+                                    ))}
+                                  </div>
                                 </div>
-                                <h5 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-blue-800 transition-colors">{docItem.title}</h5>
-                                {docItem.description && (
-                                  <p className="text-sm text-slate-500 mb-4 line-clamp-2 italic">{docItem.description}</p>
-                                )}
-                                <a 
-                                  href={docItem.file_url} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="flex items-center justify-center gap-2 w-full py-3 bg-blue-50 text-blue-700 font-bold rounded-xl hover:bg-blue-600 hover:text-white transition-all"
-                                >
-                                  <Icons.Download className="w-4 h-4" /> Tải tài liệu
-                                </a>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         ) : (
                           <div className="p-8 bg-slate-50 rounded-3xl border border-dashed border-slate-200 text-center">
