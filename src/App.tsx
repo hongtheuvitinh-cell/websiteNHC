@@ -100,14 +100,54 @@ export default function App() {
           loading="lazy"
         />
       ),
-      a: ({ node, ...props }: any) => (
-        <a 
-          {...props} 
-          target="_blank" 
-          rel="noopener noreferrer" 
-          className="text-blue-600 hover:text-blue-800 underline decoration-blue-300 underline-offset-4 font-bold"
-        />
-      ),
+      a: ({ node, ...props }: any) => {
+        const href = props.href || '';
+        const isInternalNews = href.startsWith('news:');
+        const isInternalAdmission = href.startsWith('admission:');
+        
+        if (isInternalNews || isInternalAdmission) {
+          return (
+            <button 
+              onClick={async (e) => {
+                e.preventDefault();
+                const id = href.split(':')[1];
+                if (isInternalNews) {
+                  // Try to find in current news state or fetch
+                  let item = news.find(n => n.id === id);
+                  if (!item) {
+                    const { data } = await supabase.from('news').select('*').eq('id', id).maybeSingle();
+                    item = data;
+                  }
+                  if (item) handleNewsDetailClick(item);
+                } else {
+                  let item = admissions.find(a => a.id === id);
+                  if (!item) {
+                    const { data } = await supabase.from('admissions').select('*').eq('id', id).maybeSingle();
+                    item = data;
+                  }
+                  if (item) {
+                    setActiveMenu('Tuyển sinh');
+                    setSelectedAdmission(item);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }
+                }
+              }}
+              className="text-blue-600 hover:text-blue-800 underline decoration-blue-300 underline-offset-4 font-bold cursor-pointer inline-block"
+            >
+              {props.children}
+            </button>
+          );
+        }
+
+        return (
+          <a 
+            {...props} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="text-blue-600 hover:text-blue-800 underline decoration-blue-300 underline-offset-4 font-bold"
+          />
+        );
+      },
       p: ({ node, ...props }: any) => (
         <p className="mb-2 whitespace-pre-wrap" {...props} />
       ),
@@ -377,6 +417,59 @@ export default function App() {
     setShowAdmin(false);
   };
 
+  const InternalLinkHandler = ({ url, label, className, icon: Icon = Icons.ExternalLink }: { url: string, label: string, className?: string, icon?: any }) => {
+    if (!url) return null;
+    
+    const isInternalNews = url.startsWith('news:');
+    const isInternalAdmission = url.startsWith('admission:');
+
+    if (isInternalNews || isInternalAdmission) {
+      const id = url.split(':')[1];
+      const displayLabel = label === 'Tải về' || label === 'TẢI XUỐNG' || label === 'Tải văn bản' ? 'Xem nội dung' : label;
+      
+      return (
+        <button 
+          onClick={async (e) => {
+            e.preventDefault();
+            if (isInternalNews) {
+              let item = news.find(n => n.id === id);
+              if (!item) {
+                const { data } = await supabase.from('news').select('*').eq('id', id).maybeSingle();
+                item = data;
+              }
+              if (item) handleNewsDetailClick(item);
+            } else {
+              let item = admissions.find(a => a.id === id);
+              if (!item) {
+                const { data } = await supabase.from('admissions').select('*').eq('id', id).maybeSingle();
+                item = data;
+              }
+              if (item) {
+                setActiveMenu('Tuyển sinh');
+                setSelectedAdmission(item);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
+            }
+          }}
+          className={className}
+        >
+          {Icon && <Icon className="w-4 h-4" />} {displayLabel}
+        </button>
+      );
+    }
+
+    return (
+      <a 
+        href={url} 
+        target="_blank" 
+        rel="noopener noreferrer"
+        className={className}
+      >
+        {Icon && <Icon className="w-4 h-4" />} {label}
+      </a>
+    );
+  };
+
   const renderContent = () => {
     if (selectedNews && activeMenu === 'Tin tức') {
       return (
@@ -401,7 +494,7 @@ export default function App() {
               </div>
               <h2 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight flex items-center gap-2 flex-wrap">
                 {selectedNews.title}
-                {(selectedNews.is_new || !selectedNews.date || isNaN(new Date(selectedNews.date).getTime())) && (
+                {selectedNews.is_new && (
                   <span className="px-2 py-0.5 bg-gradient-to-r from-orange-500 to-red-600 text-white text-[10px] font-black rounded shadow-sm animate-pulse shrink-0 tracking-wider">NEW</span>
                 )}
               </h2>
@@ -421,14 +514,11 @@ export default function App() {
                             <p className="text-sm text-blue-600 truncate max-w-[200px] md:max-w-md">{selectedNews.document_url}</p>
                           </div>
                         </div>
-                        <a 
-                          href={selectedNews.document_url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
+                        <InternalLinkHandler 
+                          url={selectedNews.document_url} 
+                          label="Tải về" 
                           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors"
-                        >
-                          <Icons.ExternalLink className="w-4 h-4" /> Tải về
-                        </a>
+                        />
                       </div>
                     )}
                   </div>
@@ -472,14 +562,11 @@ export default function App() {
                         <p className="text-sm text-blue-600 truncate max-w-[200px] md:max-w-md">{selectedAdmission.document_url}</p>
                       </div>
                     </div>
-                    <a 
-                      href={selectedAdmission.document_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
+                    <InternalLinkHandler 
+                      url={selectedAdmission.document_url} 
+                      label="Tải về" 
                       className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors"
-                    >
-                      <Icons.ExternalLink className="w-4 h-4" /> Tải về
-                    </a>
+                    />
                   </div>
                 )}
 
@@ -572,9 +659,12 @@ export default function App() {
                             <p className="text-xs text-slate-500 line-clamp-2">{doc.description}</p>
                           </div>
                           {doc.file_url && (
-                            <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="p-2 bg-white text-blue-600 rounded-xl shadow-sm border border-slate-100 hover:bg-blue-600 hover:text-white transition-all transform group-hover:scale-110">
-                              <Icons.ExternalLink className="w-4 h-4" />
-                            </a>
+                            <InternalLinkHandler 
+                              url={doc.file_url} 
+                              label="" 
+                              icon={Icons.ExternalLink}
+                              className="p-2 bg-white text-blue-600 rounded-xl shadow-sm border border-slate-100 hover:bg-blue-600 hover:text-white transition-all transform group-hover:scale-110"
+                            />
                           )}
                         </div>
                       </div>
@@ -601,9 +691,12 @@ export default function App() {
                             <p className="text-xs text-slate-500 line-clamp-2">{doc.description}</p>
                           </div>
                           {doc.file_url && (
-                            <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="p-2 bg-white text-blue-600 rounded-xl shadow-sm border border-slate-100 hover:bg-blue-600 hover:text-white transition-all transform group-hover:scale-110">
-                              <Icons.ExternalLink className="w-4 h-4" />
-                            </a>
+                            <InternalLinkHandler 
+                              url={doc.file_url} 
+                              label="" 
+                              icon={Icons.ExternalLink}
+                              className="p-2 bg-white text-blue-600 rounded-xl shadow-sm border border-slate-100 hover:bg-blue-600 hover:text-white transition-all transform group-hover:scale-110"
+                            />
                           )}
                         </div>
                       </div>
@@ -727,7 +820,7 @@ export default function App() {
                   <div className="flex items-center gap-1 min-w-0 flex-1">
                     <span className="font-bold text-slate-900 shrink-0">Tiêu đề:</span>
                     <span className="text-slate-700 truncate">{item.title}</span>
-                    {(item.is_new || !item.date || isNaN(new Date(item.date).getTime())) && (
+                    {item.is_new && (
                       <span className="ml-1 px-1.5 py-0.5 bg-orange-600 text-white text-[8px] font-black rounded shadow-sm shrink-0">NEW</span>
                     )}
                   </div>
@@ -786,15 +879,12 @@ export default function App() {
                             </div>
                           </div>
                           {doc.file_url && (
-                            <a 
-                              href={doc.file_url} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
+                            <InternalLinkHandler 
+                              url={doc.file_url} 
+                              label="" 
+                              icon={Icons.FileText}
                               className="ml-4 p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors shrink-0"
-                              title="Tải văn bản"
-                            >
-                              <Icons.FileText className="w-5 h-5" />
-                            </a>
+                            />
                           )}
                         </div>
                       ))}
@@ -895,14 +985,12 @@ export default function App() {
 
                   <div className="flex flex-wrap gap-4 mt-12 pt-8 border-t border-slate-100">
                     {selectedDeptActivity.document_url && (
-                      <a 
-                        href={selectedDeptActivity.document_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
+                      <InternalLinkHandler 
+                        url={selectedDeptActivity.document_url} 
+                        label="Tài liệu đính kèm" 
+                        icon={Icons.FileText}
                         className="inline-flex items-center gap-3 px-8 py-4 bg-blue-800 text-white font-bold rounded-2xl hover:bg-blue-900 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1"
-                      >
-                        Tài liệu đính kèm <Icons.FileText className="w-5 h-5" />
-                      </a>
+                      />
                     )}
                   </div>
                 </div>
@@ -1143,14 +1231,12 @@ export default function App() {
                                               {docItem.is_new && <span className="px-1.5 py-0.5 bg-orange-600 text-white text-[8px] font-black rounded shadow-sm shrink-0">NEW</span>}
                                             </h5>
                                             <div className="flex items-center gap-2 mt-0.5">
-                                              <a 
-                                                href={docItem.file_url} 
-                                                target="_blank" 
-                                                rel="noopener noreferrer"
+                                              <InternalLinkHandler 
+                                                url={docItem.file_url} 
+                                                label="Tải về" 
+                                                icon={null}
                                                 className="text-[10px] font-black text-blue-600 hover:underline uppercase tracking-wider"
-                                              >
-                                                Tải về
-                                              </a>
+                                              />
                                               <span className="text-[9px] text-slate-400 font-medium opacity-70">
                                                 • {docItem.created_at ? new Date(docItem.created_at).toLocaleDateString('vi-VN') : '---'}
                                               </span>
@@ -1162,14 +1248,12 @@ export default function App() {
                                             </div>
                                           </div>
                                         </div>
-                                        <a 
-                                          href={docItem.file_url}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
+                                        <InternalLinkHandler 
+                                          url={docItem.file_url} 
+                                          label="" 
+                                          icon={Icons.ExternalLink}
                                           className="p-2 text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                                        >
-                                          <Icons.ExternalLink className="w-4 h-4" />
-                                        </a>
+                                        />
                                       </div>
                                     ))}
                                   </div>
@@ -1747,7 +1831,7 @@ export default function App() {
                     </div>
                     <p className="font-medium line-clamp-2 flex items-center gap-1 flex-wrap">
                       {item.title}
-                      {(item.is_new || !item.date || isNaN(new Date(item.date).getTime())) && (
+                      {item.is_new && (
                         <span className="px-1 py-0.5 bg-orange-600 text-white text-[7px] font-black rounded-sm shadow-sm leading-none shrink-0 uppercase">NEW</span>
                       )}
                     </p>
