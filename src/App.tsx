@@ -71,6 +71,7 @@ export default function App() {
   const [deptActivities, setDeptActivities] = useState<any[]>([]);
   const [deptDocuments, setDeptDocuments] = useState<any[]>([]);
   const [activeDeptTab, setActiveDeptTab] = useState<'personnel' | 'activities' | 'documents' | 'introduction'>('introduction');
+  const [documentFilter, setDocumentFilter] = useState<'new' | 'old'>('new');
   const [loginError, setLoginError] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -1043,7 +1044,7 @@ export default function App() {
                                     <Icons.Calendar className="w-4 h-4" />
                                     {a.date && !isNaN(new Date(a.date).getTime()) ? new Date(a.date).toLocaleString('vi-VN') : '...'}
                                   </div>
-                                  <h5 className="text-xl font-bold text-slate-900 mb-3">{a.title}</h5>
+                                  <h5 className="text-xl font-bold text-slate-900 mb-3 truncate">{a.title}</h5>
                                   <div className="text-slate-600 leading-relaxed mb-4 line-clamp-3">
                                     <MarkdownContent content={a.summary || a.content || a.description} />
                                   </div>
@@ -1083,13 +1084,33 @@ export default function App() {
                     {/* Documents Tab */}
                     {activeDeptTab === 'documents' && (
                       <div className="animate-in fade-in duration-300">
-                        <h4 className="text-2xl font-bold text-slate-900 mb-8 flex items-center gap-3">
-                          <Icons.BookOpen className="w-7 h-7 text-amber-600" /> Tài liệu tổ chuyên môn
-                        </h4>
-                        {deptDocuments.length > 0 ? (
+                        <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
+                          <h4 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
+                            <Icons.BookOpen className="w-7 h-7 text-amber-600" /> Tài liệu tổ chuyên môn
+                          </h4>
+                          <div className="flex p-1 bg-slate-100 rounded-xl">
+                            <button 
+                              onClick={() => setDocumentFilter('new')}
+                              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${documentFilter === 'new' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                              TÀI LIỆU MỚI
+                            </button>
+                            <button 
+                              onClick={() => setDocumentFilter('old')}
+                              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${documentFilter === 'old' ? 'bg-white text-slate-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                              TÀI LIỆU CŨ
+                            </button>
+                          </div>
+                        </div>
+
+                        {deptDocuments.filter(d => documentFilter === 'new' ? d.is_new : !d.is_new).length > 0 ? (
                           <div className="space-y-12">
                             {['Giáo án', 'Đề KT', 'Chuyên đề', 'Hệ thống học tập'].map(cat => {
-                              const catDocs = deptDocuments.filter(d => d.category === cat);
+                              const catDocs = deptDocuments.filter(d => 
+                                d.category === cat && 
+                                (documentFilter === 'new' ? d.is_new : !d.is_new)
+                              );
                               if (catDocs.length === 0) return null;
                               
                               return (
@@ -1107,7 +1128,10 @@ export default function App() {
                                             <Icons.FileText className="w-5 h-5" />
                                           </div>
                                           <div className="min-w-0">
-                                            <h5 className="font-bold text-slate-800 group-hover:text-blue-900 transition-colors truncate">{docItem.title}</h5>
+                                            <h5 className="font-bold text-slate-800 group-hover:text-blue-900 transition-colors truncate flex items-center gap-1.5">
+                                              {docItem.title}
+                                              {docItem.is_new && <span className="px-1.5 py-0.5 bg-orange-600 text-white text-[8px] font-black rounded shadow-sm shrink-0">NEW</span>}
+                                            </h5>
                                             <div className="flex items-center gap-2 mt-0.5">
                                               <a 
                                                 href={docItem.file_url} 
@@ -1142,7 +1166,7 @@ export default function App() {
                           </div>
                         ) : (
                           <div className="p-12 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 text-center">
-                            <p className="text-slate-400 italic">Kho tài liệu đang được cập nhật...</p>
+                            <p className="text-slate-400 italic">Chưa có tài liệu nào trong mục này.</p>
                           </div>
                         )}
                       </div>
@@ -1455,7 +1479,7 @@ export default function App() {
                     </div>
                   </div>
                   <div className="p-6">
-                    <h3 className="font-bold text-slate-900 mb-1 group-hover:text-blue-800 transition-colors">{item.title}</h3>
+                    <h3 className="font-bold text-slate-900 mb-1 group-hover:text-blue-800 transition-colors truncate">{item.title}</h3>
                     {item.description && <p className="text-xs text-slate-500 line-clamp-2 italic mb-3">{item.description}</p>}
                     <div className="flex items-center justify-between mt-auto">
                       {item.images_json && JSON.parse(item.images_json).length > 0 && (
@@ -1524,10 +1548,10 @@ export default function App() {
             <section className="bg-slate-50 rounded-3xl p-8 border border-slate-200">
               <div className="flex flex-col md:flex-row gap-8 items-center">
                 <div className="flex-1">
-                  <h3 className="text-2xl font-bold text-blue-900 mb-4">
+                  <h3 className="text-2xl font-bold text-blue-900 mb-4 truncate">
                     {admissions[0]?.title || 'Thông tin tuyển sinh'}
                   </h3>
-                  <p className="text-slate-600 mb-6">
+                  <p className="text-slate-600 mb-6 line-clamp-3">
                     {admissions[0]?.content || 'Đang tải thông tin tuyển sinh mới nhất...'}
                   </p>
                   <div className="flex gap-4">
@@ -1647,10 +1671,10 @@ export default function App() {
           <div className="w-16 h-16 bg-blue-800 rounded-full flex items-center justify-center text-white shadow-lg">
             <GraduationCap className="w-10 h-10" />
           </div>
-          <div className="pb-2">
+          <div className="pb-4">
             <h1 className="text-2xl font-bold tracking-tight text-blue-900 uppercase leading-none mb-2">{schoolInfo?.name || 'Trường THPT'}</h1>
             <div className="flex items-center gap-6">
-              <p className="text-[11px] text-slate-400 italic font-bold tracking-wide uppercase opacity-80">"{schoolInfo?.slogan || 'Trí tuệ - Đạo đức - Sáng tạo'}"</p>
+              <p className="text-[10px] text-slate-400 italic font-bold tracking-wide uppercase opacity-80">"{schoolInfo?.slogan || 'Trí tuệ - Đạo đức - Sáng tạo'}"</p>
               
               {/* Search Bar - Moved closer to title */}
               <div className="hidden lg:flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200 focus-within:ring-2 focus-within:ring-blue-500 transition-all group" title="Tìm kiếm theo tiêu đề Tin tức hoặc Tuyển sinh">
