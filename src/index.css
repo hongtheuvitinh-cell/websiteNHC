@@ -19,8 +19,8 @@
 
 /* Fix for markdown alignment blocks */
 .markdown-body .flex-col {
-  margin-top: 1rem;
-  margin-bottom: 1rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .markdown-body table {
@@ -28,11 +28,20 @@
   margin-right: auto;
 }
 
-/* Tighten paragraph spacing */
+/* Tighten paragraph spacing and ensure colors work */
 .prose p {
-  margin-top: 4px !important;
-  margin-bottom: 4px !important;
-  line-height: 1.6 !important;
+  margin-top: 1px !important;
+  margin-bottom: 1px !important;
+  line-height: 1.4 !important;
+}
+
+/* Ensure colors from inline styles are respected by child elements (like bold text) */
+.prose span[style*="color"] * {
+  color: inherit !important;
+}
+
+.prose span[style*="color"] {
+  display: inline-block; /* Helps with some rendering engines */
 }
 
 /* Ensure nested prose elements respect parent alignment */
@@ -42,6 +51,11 @@
 
 .text-right .prose, .text-right p, .text-right h1, .text-right h2, .text-right h3, .text-right h4 {
   text-align: right;
+}
+
+.text-justify .prose, .text-justify p, .text-justify h1, .text-justify h2, .text-justify h3, .text-justify h4 {
+  text-align: justify;
+  text-justify: inter-word;
 }
 
 
