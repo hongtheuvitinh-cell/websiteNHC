@@ -85,35 +85,78 @@ export default function App() {
   const [gallery, setGallery] = useState<any[]>([]);
 
   const MarkdownContent = ({ content }: { content: string }) => {
+    if (!content) return null;
+
+    // Split content into parts based on alignment markers :::center ... :::
+    const parts = content.split(/(:::(?:center|right|left)[\s\S]*?:::)/g);
+
+    const sharedComponents = {
+      img: ({ node, ...props }: any) => (
+        <img 
+          {...props} 
+          className="max-w-full h-auto rounded-2xl shadow-md my-6 mx-auto block border border-slate-100" 
+          referrerPolicy="no-referrer"
+          loading="lazy"
+        />
+      ),
+      a: ({ node, ...props }: any) => (
+        <a 
+          {...props} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="text-blue-600 hover:text-blue-800 underline decoration-blue-300 underline-offset-4 font-bold"
+        />
+      ),
+      p: ({ node, ...props }: any) => (
+        <p className="mb-4 whitespace-pre-wrap" {...props} />
+      )
+    };
+
+    const sharedPlugins = {
+      remarkPlugins: [remarkMath, remarkGfm, remarkBreaks],
+      rehypePlugins: [rehypeKatex, rehypeRaw]
+    };
+
     return (
       <div className="markdown-body prose prose-slate prose-lg max-w-none prose-p:leading-relaxed prose-li:my-1 prose-headings:text-blue-900 prose-strong:text-slate-900 prose-strong:font-black">
-        <ReactMarkdown 
-          remarkPlugins={[remarkMath, remarkGfm, remarkBreaks]} 
-          rehypePlugins={[rehypeKatex, rehypeRaw]}
-          components={{
-            img: ({ node, ...props }) => (
-              <img 
-                {...props} 
-                className="max-w-full h-auto rounded-2xl shadow-md my-6 mx-auto block border border-slate-100" 
-                referrerPolicy="no-referrer"
-                loading="lazy"
-              />
-            ),
-            a: ({ node, ...props }) => (
-              <a 
-                {...props} 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="text-blue-600 hover:text-blue-800 underline decoration-blue-300 underline-offset-4 font-bold"
-              />
-            ),
-            p: ({ node, ...props }) => (
-              <p className="mb-4 whitespace-pre-wrap" {...props} />
-            )
-          }}
-        >
-          {content}
-        </ReactMarkdown>
+        {parts.map((part, index) => {
+          if (part.startsWith(':::center')) {
+            const inner = part.replace(/^:::center\n?/, '').replace(/\n?:::$/, '').trim();
+            return (
+              <div key={index} className="flex flex-col items-center text-center w-full my-6">
+                <ReactMarkdown {...sharedPlugins} components={sharedComponents}>
+                  {inner}
+                </ReactMarkdown>
+              </div>
+            );
+          }
+          if (part.startsWith(':::right')) {
+            const inner = part.replace(/^:::right\n?/, '').replace(/\n?:::$/, '').trim();
+            return (
+              <div key={index} className="flex flex-col items-end text-right w-full my-6">
+                <ReactMarkdown {...sharedPlugins} components={sharedComponents}>
+                  {inner}
+                </ReactMarkdown>
+              </div>
+            );
+          }
+          if (part.startsWith(':::left')) {
+            const inner = part.replace(/^:::left\n?/, '').replace(/\n?:::$/, '').trim();
+            return (
+              <div key={index} className="flex flex-col items-start text-left w-full my-6">
+                <ReactMarkdown {...sharedPlugins} components={sharedComponents}>
+                  {inner}
+                </ReactMarkdown>
+              </div>
+            );
+          }
+          if (!part.trim()) return null;
+          return (
+            <ReactMarkdown key={index} {...sharedPlugins} components={sharedComponents}>
+              {part}
+            </ReactMarkdown>
+          );
+        })}
       </div>
     );
   };
@@ -692,6 +735,69 @@ export default function App() {
                 </div>
               ))}
             </div>
+          </div>
+        );
+      case 'Lưu trữ văn bản':
+        const filteredArchive = archiveDocuments.filter(item => 
+          item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.type.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+        return (
+          <div className="space-y-8 animate-in fade-in duration-500">
+            <h2 className="text-3xl font-black text-slate-900 uppercase">Lưu trữ văn bản & Tài liệu</h2>
+            <div className="h-1.5 w-24 bg-blue-800 rounded-full mb-8"></div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {['Nội bộ', 'Sở, Bộ', 'Số bộ'].map(cat => {
+                const docs = filteredArchive.filter(d => d.category === cat || (cat === 'Sở, Bộ' && d.category === 'Số bộ'));
+                if (docs.length === 0 && cat === 'Số bộ') return null; // Group Số bộ with Sở, Bộ
+                if (docs.length === 0 && cat !== 'Sở, Bộ') return null; 
+                
+                return (
+                  <div key={cat} className="space-y-4">
+                    <h3 className="text-xl font-bold text-slate-800 border-b-2 border-slate-100 pb-2 flex items-center gap-2">
+                       <Icons.Archive className="w-5 h-5 text-blue-600" />
+                       {cat === 'Sở, Bộ' ? 'Văn bản Sở, Bộ' : cat}
+                    </h3>
+                    <div className="space-y-2">
+                      {docs.map(doc => (
+                        <div key={doc.id} className="p-4 bg-white border border-slate-100 rounded-2xl hover:shadow-md transition-all flex justify-between items-center group">
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-bold text-slate-900 group-hover:text-blue-700 transition-colors truncate">{doc.title}</h4>
+                            <div className="flex items-center gap-2 text-xs text-slate-400 mt-1">
+                              <span className="font-medium bg-slate-100 px-2 py-0.5 rounded">{doc.type}</span>
+                              <span className="shrink-0">• {doc.year}</span>
+                              {doc.category === 'Số bộ' && <span className="text-[10px] bg-amber-50 text-amber-600 px-1 rounded border border-amber-100">Cũ</span>}
+                            </div>
+                          </div>
+                          {doc.file_url && (
+                            <a 
+                              href={doc.file_url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="ml-4 p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors shrink-0"
+                              title="Tải văn bản"
+                            >
+                              <Icons.FileText className="w-5 h-5" />
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                      {docs.length === 0 && (
+                        <p className="text-sm text-slate-400 italic py-4">Chưa có văn bản trong danh mục này.</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {filteredArchive.length === 0 && searchQuery && (
+              <div className="text-center py-20 bg-slate-50 rounded-3xl border border-dashed border-slate-300">
+                <Icons.Search className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                <p className="text-slate-500">Không tìm thấy tài liệu phù hợp với "{searchQuery}".</p>
+              </div>
+            )}
           </div>
         );
       case 'Liên hệ':
@@ -1507,12 +1613,12 @@ export default function App() {
               <p className="text-sm text-slate-500 italic font-medium">"{schoolInfo?.slogan || 'Trí tuệ - Đạo đức - Sáng tạo'}"</p>
               
               {/* Search Bar - Moved closer to title */}
-              <div className="hidden lg:flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200 focus-within:ring-2 focus-within:ring-blue-500 transition-all">
-                <Icons.Search className="w-3.5 h-3.5 text-slate-400" />
+              <div className="hidden lg:flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200 focus-within:ring-2 focus-within:ring-blue-500 transition-all group" title="Tìm kiếm theo tiêu đề Tin tức hoặc Tuyển sinh">
+                <Icons.Search className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-500 transition-colors" />
                 <input 
                   type="text" 
-                  placeholder="Tìm kiếm..." 
-                  className="bg-transparent border-none outline-none text-xs w-32 font-medium"
+                  placeholder="Tìm tin tức, tuyển sinh..." 
+                  className="bg-transparent border-none outline-none text-xs w-40 font-medium"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
