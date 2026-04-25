@@ -118,7 +118,11 @@ export default function App() {
                     const { data } = await supabase.from('news').select('*').eq('id', id).maybeSingle();
                     item = data;
                   }
-                  if (item) handleNewsDetailClick(item);
+                  if (item) {
+                    handleNewsDetailClick(item);
+                  } else {
+                    alert('Mẫu tin tức này đã bị xoá hoặc không tồn tại.');
+                  }
                 } else {
                   let item = admissions.find(a => a.id === id);
                   if (!item) {
@@ -129,6 +133,8 @@ export default function App() {
                     setActiveMenu('Tuyển sinh');
                     setSelectedAdmission(item);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
+                  } else {
+                    alert('Mẫu tin tuyển sinh này đã bị xoá hoặc không tồn tại.');
                   }
                 }
               }}
@@ -437,7 +443,11 @@ export default function App() {
                 const { data } = await supabase.from('news').select('*').eq('id', id).maybeSingle();
                 item = data;
               }
-              if (item) handleNewsDetailClick(item);
+              if (item) {
+                handleNewsDetailClick(item);
+              } else {
+                alert('Mẫu tin tức này đã bị xoá hoặc không tồn tại.');
+              }
             } else {
               let item = admissions.find(a => a.id === id);
               if (!item) {
@@ -448,6 +458,8 @@ export default function App() {
                 setActiveMenu('Tuyển sinh');
                 setSelectedAdmission(item);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
+              } else {
+                alert('Mẫu tin tuyển sinh này đã bị xoá hoặc không tồn tại.');
               }
             }
           }}
@@ -1817,7 +1829,7 @@ export default function App() {
                 <Bell className="w-4 h-4" /> Thông báo mới
               </h2>
               <div className="space-y-3">
-                {news.length > 0 ? news.map((item) => (
+                {news.filter(item => item.is_new).length > 0 ? news.filter(item => item.is_new).map((item) => (
                   <div 
                     key={item.id} 
                     className="text-xs border-b border-slate-100 pb-2 hover:text-blue-600 cursor-pointer transition-colors"
