@@ -161,16 +161,24 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
         newCursorPos = start + 1;
         break;
       case 'align-left':
-        insertion = `<span style="display: block; text-align: left">\n\n${selectedText || 'văn bản canh trái'}\n\n</span>`;
-        newCursorPos = start + 37;
+        insertion = `:::left\n${selectedText || 'văn bản canh trái'}\n:::`;
+        newCursorPos = start + 8;
         break;
       case 'align-center':
-        insertion = `<span style="display: block; text-align: center">\n\n${selectedText || 'văn bản canh giữa'}\n\n</span>`;
-        newCursorPos = start + 39;
+        insertion = `:::center\n${selectedText || 'văn bản canh giữa'}\n:::`;
+        newCursorPos = start + 10;
         break;
       case 'align-right':
-        insertion = `<span style="display: block; text-align: right">\n\n${selectedText || 'văn bản canh phải'}\n\n</span>`;
-        newCursorPos = start + 38;
+        insertion = `:::right\n${selectedText || 'văn bản canh phải'}\n:::`;
+        newCursorPos = start + 9;
+        break;
+      case 'font-size':
+        insertion = `<span style="font-size: 20px">${selectedText || 'văn bản'}</span>`;
+        newCursorPos = start + 25;
+        break;
+      case 'font-family':
+        insertion = `<span style="font-family: 'Times New Roman'">${selectedText || 'văn bản'}</span>`;
+        newCursorPos = start + 40;
         break;
       default:
         return;
@@ -305,6 +313,17 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
         </button>
         <div className="w-px h-6 bg-slate-300 mx-1 self-center" />
         
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'font-size')} className="p-2 hover:bg-slate-200 rounded transition-colors flex items-center gap-1 group" title="Kích cỡ chữ">
+          <Type className="w-4 h-4" />
+          <span className="text-[10px] font-black group-hover:text-blue-600">SIZE</span>
+        </button>
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'font-family')} className="p-2 hover:bg-slate-200 rounded transition-colors flex items-center gap-1 group" title="Kiểu Font">
+          <Type className="w-4 h-4 opacity-50" />
+          <span className="text-[10px] font-black group-hover:text-blue-600">FONT</span>
+        </button>
+
+        <div className="w-px h-6 bg-slate-300 mx-1 self-center" />
+        
         <input 
           type="file" 
           ref={fileInputRef}
@@ -357,34 +376,79 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
     );
   };
 
-  const MarkdownContent = ({ content }: { content: string }) => (
-    <div className="markdown-body prose prose-slate prose-sm max-w-none prose-p:my-0.5 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-0.5 prose-li:my-0">
-      <ReactMarkdown 
-        remarkPlugins={[remarkMath, remarkGfm, remarkBreaks]} 
-        rehypePlugins={[rehypeKatex, rehypeRaw]}
-        components={{
-          img: ({ node, ...props }) => (
-            <img 
-              {...props} 
-              className="max-w-full h-auto rounded-xl shadow-sm my-2 mx-auto block" 
-              referrerPolicy="no-referrer"
-              loading="lazy"
-            />
-          ),
-          a: ({ node, ...props }) => (
-            <a 
-              {...props} 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="text-blue-600 hover:underline font-medium"
-            />
-          )
-        }}
-      >
-        {content}
-      </ReactMarkdown>
-    </div>
-  );
+  const MarkdownContent = ({ content }: { content: string }) => {
+    if (!content) return null;
+    
+    // Split content into parts based on alignment markers :::center ... :::
+    const parts = content.split(/(:::(?:center|right|left)[\s\S]*?:::)/g);
+    
+    const sharedComponents = {
+      img: ({ node, ...props }: any) => (
+        <img 
+          {...props} 
+          className="max-w-full h-auto rounded-xl shadow-sm my-2 mx-auto block" 
+          referrerPolicy="no-referrer"
+          loading="lazy"
+        />
+      ),
+      a: ({ node, ...props }: any) => (
+        <a 
+          {...props} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="text-blue-600 hover:underline font-medium"
+        />
+      )
+    };
+
+    const sharedPlugins = {
+      remarkPlugins: [remarkMath, remarkGfm, remarkBreaks],
+      rehypePlugins: [rehypeKatex, rehypeRaw]
+    };
+
+    return (
+      <div className="markdown-body prose prose-slate prose-sm max-w-none prose-p:my-0.5 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-0.5 prose-li:my-0">
+        {parts.map((part, index) => {
+          if (part.startsWith(':::center')) {
+            const inner = part.replace(/^:::center\n?/, '').replace(/\n?:::$/, '').trim();
+            return (
+              <div key={index} className="flex flex-col items-center text-center w-full my-4">
+                <ReactMarkdown {...sharedPlugins} components={sharedComponents}>
+                  {inner}
+                </ReactMarkdown>
+              </div>
+            );
+          }
+          if (part.startsWith(':::right')) {
+            const inner = part.replace(/^:::right\n?/, '').replace(/\n?:::$/, '').trim();
+            return (
+              <div key={index} className="flex flex-col items-end text-right w-full my-4">
+                <ReactMarkdown {...sharedPlugins} components={sharedComponents}>
+                  {inner}
+                </ReactMarkdown>
+              </div>
+            );
+          }
+          if (part.startsWith(':::left')) {
+            const inner = part.replace(/^:::left\n?/, '').replace(/\n?:::$/, '').trim();
+            return (
+              <div key={index} className="flex flex-col items-start text-left w-full my-4">
+                <ReactMarkdown {...sharedPlugins} components={sharedComponents}>
+                  {inner}
+                </ReactMarkdown>
+              </div>
+            );
+          }
+          if (!part.trim()) return null;
+          return (
+            <ReactMarkdown key={index} {...sharedPlugins} components={sharedComponents}>
+              {part}
+            </ReactMarkdown>
+          );
+        })}
+      </div>
+    );
+  };
 
   const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
   const [isManagingDeptContent, setIsManagingDeptContent] = useState(false);
