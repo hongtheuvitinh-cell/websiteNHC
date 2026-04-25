@@ -3,37 +3,60 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
-import * as Icons from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { supabase } from '../lib/supabase';
 import { 
+  Plus, 
+  Trash2, 
+  Edit, 
+  Save, 
+  X, 
+  LayoutDashboard, 
+  Bell, 
   GraduationCap, 
-  BookOpen, 
-  Users, 
-  Calendar, 
-  Phone, 
-  ChevronRight, 
-  ChevronLeft,
-  ArrowLeft,
-  Award, 
-  Globe, 
-  Maximize2,
-  Layers,
-  Bell,
-  Search,
-  MapPin,
-  Home,
-  LogIn,
+  Settings,
   LogOut,
-  LayoutDashboard,
-  Loader2,
-  ExternalLink,
-  Lock,
-  X,
-  AlertCircle
+  Home,
+  Info,
+  Phone,
+  Check,
+  Users,
+  Activity,
+  BookOpen,
+  ChevronRight,
+  ArrowLeft,
+  Award,
+  Calendar,
+  Globe,
+  FileText,
+  Calculator,
+  Zap,
+  FlaskConical,
+  Dna,
+  PenTool,
+  History,
+  Map,
+  Languages,
+  Scale,
+  Dumbbell,
+  Monitor,
+  Bold,
+  Italic,
+  Heading3,
+  List,
+  Table2,
+  Archive,
+  Upload,
+  Search,
+  Filter,
+  Image as ImageIcon,
+  Type,
+  Link as LinkIcon,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Palette
 } from 'lucide-react';
-import { supabase } from './lib/supabase';
-import AdminDashboard from './components/AdminDashboard';
-import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
@@ -41,60 +64,350 @@ import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import 'katex/dist/katex.min.css';
+import { Loader2 } from 'lucide-react';
 
-export default function App() {
-  const [activeMenu, setActiveMenu] = useState('Trang chủ');
-  const [user, setUser] = useState<any>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [showAdmin, setShowAdmin] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [adminPasswordInput, setAdminPasswordInput] = useState('');
-  const [loading, setLoading] = useState(true);
-  
-  // Data states
+type TabType = 'news' | 'admissions' | 'home' | 'about' | 'contact' | 'admissions_page' | 'news_page' | 'features' | 'departments' | 'youth_union' | 'achievements' | 'schedule' | 'gallery' | 'archive';
+
+interface AdminDashboardProps {
+  onLogout?: () => void;
+  onExit?: () => void;
+}
+
+export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps) {
+  const [activeTab, setActiveTab] = useState<TabType>('news');
+
+  useEffect(() => {
+    setAdminSearch('');
+  }, [activeTab]);
   const [news, setNews] = useState<any[]>([]);
   const [admissions, setAdmissions] = useState<any[]>([]);
   const [features, setFeatures] = useState<any[]>([]);
-  const [homeContent, setHomeContent] = useState<any>(null);
-  const [aboutContent, setAboutContent] = useState<any>(null);
-  const [admissionsContent, setAdmissionsContent] = useState<any>(null);
-  const [newsContent, setNewsContent] = useState<any>(null);
-  const [schoolInfo, setSchoolInfo] = useState<any>(null);
-  const [selectedNews, setSelectedNews] = useState<any>(null);
-  const [selectedAdmission, setSelectedAdmission] = useState<any>(null);
-  const [selectedSchedule, setSelectedSchedule] = useState<any>(null);
-  const [selectedYouthUnion, setSelectedYouthUnion] = useState<any>(null);
-  const [selectedAchievement, setSelectedAchievement] = useState<any>(null);
-  const [selectedDepartment, setSelectedDepartment] = useState<any>(null);
-  const [selectedDeptActivity, setSelectedDeptActivity] = useState<any>(null);
-  const [deptPersonnel, setDeptPersonnel] = useState<any[]>([]);
-  const [deptActivities, setDeptActivities] = useState<any[]>([]);
-  const [deptDocuments, setDeptDocuments] = useState<any[]>([]);
-  const [activeDeptTab, setActiveDeptTab] = useState<'personnel' | 'activities' | 'documents' | 'introduction'>('introduction');
-  const [loginError, setLoginError] = useState<string | null>(null);
-
-  const [searchQuery, setSearchQuery] = useState('');
-  const [archiveSearch, setArchiveSearch] = useState('');
-  const [archiveTypeFilter, setArchiveTypeFilter] = useState('Tất cả');
-
   const [departmentsList, setDepartmentsList] = useState<any[]>([]);
   const [youthUnion, setYouthUnion] = useState<any[]>([]);
   const [achievements, setAchievements] = useState<any[]>([]);
-  const [archiveDocuments, setArchiveDocuments] = useState<any[]>([]);
-  const [schedules, setSchedules] = useState<any[]>([]);
+  const [schedule, setSchedule] = useState<any[]>([]);
   const [gallery, setGallery] = useState<any[]>([]);
+  const [archiveDocuments, setArchiveDocuments] = useState<any[]>([]);
+  const [deptPersonnel, setDeptPersonnel] = useState<any[]>([]);
+  const [deptActivities, setDeptActivities] = useState<any[]>([]);
+  const [deptDocuments, setDeptDocuments] = useState<any[]>([]);
+  const [deptActiveTab, setDeptActiveTab] = useState<'personnel' | 'activities' | 'documents' | 'introduction'>('introduction');
+  const [loading, setLoading] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<string | null>(null);
+  const [editingNewsId, setEditingNewsId] = useState<string | null>(null);
+  const [editingAdmissionId, setEditingAdmissionId] = useState<string | null>(null);
+  const [editingFeatureId, setEditingFeatureId] = useState<string | null>(null);
+  const [editingDeptId, setEditingDeptId] = useState<string | null>(null);
+  const [editingYouthUnionId, setEditingYouthUnionId] = useState<string | null>(null);
+  const [editingAchievementId, setEditingAchievementId] = useState<string | null>(null);
+  const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
+  const [editingGalleryId, setEditingGalleryId] = useState<string | null>(null);
+  const [editingArchiveId, setEditingArchiveId] = useState<string | null>(null);
+  const [editingPersonnelId, setEditingPersonnelId] = useState<string | null>(null);
+  const [editingActivityId, setEditingActivityId] = useState<string | null>(null);
+  const [editingDocumentId, setEditingDocumentId] = useState<string | null>(null);
+
+  const scheduleTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const newsTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const admissionTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const youthUnionTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const activityTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const achievementTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const aboutMainTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const aboutHistoryTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const aboutCoreValuesTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const deptContentTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const insertMarkdown = (
+    ref: React.RefObject<HTMLTextAreaElement>, 
+    setter: React.Dispatch<React.SetStateAction<any>>, 
+    form: any, 
+    field: string, 
+    type: string
+  ) => {
+    const textarea = ref.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = form[field];
+    const selectedText = text.substring(start, end);
+
+    let insertion = '';
+    let newCursorPos = start;
+
+    switch (type) {
+      case 'bold':
+        insertion = `**${selectedText || 'văn bản đậm'}**`;
+        newCursorPos = start + 2;
+        break;
+      case 'italic':
+        insertion = `*${selectedText || 'văn bản nghiêng'}*`;
+        newCursorPos = start + 1;
+        break;
+      case 'heading':
+        insertion = `\n### ${selectedText || 'Tiêu đề'}\n`;
+        newCursorPos = start + 5;
+        break;
+      case 'list':
+        insertion = `\n- ${selectedText || 'mục danh sách'}\n`;
+        newCursorPos = start + 3;
+        break;
+      case 'table':
+        insertion = `\n| Tiêu đề 1 | Tiêu đề 2 |\n|---|---|\n| Nội dung 1 | Nội dung 2 |\n`;
+        newCursorPos = start + 2;
+        break;
+      case 'link':
+        insertion = `[${selectedText || 'tên liên kết'}](https://example.com)`;
+        newCursorPos = start + 1;
+        break;
+      case 'align-left':
+        insertion = `:::left\n${selectedText || 'văn bản canh trái'}\n:::`;
+        newCursorPos = start + 8;
+        break;
+      case 'align-center':
+        insertion = `:::center\n${selectedText || 'văn bản canh giữa'}\n:::`;
+        newCursorPos = start + 10;
+        break;
+      case 'align-right':
+        insertion = `:::right\n${selectedText || 'văn bản canh phải'}\n:::`;
+        newCursorPos = start + 9;
+        break;
+      case 'align-justify':
+        insertion = `:::justify\n${selectedText || 'văn bản canh đều'}\n:::`;
+        newCursorPos = start + 11;
+        break;
+      case 'font-size':
+        insertion = `<span style="font-size: 20px">${selectedText || 'văn bản'}</span>`;
+        newCursorPos = start + 25;
+        break;
+      case 'font-family':
+        insertion = `<span style="font-family: 'Times New Roman'">${selectedText || 'văn bản'}</span>`;
+        newCursorPos = start + 40;
+        break;
+      case 'text-color':
+        insertion = `<span style="color:blue">${selectedText || 'văn bản màu xanh'}</span>`;
+        newCursorPos = start + 20;
+        break;
+      default:
+        return;
+    }
+
+    const newText = text.substring(0, start) + insertion + text.substring(end);
+    setter({ ...form, [field]: newText });
+
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(newCursorPos, newCursorPos + (selectedText.length || insertion.length - (insertion.indexOf(selectedText) === -1 ? 0 : insertion.length - selectedText.length)));
+    }, 0);
+  };
+
+  const [isUploading, setIsUploading] = useState(false);
+  const [adminSearch, setAdminSearch] = useState('');
+
+  const handleFileUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    setter: React.Dispatch<React.SetStateAction<any>>,
+    form: any,
+    field: string,
+    refTextarea?: React.RefObject<HTMLTextAreaElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check if file is image or pdf
+    const isImage = file.type.startsWith('image/');
+    const isPdf = file.type === 'application/pdf';
+
+    if (!isImage && !isPdf) {
+      showAlert('Lỗi định dạng', 'Vui lòng chọn file hình ảnh (JPG, PNG, GIF,...) hoặc PDF.');
+      return;
+    }
+
+    // Limit size to 10MB
+    if (file.size > 10 * 1024 * 1024) {
+      showAlert('File quá lớn', 'Vui lòng chọn file dưới 10MB.');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+      
+      const { data, error } = await supabase.storage
+        .from('images')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('images')
+        .getPublicUrl(data.path);
+
+      const downloadURL = publicUrl;
+
+      if (refTextarea && refTextarea.current) {
+        const textarea = refTextarea.current;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const text = form[field];
+        
+        const insertion = isPdf ? `\n[Tải file: ${file.name}](${downloadURL})\n` : `\n![${file.name}](${downloadURL})\n`;
+        const newText = text.substring(0, start) + insertion + text.substring(end);
+        setter({ ...form, [field]: newText });
+        
+        setTimeout(() => {
+          textarea.focus();
+          const newPos = start + insertion.length;
+          textarea.setSelectionRange(newPos, newPos);
+        }, 0);
+      } else {
+        setter({ ...form, [field]: downloadURL });
+      }
+    } catch (error) {
+      console.error('Upload failed:', error);
+      alert('Tải file thất bại. Lỗi: ' + (error instanceof Error ? error.message : 'Không xác định'));
+    } finally {
+      setIsUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const MarkdownToolbar = ({ 
+    textareaRef, 
+    setter, 
+    form, 
+    field 
+  }: { 
+    textareaRef: React.RefObject<HTMLTextAreaElement>, 
+    setter: React.Dispatch<React.SetStateAction<any>>, 
+    form: any, 
+    field: string 
+  }) => {
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    return (
+      <div className="flex flex-wrap gap-2 mb-0 p-2 bg-slate-50 rounded-t-xl border border-slate-200">
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'bold')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Đậm">
+          <Bold className="w-4 h-4" />
+        </button>
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'italic')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Nghiêng">
+          <Italic className="w-4 h-4" />
+        </button>
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'heading')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Tiêu đề">
+          <Heading3 className="w-4 h-4" />
+        </button>
+        <div className="w-px h-6 bg-slate-300 mx-1 self-center" />
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'list')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Danh sách">
+          <List className="w-4 h-4" />
+        </button>
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'table')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Bảng biểu">
+          <Table2 className="w-4 h-4" />
+        </button>
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'link')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Chèn liên kết">
+          <LinkIcon className="w-4 h-4" />
+        </button>
+        <div className="w-px h-6 bg-slate-300 mx-1 self-center" />
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'align-left')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Canh trái">
+          <AlignLeft className="w-4 h-4" />
+        </button>
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'align-center')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Canh giữa">
+          <AlignCenter className="w-4 h-4" />
+        </button>
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'align-right')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Canh phải">
+          <AlignRight className="w-4 h-4" />
+        </button>
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'align-justify')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Canh đều">
+          <div className="flex flex-col gap-0.5 items-center">
+            <div className="w-4 h-[1px] bg-current"></div>
+            <div className="w-4 h-[1px] bg-current"></div>
+            <div className="w-4 h-[1px] bg-current"></div>
+            <div className="w-4 h-[1px] bg-current"></div>
+          </div>
+        </button>
+        <div className="w-px h-6 bg-slate-300 mx-1 self-center" />
+        
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'font-size')} className="p-2 hover:bg-slate-200 rounded transition-colors flex items-center gap-1 group" title="Kích cỡ chữ">
+          <Type className="w-4 h-4" />
+          <span className="text-[10px] font-black group-hover:text-blue-600">SIZE</span>
+        </button>
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'font-family')} className="p-2 hover:bg-slate-200 rounded transition-colors flex items-center gap-1 group" title="Kiểu Font">
+          <Type className="w-4 h-4 opacity-50" />
+          <span className="text-[10px] font-black group-hover:text-blue-600">FONT</span>
+        </button>
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'text-color')} className="p-2 hover:bg-slate-200 rounded transition-colors flex items-center gap-1 group" title="Màu chữ">
+          <Palette className="w-4 h-4 text-blue-600" />
+          <span className="text-[10px] font-black group-hover:text-blue-600">COLOR</span>
+        </button>
+
+        <div className="w-px h-6 bg-slate-300 mx-1 self-center" />
+        
+        <input 
+          type="file" 
+          ref={fileInputRef}
+          className="hidden" 
+          accept="image/*,application/pdf"
+          onChange={(e) => handleFileUpload(e, setter, form, field, textareaRef)}
+        />
+        
+        <button 
+          type="button" 
+          disabled={isUploading}
+          onClick={() => fileInputRef.current?.click()} 
+          className="p-2 hover:bg-slate-200 rounded transition-colors relative flex items-center justify-center" 
+          title="Tải ảnh lên"
+        >
+          {isUploading ? (
+            <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+          ) : (
+            <ImageIcon className="w-4 h-4" />
+          )}
+        </button>
+        
+        <button 
+          type="button" 
+          onClick={() => {
+            const url = prompt('Nhập link ảnh:');
+            if (url) {
+              const textarea = textareaRef.current;
+              if (!textarea) return;
+              const start = textarea.selectionStart;
+              const end = textarea.selectionEnd;
+              const text = form[field];
+              const insertion = `\n![hình ảnh](${url})\n`;
+              const newText = text.substring(0, start) + insertion + text.substring(end);
+              setter({ ...form, [field]: newText });
+              
+              setTimeout(() => {
+                textarea.focus();
+                const newPos = start + insertion.length;
+                textarea.setSelectionRange(newPos, newPos);
+              }, 0);
+            }
+          }} 
+          className="p-2 hover:bg-slate-200 rounded transition-colors" 
+          title="Chèn link từ URL"
+        >
+          <LinkIcon className="w-4 h-3 opacity-60" />
+        </button>
+      </div>
+    );
+  };
 
   const MarkdownContent = ({ content }: { content: string }) => {
     if (!content) return null;
-
+    
     // Split content into parts based on alignment markers :::center ... :::
-    const parts = content.split(/(:::(?:center|right|left)[\s\S]*?:::)/g);
-
+    const parts = content.split(/(:::(?:center|right|left|justify)[\s\S]*?:::)/g);
+    
     const sharedComponents = {
       img: ({ node, ...props }: any) => (
         <img 
           {...props} 
-          className="max-w-full h-auto rounded-2xl shadow-md my-6 mx-auto block border border-slate-100" 
+          className="max-w-full h-auto rounded-xl shadow-sm my-2 mx-auto block" 
           referrerPolicy="no-referrer"
           loading="lazy"
         />
@@ -104,11 +417,11 @@ export default function App() {
           {...props} 
           target="_blank" 
           rel="noopener noreferrer" 
-          className="text-blue-600 hover:text-blue-800 underline decoration-blue-300 underline-offset-4 font-bold"
+          className="text-blue-600 hover:underline font-medium"
         />
       ),
-      p: ({ node, ...props }: any) => (
-        <p className="mb-4 whitespace-pre-wrap" {...props} />
+      span: ({ node, ...props }: any) => (
+        <span {...props} style={props.style} />
       )
     };
 
@@ -118,12 +431,12 @@ export default function App() {
     };
 
     return (
-      <div className="markdown-body prose prose-slate prose-lg max-w-none prose-p:leading-relaxed prose-li:my-1 prose-headings:text-blue-900 prose-strong:text-slate-900 prose-strong:font-black">
+      <div className="markdown-body prose prose-slate prose-sm max-w-none prose-p:my-0.5 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-0.5 prose-li:my-0">
         {parts.map((part, index) => {
           if (part.startsWith(':::center')) {
             const inner = part.replace(/^:::center\n?/, '').replace(/\n?:::$/, '').trim();
             return (
-              <div key={index} className="flex flex-col items-center text-center w-full my-6">
+              <div key={index} className="flex flex-col items-center text-center w-full my-4">
                 <ReactMarkdown {...sharedPlugins} components={sharedComponents}>
                   {inner}
                 </ReactMarkdown>
@@ -133,7 +446,7 @@ export default function App() {
           if (part.startsWith(':::right')) {
             const inner = part.replace(/^:::right\n?/, '').replace(/\n?:::$/, '').trim();
             return (
-              <div key={index} className="flex flex-col items-end text-right w-full my-6">
+              <div key={index} className="flex flex-col items-end text-right w-full my-4">
                 <ReactMarkdown {...sharedPlugins} components={sharedComponents}>
                   {inner}
                 </ReactMarkdown>
@@ -143,7 +456,17 @@ export default function App() {
           if (part.startsWith(':::left')) {
             const inner = part.replace(/^:::left\n?/, '').replace(/\n?:::$/, '').trim();
             return (
-              <div key={index} className="flex flex-col items-start text-left w-full my-6">
+              <div key={index} className="flex flex-col items-start text-left w-full my-4">
+                <ReactMarkdown {...sharedPlugins} components={sharedComponents}>
+                  {inner}
+                </ReactMarkdown>
+              </div>
+            );
+          }
+          if (part.startsWith(':::justify')) {
+            const inner = part.replace(/^:::justify\n?/, '').replace(/\n?:::$/, '').trim();
+            return (
+              <div key={index} className="flex flex-col w-full my-4 text-justify">
                 <ReactMarkdown {...sharedPlugins} components={sharedComponents}>
                   {inner}
                 </ReactMarkdown>
@@ -161,156 +484,189 @@ export default function App() {
     );
   };
 
-  const adminEmail = "trieuhaminh@gmail.com";
+  const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
+  const [isManagingDeptContent, setIsManagingDeptContent] = useState(false);
 
-  useEffect(() => {
-    const checkAdmin = (sessionUser: any) => {
-      const isEmailAdmin = sessionUser?.email === adminEmail;
-      const isPasswordAdmin = localStorage.getItem('admin_authenticated') === 'true';
-      setIsAdmin(isEmailAdmin || isPasswordAdmin);
-    };
+  // Modal state
+  const [modal, setModal] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    onConfirm?: () => void;
+    type: 'alert' | 'confirm';
+  }>({
+    show: false,
+    title: '',
+    message: '',
+    type: 'alert'
+  });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      checkAdmin(session?.user);
-      setLoading(false);
-    });
+  const showAlert = (title: string, message: string) => {
+    setModal({ show: true, title, message, type: 'alert' });
+  };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      checkAdmin(session?.user);
-      setLoading(false);
-    });
+  const showConfirm = (title: string, message: string, onConfirm: () => void) => {
+    setModal({ show: true, title, message, onConfirm, type: 'confirm' });
+  };
 
-    return () => subscription.unsubscribe();
-  }, []);
+  // Form states
+  const [newsForm, setNewsForm] = useState({ title: '', content: '', category: 'Tin tức', image_url: '', is_new: true });
+  const [admissionForm, setAdmissionForm] = useState({ title: '', summary: '', content: '', deadline: '', year: 2026, document_url: '' });
+  const [featureForm, setFeatureForm] = useState({ title: '', description: '', icon: 'BookOpen', color: 'bg-blue-100 text-blue-700', order_num: 0 });
+  const [deptForm, setDeptForm] = useState({ name: '', icon: 'BookOpen', description: '', content: '' });
+  const [youthUnionForm, setYouthUnionForm] = useState({ title: '', summary: '', content: '', date: '', image_url: '' });
+  const [achievementForm, setAchievementForm] = useState({ title: '', student_name: '', class: '', year: '2025-2026', award: '', type: 'academic', description: '', image_url: '' });
+  const [scheduleForm, setScheduleForm] = useState({ title: '', week: '', date_range: '', content: '', file_url: '', start_date: '', end_date: '' });
+  const [galleryForm, setGalleryForm] = useState({ title: '', image_url: '', category: 'Hoạt động trường', description: '', images_json: '[]' });
+  const [galleryImages, setGalleryImages] = useState<{ url: string, caption: string }[]>([]);
+  const [archiveForm, setArchiveForm] = useState({ title: '', category: 'Nội bộ', year: new Date().getFullYear(), type: 'Chương trình', file_url: '', description: '' });
+  const [personnelForm, setPersonnelForm] = useState({ name: '', position: '', bio: '', birth_date: '', education: '', image_url: '' });
+  const [activityForm, setActivityForm] = useState({ title: '', date: '', summary: '', description: '', document_url: '', content: '', image_url: '' });
+  const [documentForm, setDocumentForm] = useState({ title: '', description: '', file_url: '', category: 'Giáo án' });
+  
+  const [homeForm, setHomeForm] = useState({ 
+    banner_title: 'Môi trường giáo dục hiện đại & thân thiện', 
+    banner_description: 'Với đội ngũ giáo viên tâm huyết và cơ sở vật chất khang trang, chúng tôi cam kết mang lại chất lượng giáo dục tốt nhất cho học sinh.',
+    banner_image: 'https://picsum.photos/seed/school/1200/600'
+  });
 
-  useEffect(() => {
-    // News
-    const fetchNews = async () => {
-      const { data } = await supabase.from('news').select('*').order('date', { ascending: false }).limit(10);
+  const [aboutForm, setAboutForm] = useState({
+    main_text: '',
+    history: '',
+    core_values: ''
+  });
+
+  const [admissionsPageForm, setAdmissionsPageForm] = useState({
+    banner_title: 'Thông tin tuyển sinh',
+    banner_description: 'Cập nhật các thông tin mới nhất về tuyển sinh tại trường.'
+  });
+
+  const [newsPageForm, setNewsPageForm] = useState({
+    banner_title: 'Tin tức & Thông báo',
+    banner_description: 'Nơi cập nhật những tin tức, hoạt động mới nhất của nhà trường.'
+  });
+
+  const [contactForm, setContactForm] = useState({
+    name: '',
+    slogan: '',
+    address: '',
+    phone: '',
+    email: ''
+  });
+
+  const departments = [
+    { id: 'toan', name: 'Tổ Toán', icon: 'Calculator' },
+    { id: 'ly', name: 'Tổ Vật lý', icon: 'Zap' },
+    { id: 'hoa', name: 'Tổ Hóa học', icon: 'FlaskConical' },
+    { id: 'sinh', name: 'Tổ Sinh học', icon: 'Dna' },
+    { id: 'van', name: 'Tổ Ngữ văn', icon: 'PenTool' },
+    { id: 'su', name: 'Tổ Lịch sử', icon: 'History' },
+    { id: 'dia', name: 'Tổ Địa lý', icon: 'Map' },
+    { id: 'anh', name: 'Tổ Ngoại ngữ', icon: 'Languages' },
+    { id: 'gdcd', name: 'Tổ GDCD', icon: 'Scale' },
+    { id: 'tdqp', name: 'Tổ Thể dục - QP', icon: 'Dumbbell' },
+    { id: 'tin', name: 'Tổ Tin học - CN', icon: 'Monitor' }
+  ];
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    if (activeTab === 'news') {
+      const { data } = await supabase.from('news').select('*').order('date', { ascending: false });
       if (data) setNews(data);
-    };
-    fetchNews();
-    const newsChannel = supabase.channel('news_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'news' }, fetchNews).subscribe();
-
-    // Admissions
-    const fetchAdmissions = async () => {
+    } else if (activeTab === 'admissions') {
       const { data } = await supabase.from('admissions').select('*').order('year', { ascending: false });
       if (data) setAdmissions(data);
-    };
-    fetchAdmissions();
-    const admissionsChannel = supabase.channel('admissions_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'admissions' }, fetchAdmissions).subscribe();
-
-    // Features
-    const fetchFeatures = async () => {
-      const { data } = await supabase.from('features').select('*').order('order_num', { ascending: true });
-      if (data) setFeatures(data);
-    };
-    fetchFeatures();
-    const featuresChannel = supabase.channel('features_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'features' }, fetchFeatures).subscribe();
-
-    // Youth Union
-    const fetchYouthUnion = async () => {
-      const { data } = await supabase.from('youth_union').select('*').order('date', { ascending: false });
-      if (data) setYouthUnion(data);
-    };
-    fetchYouthUnion();
-    const youthUnionChannel = supabase.channel('youth_union_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'youth_union' }, fetchYouthUnion).subscribe();
-
-    // Departments
-    const fetchDepts = async () => {
+    } else if (activeTab === 'home') {
+      const { data } = await supabase.from('home_content').select('*').eq('id', 'main').maybeSingle();
+      if (data) setHomeForm(prev => ({ ...prev, ...data }));
+    } else if (activeTab === 'about') {
+      const { data } = await supabase.from('about_content').select('*').eq('id', 'main').maybeSingle();
+      if (data) setAboutForm(prev => ({ ...prev, ...data }));
+    } else if (activeTab === 'contact') {
+      const { data } = await supabase.from('school_info').select('*').eq('id', 'main').maybeSingle();
+      if (data) setContactForm(prev => ({ ...prev, ...data }));
+    } else if (activeTab === 'admissions_page') {
+      const { data } = await supabase.from('admissions_content').select('*').eq('id', 'main').maybeSingle();
+      if (data) setAdmissionsPageForm(prev => ({ ...prev, ...data }));
+    } else if (activeTab === 'news_page') {
+      const { data } = await supabase.from('news_content').select('*').eq('id', 'main').maybeSingle();
+      if (data) setNewsPageForm(prev => ({ ...prev, ...data }));
+    } else if (activeTab === 'departments') {
       const { data } = await supabase.from('departments').select('*');
       if (data) setDepartmentsList(data);
-    };
-    fetchDepts();
-    const deptsChannel = supabase.channel('depts_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'departments' }, fetchDepts).subscribe();
-
-    // Achievements
-    const fetchAchievements = async () => {
+    } else if (activeTab === 'youth_union') {
+      const { data } = await supabase.from('youth_union').select('*').order('date', { ascending: false });
+      if (data) setYouthUnion(data);
+    } else if (activeTab === 'achievements') {
       const { data } = await supabase.from('achievements').select('*').order('year', { ascending: false });
       if (data) setAchievements(data);
-    };
-    fetchAchievements();
-    const achievementsChannel = supabase.channel('achievements_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'achievements' }, fetchAchievements).subscribe();
-
-    // Schedules
-    const fetchSchedules = async () => {
+    } else if (activeTab === 'schedule') {
       const { data } = await supabase.from('schedules').select('*').order('start_date', { ascending: false });
-      if (data) setSchedules(data);
-    };
-    fetchSchedules();
-    const schedulesChannel = supabase.channel('schedules_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'schedules' }, fetchSchedules).subscribe();
-
-    // Gallery
-    const fetchGallery = async () => {
+      if (data) setSchedule(data);
+    } else if (activeTab === 'gallery') {
       const { data } = await supabase.from('gallery').select('*').order('title', { ascending: true });
       if (data) setGallery(data);
-    };
-    fetchGallery();
-    const galleryChannel = supabase.channel('gallery_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'gallery' }, fetchGallery).subscribe();
-
-    // Archive Documents
-    const fetchArchive = async () => {
+    } else if (activeTab === 'archive') {
       const { data } = await supabase.from('archive_documents').select('*').order('year', { ascending: false }).order('created_at', { ascending: false });
       if (data) setArchiveDocuments(data);
-    };
-    fetchArchive();
-    const archiveChannel = supabase.channel('archive_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'archive_documents' }, fetchArchive).subscribe();
-
-    // Static contents
-    const fetchStatic = async () => {
-      const { data: home } = await supabase.from('home_content').select('*').eq('id', 'main').maybeSingle();
-      if (home) setHomeContent(home);
-      const { data: about } = await supabase.from('about_content').select('*').eq('id', 'main').maybeSingle();
-      if (about) setAboutContent(about);
-      const { data: adm } = await supabase.from('admissions_content').select('*').eq('id', 'main').maybeSingle();
-      if (adm) setAdmissionsContent(adm);
-      const { data: newsP } = await supabase.from('news_content').select('*').eq('id', 'main').maybeSingle();
-      if (newsP) setNewsContent(newsP);
-      const { data: info } = await supabase.from('school_info').select('*').eq('id', 'main').maybeSingle();
-      if (info) setSchoolInfo(info);
-    };
-    fetchStatic();
-    const homeChannel = supabase.channel('home_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'home_content' }, fetchStatic).subscribe();
-    const aboutChannel = supabase.channel('about_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'about_content' }, fetchStatic).subscribe();
-    const admContentChannel = supabase.channel('adm_content_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'admissions_content' }, fetchStatic).subscribe();
-    const newsContentChannel = supabase.channel('news_content_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'news_content' }, fetchStatic).subscribe();
-    const infoChannel = supabase.channel('info_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'school_info' }, fetchStatic).subscribe();
-
-    return () => {
-      supabase.removeChannel(newsChannel);
-      supabase.removeChannel(admissionsChannel);
-      supabase.removeChannel(featuresChannel);
-      supabase.removeChannel(youthUnionChannel);
-      supabase.removeChannel(deptsChannel);
-      supabase.removeChannel(achievementsChannel);
-      supabase.removeChannel(schedulesChannel);
-      supabase.removeChannel(galleryChannel);
-      supabase.removeChannel(archiveChannel);
-      supabase.removeChannel(homeChannel);
-      supabase.removeChannel(aboutChannel);
-      supabase.removeChannel(admContentChannel);
-      supabase.removeChannel(newsContentChannel);
-      supabase.removeChannel(infoChannel);
-    };
-  }, []);
+    }
+    setLoading(false);
+  }, [activeTab]);
 
   useEffect(() => {
-    if (selectedDepartment) {
-      const fetchDeptData = async () => {
-        const { data: personnel } = await supabase.from('personnel').select('*').eq('dept_id', selectedDepartment.id);
-        if (personnel) setDeptPersonnel(personnel);
-        const { data: activities } = await supabase.from('activities').select('*').eq('dept_id', selectedDepartment.id).order('date', { ascending: false });
-        if (activities) setDeptActivities(activities);
-        const { data: docs } = await supabase.from('dept_documents').select('*').eq('dept_id', selectedDepartment.id).order('created_at', { ascending: false });
-        if (docs) setDeptDocuments(docs);
-      };
+    let channel: any = null;
+    fetchData();
+
+    // Setup real-time listener
+    const tableMap: Record<string, string> = {
+      'news': 'news',
+      'admissions': 'admissions',
+      'home': 'home_content',
+      'about': 'about_content',
+      'contact': 'school_info',
+      'admissions_page': 'admissions_content',
+      'news_page': 'news_content',
+      'departments': 'departments',
+      'youth_union': 'youth_union',
+      'achievements': 'achievements',
+      'schedule': 'schedules',
+      'gallery': 'gallery',
+      'archive': 'archive_documents'
+    };
+
+    const tableName = tableMap[activeTab];
+    if (tableName) {
+      channel = supabase.channel(`${activeTab}_admin`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: tableName }, () => {
+          fetchData();
+        })
+        .subscribe();
+    }
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [activeTab, fetchData]);
+
+  const fetchDeptData = useCallback(async () => {
+    if (!selectedDeptId) return;
+    setLoading(true);
+    const { data: personnel } = await supabase.from('personnel').select('*').eq('dept_id', selectedDeptId);
+    if (personnel) setDeptPersonnel(personnel);
+    const { data: activities } = await supabase.from('activities').select('*').eq('dept_id', selectedDeptId).order('date', { ascending: false });
+    if (activities) setDeptActivities(activities);
+    const { data: docs } = await supabase.from('dept_documents').select('*').eq('dept_id', selectedDeptId).order('created_at', { ascending: false });
+    if (docs) setDeptDocuments(docs);
+    setLoading(false);
+  }, [selectedDeptId]);
+
+  useEffect(() => {
+    if (selectedDeptId && isManagingDeptContent) {
       fetchDeptData();
-      
-      const pChannel = supabase.channel('p_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'personnel', filter: `dept_id=eq.${selectedDepartment.id}` }, fetchDeptData).subscribe();
-      const aChannel = supabase.channel('a_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'activities', filter: `dept_id=eq.${selectedDepartment.id}` }, fetchDeptData).subscribe();
-      const dChannel = supabase.channel('d_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'dept_documents', filter: `dept_id=eq.${selectedDepartment.id}` }, fetchDeptData).subscribe();
+
+      const pChannel = supabase.channel('p_admin').on('postgres_changes', { event: '*', schema: 'public', table: 'personnel', filter: `dept_id=eq.${selectedDeptId}` }, fetchDeptData).subscribe();
+      const aChannel = supabase.channel('a_admin').on('postgres_changes', { event: '*', schema: 'public', table: 'activities', filter: `dept_id=eq.${selectedDeptId}` }, fetchDeptData).subscribe();
+      const dChannel = supabase.channel('d_admin').on('postgres_changes', { event: '*', schema: 'public', table: 'dept_documents', filter: `dept_id=eq.${selectedDeptId}` }, fetchDeptData).subscribe();
 
       return () => {
         supabase.removeChannel(pChannel);
@@ -318,1602 +674,2576 @@ export default function App() {
         supabase.removeChannel(dChannel);
       };
     }
-  }, [selectedDepartment]);
+  }, [selectedDeptId, isManagingDeptContent, fetchDeptData]);
 
-  const handleLogin = async () => {
-    setShowLoginModal(true);
+  const showSuccess = () => {
+    setSaveStatus('Đã lưu thành công!');
+    setTimeout(() => setSaveStatus(null), 3000);
   };
 
-  const handleGoogleLogin = async () => {
-    setLoginError(null);
-    setShowLoginModal(false);
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin
-        }
-      });
-      if (error) throw error;
-    } catch (error: any) {
-      console.error("Login error:", error);
-      setLoginError("Lỗi đăng nhập Google. Vui lòng thử lại.");
-    }
+  const handleClearAllNew = async () => {
+    showConfirm("Xác nhận gỡ tất cả", "Bạn có chắc chắn muốn gỡ tất cả biểu tượng 'NEW' khỏi toàn bộ tin tức?", async () => {
+      setLoading(true);
+      try {
+        const { error } = await supabase.from('news').update({ is_new: false }).eq('is_new', true);
+        if (error) throw error;
+        showSuccess();
+        fetchData();
+      } catch (error: any) {
+        showAlert("Lỗi", "Không thể gỡ danh hiệu: " + error.message);
+      } finally {
+        setLoading(false);
+      }
+    });
   };
 
-  const handlePasswordLogin = (e: React.FormEvent) => {
+  const handleAddNews = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoginError(null);
-    const correctPassword = import.meta.env.VITE_ADMIN_PASSWORD || "admin123";
+    try {
+      if (editingNewsId) {
+        const { error } = await supabase.from('news').update({ ...newsForm, updated_at: new Date() }).eq('id', editingNewsId);
+        if (error) throw error;
+        setEditingNewsId(null);
+      } else {
+        const { error } = await supabase.from('news').insert([{ ...newsForm, date: new Date() }]);
+        if (error) throw error;
+      }
+      setNewsForm({ title: '', content: '', category: 'Tin tức', image_url: '', is_new: true });
+      showSuccess();
+      fetchData();
+    } catch (error: any) {
+      showAlert("Lỗi", "Lỗi khi lưu tin tức: " + error.message);
+    }
+  };
+
+  const handleEditNews = (item: any) => {
+    setEditingNewsId(item.id);
+    setNewsForm({
+      title: item.title,
+      content: item.content,
+      category: item.category,
+      image_url: item.image_url || '',
+      is_new: item.is_new ?? false
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeleteNews = async (id: string) => {
+    showConfirm("Xác nhận xóa", "Bạn có chắc chắn muốn xóa tin này?", async () => {
+      const { error } = await supabase.from('news').delete().eq('id', id);
+      if (error) {
+        showAlert("Lỗi", "Lỗi khi xóa: " + error.message);
+      } else {
+        fetchData();
+      }
+    });
+  };
+
+  const handleAddAdmission = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingAdmissionId) {
+        const { error } = await supabase.from('admissions').update({ ...admissionForm, updated_at: new Date() }).eq('id', editingAdmissionId);
+        if (error) throw error;
+        setEditingAdmissionId(null);
+      } else {
+        const { error } = await supabase.from('admissions').insert([{ ...admissionForm }]);
+        if (error) throw error;
+      }
+      setAdmissionForm({ title: '', summary: '', content: '', deadline: '', year: 2026, document_url: '' });
+      showSuccess();
+      fetchData();
+    } catch (error: any) {
+      showAlert("Lỗi", "Lỗi khi lưu thông tin tuyển sinh: " + error.message);
+    }
+  };
+
+  const handleEditAdmission = (item: any) => {
+    setEditingAdmissionId(item.id);
+    setAdmissionForm({
+      title: item.title,
+      summary: item.summary || '',
+      content: item.content,
+      deadline: item.deadline,
+      year: item.year,
+      document_url: item.document_url || ''
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeleteAdmission = async (id: string) => {
+    showConfirm("Xác nhận xóa", "Bạn có chắc chắn muốn xóa thông tin này?", async () => {
+      const { error } = await supabase.from('admissions').delete().eq('id', id);
+      if (error) {
+        showAlert("Lỗi", "Lỗi khi xóa: " + error.message);
+      } else {
+        fetchData();
+      }
+    });
+  };
+
+  const handleSaveHome = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const { error } = await supabase.from('home_content').upsert({ id: 'main', ...homeForm, updated_at: new Date() });
+      if (error) throw error;
+      showSuccess();
+      fetchData();
+    } catch (error: any) {
+      showAlert("Lỗi", "Lỗi: " + error.message);
+    }
+  };
+
+  const handleSaveAbout = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const { error } = await supabase.from('about_content').upsert({ id: 'main', ...aboutForm, updated_at: new Date() });
+      if (error) throw error;
+      showSuccess();
+      fetchData();
+    } catch (error: any) {
+      showAlert("Lỗi", "Lỗi: " + error.message);
+    }
+  };
+
+  const handleSaveContact = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const { error } = await supabase.from('school_info').upsert({ id: 'main', ...contactForm, updated_at: new Date() });
+      if (error) throw error;
+      showSuccess();
+      fetchData();
+    } catch (error: any) {
+      showAlert("Lỗi", "Lỗi: " + error.message);
+    }
+  };
+
+  const handleSaveAdmissionsPage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const { error } = await supabase.from('admissions_content').upsert({ id: 'main', ...admissionsPageForm, updated_at: new Date() });
+      if (error) throw error;
+      showSuccess();
+      fetchData();
+    } catch (error: any) {
+      showAlert("Lỗi", "Lỗi: " + error.message);
+    }
+  };
+
+  const handleSaveNewsPage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const { error } = await supabase.from('news_content').upsert({ id: 'main', ...newsPageForm, updated_at: new Date() });
+      if (error) throw error;
+      showSuccess();
+      fetchData();
+    } catch (error: any) {
+      showAlert("Lỗi", "Lỗi: " + error.message);
+    }
+  };
+
+  const handleSaveFeature = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingFeatureId) {
+        const { error } = await supabase.from('features').update({ ...featureForm, updated_at: new Date() }).eq('id', editingFeatureId);
+        if (error) throw error;
+        setEditingFeatureId(null);
+      } else {
+        const { error } = await supabase.from('features').insert([{ ...featureForm }]);
+        if (error) throw error;
+      }
+      setFeatureForm({ title: '', description: '', icon: 'BookOpen', color: 'bg-blue-100 text-blue-700', order_num: 0 });
+      showSuccess();
+      fetchData();
+    } catch (error: any) {
+      showAlert("Lỗi", "Lỗi khi lưu tính năng: " + error.message);
+    }
+  };
+
+  const handleEditFeature = (item: any) => {
+    setEditingFeatureId(item.id);
+    setFeatureForm({
+      title: item.title,
+      description: item.description,
+      icon: item.icon,
+      color: item.color,
+      order_num: item.order_num || 0
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeleteFeature = async (id: string) => {
+    showConfirm("Xác nhận xóa", "Xóa thẻ này?", async () => {
+      const { error } = await supabase.from('features').delete().eq('id', id);
+      if (error) {
+        showAlert("Lỗi", "Lỗi khi xóa: " + error.message);
+      } else {
+        fetchData();
+      }
+    });
+  };
+
+  const handleSaveDept = async (e: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const targetId = editingDeptId || (isManagingDeptContent ? selectedDeptId : null);
     
-    if (adminPasswordInput === correctPassword) {
-      localStorage.setItem('admin_authenticated', 'true');
-      setIsAdmin(true);
-      setShowLoginModal(false);
-      setAdminPasswordInput('');
-    } else {
-      setLoginError("Mật khẩu không chính xác.");
+    try {
+      if (targetId) {
+        const { error } = await supabase.from('departments').update({ ...deptForm, updated_at: new Date() }).eq('id', targetId);
+        if (error) throw error;
+        setEditingDeptId(null);
+      } else {
+        const { error } = await supabase.from('departments').insert([{ ...deptForm }]);
+        if (error) throw error;
+      }
+      
+      if (!isManagingDeptContent) {
+        setDeptForm({ name: '', icon: 'BookOpen', description: '', content: '' });
+      }
+      
+      showSuccess();
+      fetchData();
+    } catch (error: any) {
+      showAlert("Lỗi", "Lỗi khi lưu tổ chuyên môn: " + error.message);
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    localStorage.removeItem('admin_authenticated');
-    setIsAdmin(false);
-    setShowAdmin(false);
+  const handleDeleteDept = async (id: string) => {
+    showConfirm("Xác nhận xóa", "Xóa tổ này sẽ không xóa các dữ liệu con (nhân sự, hoạt động) nhưng tổ sẽ không hiển thị. Tiếp tục?", async () => {
+      const { error } = await supabase.from('departments').delete().eq('id', id);
+      if (error) {
+        showAlert("Lỗi", "Lỗi khi xóa: " + error.message);
+      } else {
+        fetchData();
+      }
+    });
   };
 
-  const renderContent = () => {
-    if (selectedNews && activeMenu === 'Tin tức') {
-      return (
-        <div className="animate-in slide-in-from-right duration-500 space-y-4">
+  const handleEditYouthUnion = (item: any) => {
+    setEditingYouthUnionId(item.id);
+    setYouthUnionForm({
+      title: item.title,
+      summary: item.summary || '',
+      content: item.content,
+      date: item.date || '',
+      image_url: item.image_url || ''
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSaveYouthUnion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingYouthUnionId) {
+        const { error } = await supabase.from('youth_union').update({ ...youthUnionForm, updated_at: new Date() }).eq('id', editingYouthUnionId);
+        if (error) throw error;
+        setEditingYouthUnionId(null);
+      } else {
+        const { error } = await supabase.from('youth_union').insert([{ ...youthUnionForm }]);
+        if (error) throw error;
+      }
+      setYouthUnionForm({ title: '', summary: '', content: '', date: '', image_url: '' });
+      showSuccess();
+      fetchData();
+    } catch (error: any) {
+      showAlert("Lỗi", "Lỗi: " + error.message);
+    }
+  };
+
+  const handleDeleteYouthUnion = async (id: string) => {
+    showConfirm("Xác nhận xóa", "Xóa hoạt động này?", async () => {
+      const { error } = await supabase.from('youth_union').delete().eq('id', id);
+      if (error) showAlert("Lỗi", "Lỗi khi xóa: " + error.message);
+    });
+  };
+
+  const handleEditAchievement = (item: any) => {
+    setEditingAchievementId(item.id);
+    setAchievementForm({
+      title: item.title,
+      student_name: item.student_name || '',
+      class: item.class || '',
+      year: item.year || '2025-2026',
+      award: item.award || '',
+      image_url: item.image_url || '',
+      type: item.type || 'academic',
+      description: item.description || ''
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSaveAchievement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingAchievementId) {
+        const { error } = await supabase.from('achievements').update({ ...achievementForm, updated_at: new Date() }).eq('id', editingAchievementId);
+        if (error) throw error;
+        setEditingAchievementId(null);
+      } else {
+        const { error } = await supabase.from('achievements').insert([{ ...achievementForm }]);
+        if (error) throw error;
+      }
+      setAchievementForm({ title: '', student_name: '', class: '', year: '2025-2026', award: '', type: 'academic', description: '', image_url: '' });
+      showSuccess();
+      fetchData();
+    } catch (error: any) {
+      showAlert("Lỗi", "Lỗi: " + error.message);
+    }
+  };
+
+  const handleDeleteAchievement = async (id: string) => {
+    showConfirm("Xác nhận xóa", "Xóa thành tích này?", async () => {
+      const { error } = await supabase.from('achievements').delete().eq('id', id);
+      if (error) {
+        showAlert("Lỗi", "Lỗi khi xóa: " + error.message);
+      } else {
+        fetchData();
+      }
+    });
+  };
+
+  const handleEditSchedule = (item: any) => {
+    setEditingScheduleId(item.id);
+    setScheduleForm({
+      title: item.title,
+      week: item.week || '',
+      date_range: item.date_range || '',
+      content: item.content || '',
+      file_url: item.file_url || '',
+      start_date: item.start_date || '',
+      end_date: item.end_date || ''
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSaveSchedule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingScheduleId) {
+        const { error } = await supabase.from('schedules').update({ ...scheduleForm, updated_at: new Date() }).eq('id', editingScheduleId);
+        if (error) throw error;
+        setEditingScheduleId(null);
+      } else {
+        const { error } = await supabase.from('schedules').insert([{ ...scheduleForm }]);
+        if (error) throw error;
+      }
+      setScheduleForm({ title: '', week: '', date_range: '', content: '', file_url: '', start_date: '', end_date: '' });
+      showSuccess();
+      fetchData();
+    } catch (error: any) {
+      showAlert("Lỗi", "Lỗi: " + error.message);
+    }
+  };
+
+  const handleDeleteSchedule = async (id: string) => {
+    showConfirm("Xác nhận xóa", "Xóa lịch công tác này?", async () => {
+      const { error } = await supabase.from('schedules').delete().eq('id', id);
+      if (error) showAlert("Lỗi", "Lỗi khi xóa: " + error.message);
+    });
+  };
+
+  const handleEditGallery = (item: any) => {
+    setEditingGalleryId(item.id);
+    setGalleryForm({
+      title: item.title,
+      image_url: item.image_url || '',
+      category: item.category || 'Hoạt động trường',
+      description: item.description || '',
+      images_json: item.images_json || '[]'
+    });
+    try {
+      setGalleryImages(JSON.parse(item.images_json || '[]'));
+    } catch (e) {
+      setGalleryImages([]);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSaveGallery = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const finalData = { ...galleryForm, images_json: JSON.stringify(galleryImages) };
+      if (editingGalleryId) {
+        const { error } = await supabase.from('gallery').update({ ...finalData, updated_at: new Date() }).eq('id', editingGalleryId);
+        if (error) throw error;
+        setEditingGalleryId(null);
+      } else {
+        const { error } = await supabase.from('gallery').insert([{ ...finalData }]);
+        if (error) throw error;
+      }
+      setGalleryForm({ title: '', image_url: '', category: 'Hoạt động trường', description: '', images_json: '[]' });
+      setGalleryImages([]);
+      showSuccess();
+      fetchData();
+    } catch (error: any) {
+      showAlert("Lỗi", "Lỗi: " + error.message);
+    }
+  };
+
+  const handleDeleteGallery = async (id: string) => {
+    showConfirm("Xác nhận xóa", "Xóa ảnh này?", async () => {
+      const { error } = await supabase.from('gallery').delete().eq('id', id);
+      if (error) showAlert("Lỗi", "Lỗi khi xóa: " + error.message);
+    });
+  };
+
+  const handleSaveArchive = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingArchiveId) {
+        const { error } = await supabase.from('archive_documents').update({ ...archiveForm, updated_at: new Date() }).eq('id', editingArchiveId);
+        if (error) throw error;
+        setEditingArchiveId(null);
+      } else {
+        const { error } = await supabase.from('archive_documents').insert([{ ...archiveForm }]);
+        if (error) throw error;
+      }
+      setArchiveForm({ title: '', category: 'Nội bộ', year: new Date().getFullYear(), type: 'Chương trình', file_url: '', description: '' });
+      showSuccess();
+      fetchData();
+    } catch (error: any) {
+      showAlert("Lỗi", "Lỗi khi lưu văn bản: " + error.message);
+    }
+  };
+
+  const handleEditArchive = (item: any) => {
+    setEditingArchiveId(item.id);
+    setArchiveForm({
+      title: item.title,
+      category: item.category,
+      year: item.year,
+      type: item.type,
+      file_url: item.file_url || '',
+      description: item.description || ''
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeleteArchive = async (id: string) => {
+    showConfirm("Xác nhận xóa", "Bạn có chắc chắn muốn xóa văn bản này?", async () => {
+      const { error } = await supabase.from('archive_documents').delete().eq('id', id);
+      if (error) {
+        showAlert("Lỗi", "Lỗi khi xóa: " + error.message);
+      } else {
+        fetchData();
+      }
+    });
+  };
+
+  const handleAddPersonnel = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDeptId) return;
+    try {
+      if (editingPersonnelId) {
+        const { error } = await supabase.from('personnel').update({ ...personnelForm, updated_at: new Date() }).eq('id', editingPersonnelId);
+        if (error) throw error;
+        setEditingPersonnelId(null);
+      } else {
+        const { error } = await supabase.from('personnel').insert([{ ...personnelForm, dept_id: selectedDeptId }]);
+        if (error) throw error;
+      }
+      setPersonnelForm({ name: '', position: '', bio: '', birth_date: '', education: '', image_url: '' });
+      showSuccess();
+      fetchDeptData();
+    } catch (error: any) {
+      showAlert("Lỗi", "Lỗi: " + error.message);
+    }
+  };
+
+  const handleDeletePersonnel = async (id: string) => {
+    if (!selectedDeptId) return;
+    showConfirm("Xác nhận xóa", "Xóa nhân sự này?", async () => {
+      const { error } = await supabase.from('personnel').delete().eq('id', id);
+      if (error) {
+        showAlert("Lỗi", "Lỗi khi xóa: " + error.message);
+      } else {
+        fetchDeptData();
+      }
+    });
+  };
+
+  const handleEditActivity = (item: any) => {
+    setEditingActivityId(item.id);
+    setActivityForm({
+      title: item.title,
+      date: item.date || '',
+      summary: item.summary || '',
+      description: item.description || '',
+      image_url: item.image_url || '',
+      document_url: item.document_url || '',
+      content: item.content || ''
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleAddActivity = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDeptId) return;
+    try {
+      if (editingActivityId) {
+        const { error } = await supabase.from('activities').update({ ...activityForm, updated_at: new Date() }).eq('id', editingActivityId);
+        if (error) throw error;
+        setEditingActivityId(null);
+      } else {
+        const { error } = await supabase.from('activities').insert([{ ...activityForm, dept_id: selectedDeptId }]);
+        if (error) throw error;
+      }
+      setActivityForm({ title: '', date: '', summary: '', description: '', document_url: '', content: '', image_url: '' });
+      showSuccess();
+      fetchDeptData();
+    } catch (error: any) {
+      showAlert("Lỗi", "Lỗi: " + error.message);
+    }
+  };
+
+  const handleDeleteActivity = async (id: string) => {
+    if (!selectedDeptId) return;
+    showConfirm("Xác nhận xóa", "Xóa hoạt động này?", async () => {
+      const { error } = await supabase.from('activities').delete().eq('id', id);
+      if (error) {
+        showAlert("Lỗi", "Lỗi khi xóa: " + error.message);
+      } else {
+        fetchDeptData();
+      }
+    });
+  };
+
+  const handleAddDocument = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDeptId) return;
+    try {
+      if (editingDocumentId) {
+        const { error } = await supabase.from('dept_documents').update({ ...documentForm, updated_at: new Date() }).eq('id', editingDocumentId);
+        if (error) throw error;
+        setEditingDocumentId(null);
+      } else {
+        const { error } = await supabase.from('dept_documents').insert([{ ...documentForm, dept_id: selectedDeptId }]);
+        if (error) throw error;
+      }
+      setDocumentForm({ title: '', description: '', file_url: '', category: 'Giáo án' });
+      showSuccess();
+      fetchDeptData();
+    } catch (error: any) {
+      showAlert("Lỗi", "Lỗi: " + error.message);
+    }
+  };
+
+  const handleDeleteDocument = async (id: string) => {
+    if (!selectedDeptId) return;
+    showConfirm("Xác nhận xóa", "Xóa tài liệu này?", async () => {
+      const { error } = await supabase.from('dept_documents').delete().eq('id', id);
+      if (error) {
+        showAlert("Lỗi", "Lỗi khi xóa: " + error.message);
+      } else {
+        fetchDeptData();
+      }
+    });
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-100 flex">
+      {/* Admin Sidebar */}
+      <aside className="w-64 bg-slate-900 text-white p-6 flex flex-col sticky top-0 h-screen">
+        <div className="flex items-center gap-3 mb-10">
+          <LayoutDashboard className="w-8 h-8 text-blue-400" />
+          <h1 className="text-xl font-bold uppercase tracking-tight">Quản trị</h1>
+        </div>
+
+        <nav className="flex-1 space-y-2 overflow-y-auto pr-2 custom-scrollbar">
           <button 
-            onClick={() => setSelectedNews(null)}
-            className="group flex items-center gap-1.5 text-blue-600 text-xs font-black uppercase tracking-wider hover:text-blue-800 transition-all mb-4 bg-white px-3 py-1.5 rounded-full border border-blue-100 shadow-sm"
+            onClick={() => setActiveTab('news')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'news' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
           >
-            <Icons.ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" /> Quay lại
+            <Bell className="w-5 h-5" /> Danh sách Tin tức
           </button>
-          <div className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm p-6 md:p-10">
-            <div className="space-y-6">
-              <div className="flex items-center gap-4">
-                <span className="px-4 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold uppercase">
-                  {selectedNews.category}
-                </span>
-                <span className="text-slate-400 flex items-center gap-2 text-sm">
-                  <Icons.Calendar className="w-4 h-4" />
-                  {selectedNews.date?.toDate ? selectedNews.date.toDate().toLocaleDateString('vi-VN') : 
-                   (selectedNews.date ? new Date(selectedNews.date).toLocaleDateString('vi-VN') : 'Mới')}
-                </span>
-              </div>
-              <h2 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight flex items-center gap-2 flex-wrap">
-                {selectedNews.title}
-                {(selectedNews.is_new || !selectedNews.date || isNaN(new Date(selectedNews.date).getTime())) && (
-                  <span className="px-2 py-0.5 bg-gradient-to-r from-orange-500 to-red-600 text-white text-[10px] font-black rounded shadow-sm animate-pulse shrink-0 tracking-wider">NEW</span>
-                )}
-              </h2>
-              <div className="h-1.5 w-20 bg-blue-800 rounded-full"></div>
-              
-              <div className="text-lg text-slate-600 leading-relaxed">
-                <div className="space-y-6">
-                  <MarkdownContent content={selectedNews.content} />
-                  
-                  <div className="flex flex-col gap-4 mt-8">
-                    {selectedNews.document_url && (
-                      <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Icons.FileText className="w-6 h-6 text-blue-600" />
-                          <div>
-                            <p className="font-bold text-blue-900">Tài liệu đính kèm</p>
-                            <p className="text-sm text-blue-600 truncate max-w-[200px] md:max-w-md">{selectedNews.document_url}</p>
-                          </div>
-                        </div>
-                        <a 
-                          href={selectedNews.document_url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors"
-                        >
-                          <Icons.ExternalLink className="w-4 h-4" /> Tải về
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    if (selectedAdmission && activeMenu === 'Tuyển sinh') {
-      return (
-        <div className="animate-in slide-in-from-right duration-500 space-y-8">
           <button 
-            onClick={() => setSelectedAdmission(null)}
-            className="flex items-center gap-2 text-blue-600 font-bold hover:text-blue-800 transition-colors"
+            onClick={() => setActiveTab('news_page')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'news_page' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
           >
-            <Icons.ArrowLeft className="w-5 h-5" /> Quay lại danh sách
+            <Settings className="w-5 h-5" /> Trang Tin tức
           </button>
-          <div className="bg-white border border-slate-200 rounded-3xl p-8 md:p-12 shadow-sm space-y-8">
-            <div className="flex flex-col md:flex-row justify-between items-start gap-4">
-              <div className="space-y-2">
-                <h3 className="text-3xl font-black text-blue-900">{selectedAdmission.title}</h3>
-                <div className="h-1.5 w-24 bg-blue-800 rounded-full"></div>
-              </div>
-              <span className="px-6 py-2 bg-blue-100 text-blue-700 rounded-full text-lg font-bold">
-                Năm học {selectedAdmission.year}
-              </span>
-            </div>
-            <div className="prose prose-slate max-w-none text-lg text-slate-600 leading-relaxed">
-              <MarkdownContent content={selectedAdmission.content} />
-              
-              <div className="flex flex-col gap-4 mt-8">
-                {selectedAdmission.document_url && (
-                  <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Icons.FileText className="w-6 h-6 text-blue-600" />
-                      <div>
-                        <p className="font-bold text-blue-900">Tài liệu đính kèm</p>
-                        <p className="text-sm text-blue-600 truncate max-w-[200px] md:max-w-md">{selectedAdmission.document_url}</p>
-                      </div>
-                    </div>
-                    <a 
-                      href={selectedAdmission.document_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors"
-                    >
-                      <Icons.ExternalLink className="w-4 h-4" /> Tải về
-                    </a>
-                  </div>
-                )}
+          <button 
+            onClick={() => setActiveTab('admissions')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'admissions' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+          >
+            <GraduationCap className="w-5 h-5" /> Danh sách Tuyển sinh
+          </button>
+          <button 
+            onClick={() => setActiveTab('admissions_page')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'admissions_page' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+          >
+            <Settings className="w-5 h-5" /> Trang Tuyển sinh
+          </button>
+          <button 
+            onClick={() => setActiveTab('home')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'home' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+          >
+            <Home className="w-5 h-5" /> Trang chủ
+          </button>
+          <button 
+            onClick={() => setActiveTab('features')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'features' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+          >
+            <Plus className="w-5 h-5" /> Thẻ Tính năng
+          </button>
+          <button 
+            onClick={() => setActiveTab('about')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'about' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+          >
+            <Info className="w-5 h-5" /> Giới thiệu
+          </button>
+          <button 
+            onClick={() => setActiveTab('contact')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'contact' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+          >
+            <Phone className="w-5 h-5" /> Liên hệ & Cấu hình
+          </button>
+          <button 
+            onClick={() => setActiveTab('departments')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'departments' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+          >
+            <BookOpen className="w-5 h-5" /> Tổ chuyên môn
+          </button>
+          <button 
+            onClick={() => setActiveTab('youth_union')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'youth_union' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+          >
+            <Users className="w-5 h-5" /> Hoạt động Đoàn
+          </button>
+          <button 
+            onClick={() => setActiveTab('achievements')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'achievements' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+          >
+            <Award className="w-5 h-5" /> Thành tích học tập
+          </button>
+          <button 
+            onClick={() => setActiveTab('schedule')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'schedule' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+          >
+            <Calendar className="w-5 h-5" /> Lịch công tác
+          </button>
+          <button 
+            onClick={() => setActiveTab('gallery')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'gallery' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+          >
+            <Globe className="w-5 h-5" /> Thư viện ảnh
+          </button>
+          <button 
+            onClick={() => setActiveTab('archive')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'archive' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+          >
+            <Archive className="w-5 h-5" /> Lưu trữ văn bản
+          </button>
+        </nav>
 
-              </div>
-            </div>
-            <div className="flex items-center gap-3 text-red-600 font-black text-xl p-6 bg-red-50 rounded-2xl border border-red-100">
-              <Icons.Calendar className="w-6 h-6" />
-              <span>Hạn chót nộp hồ sơ: {new Date(selectedAdmission.deadline).toLocaleDateString('vi-VN')}</span>
-            </div>
-          </div>
-        </div>
-      );
-    }
+        <button 
+          onClick={onExit}
+          className="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-blue-400 transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" /> Quay lại trang web
+        </button>
 
-    if (activeMenu === 'Giới thiệu' && aboutContent?.render_type === 'html') {
-      return (
-        <div className="animate-in fade-in duration-500 prose prose-slate max-w-none" 
-             dangerouslySetInnerHTML={{ __html: aboutContent.html_content }} />
-      );
-    }
+        <button 
+          onClick={onLogout}
+          className="mt-auto flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-red-400 transition-colors"
+        >
+          <LogOut className="w-5 h-5" /> Đăng xuất
+        </button>
+      </aside>
 
-    if (activeMenu === 'Tuyển sinh' && admissionsContent?.render_type === 'html') {
-      return (
-        <div className="animate-in fade-in duration-500 prose prose-slate max-w-none" 
-             dangerouslySetInnerHTML={{ __html: admissionsContent.html_content }} />
-      );
-    }
-
-    if (activeMenu === 'Tin tức' && newsContent?.render_type === 'html') {
-      return (
-        <div className="animate-in fade-in duration-500 prose prose-slate max-w-none" 
-             dangerouslySetInnerHTML={{ __html: newsContent.html_content }} />
-      );
-    }
-
-    if (activeMenu === 'Lưu trữ văn bản') {
-      const filteredDocs = archiveDocuments.filter(d => {
-        const matchesSearch = d.title.toLowerCase().includes(archiveSearch.toLowerCase()) || 
-                             (d.description?.toLowerCase().includes(archiveSearch.toLowerCase()));
-        const matchesType = archiveTypeFilter === 'Tất cả' || d.type === archiveTypeFilter;
-        return matchesSearch && matchesType;
-      });
-
-      const docTypes = ['Tất cả', ...new Set(archiveDocuments.map(d => d.type))];
-
-      return (
-        <div className="animate-in fade-in duration-500 space-y-12">
-          <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
-              <h2 className="text-2xl font-black text-blue-900 flex items-center gap-3">
-                <Icons.Archive className="w-8 h-8 text-blue-600" /> Lưu trữ văn bản & Tài liệu
-              </h2>
-              <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                 <div className="relative flex-1 sm:w-64">
-                    <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input 
-                      type="text" 
-                      placeholder="Tìm tên văn bản..." 
-                      className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                      value={archiveSearch}
-                      onChange={(e) => setArchiveSearch(e.target.value)}
-                    />
-                 </div>
-                 <select 
-                    className="py-2 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500"
-                    value={archiveTypeFilter}
-                    onChange={(e) => setArchiveTypeFilter(e.target.value)}
-                 >
-                   {docTypes.map(type => (
-                     <option key={type} value={type}>{type}</option>
-                   ))}
-                 </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Nội bộ Group */}
-              <div className="space-y-6">
-                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2 border-b-2 border-emerald-500 pb-2 w-fit">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Văn bản Nội bộ
-                </h3>
-                <div className="space-y-4">
-                  {filteredDocs.filter(d => d.category === 'Nội bộ').length > 0 ? (
-                    filteredDocs.filter(d => d.category === 'Nội bộ').map((doc) => (
-                      <div key={doc.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-white hover:shadow-md transition-all group">
-                        <div className="flex justify-between items-start gap-3">
-                          <div className="min-w-0">
-                            <span className="text-[10px] font-black uppercase text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded mb-1 inline-block">{doc.type} {doc.year ? `- ${doc.year}` : ''}</span>
-                            <h4 className="font-bold text-slate-900 line-clamp-2 leading-tight mb-1">{doc.title}</h4>
-                            <p className="text-xs text-slate-500 line-clamp-2">{doc.description}</p>
-                          </div>
-                          {doc.file_url && (
-                            <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="p-2 bg-white text-blue-600 rounded-xl shadow-sm border border-slate-100 hover:bg-blue-600 hover:text-white transition-all transform group-hover:scale-110">
-                              <Icons.ExternalLink className="w-4 h-4" />
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-8 text-slate-400 text-sm italic">Đang cập nhật...</div>
-                  )}
-                </div>
-              </div>
-
-              {/* Sở, Bộ Group */}
-              <div className="space-y-6">
-                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2 border-b-2 border-purple-500 pb-2 w-fit">
-                  <span className="w-2 h-2 rounded-full bg-purple-500"></span> Văn bản Sở, Bộ
-                </h3>
-                <div className="space-y-4">
-                  {filteredDocs.filter(d => ['Sở, Bộ', 'Số, Bộ', 'Sổ, Bộ'].includes(d.category)).length > 0 ? (
-                    filteredDocs.filter(d => ['Sở, Bộ', 'Số, Bộ', 'Sổ, Bộ'].includes(d.category)).map((doc) => (
-                      <div key={doc.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-white hover:shadow-md transition-all group">
-                        <div className="flex justify-between items-start gap-3">
-                          <div className="min-w-0">
-                            <span className="text-[10px] font-black uppercase text-purple-600 bg-purple-50 px-2 py-0.5 rounded mb-1 inline-block">{doc.type} {doc.year ? `- ${doc.year}` : ''}</span>
-                            <h4 className="font-bold text-slate-900 line-clamp-2 leading-tight mb-1">{doc.title}</h4>
-                            <p className="text-xs text-slate-500 line-clamp-2">{doc.description}</p>
-                          </div>
-                          {doc.file_url && (
-                            <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="p-2 bg-white text-blue-600 rounded-xl shadow-sm border border-slate-100 hover:bg-blue-600 hover:text-white transition-all transform group-hover:scale-110">
-                              <Icons.ExternalLink className="w-4 h-4" />
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-8 text-slate-400 text-sm italic">Đang cập nhật...</div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-6 bg-blue-900 text-white rounded-3xl space-y-4">
-              <Icons.ShieldCheck className="w-10 h-10 text-blue-400" />
-              <h4 className="text-lg font-bold">Lưu ý</h4>
-              <p className="text-sm text-blue-100 leading-relaxed font-medium">Toàn bộ văn bản được đăng tải đều là bản sao từ văn bản gốc, có giá trị nội bộ tại nhà trường.</p>
-            </div>
-            <div className="md:col-span-2 p-8 bg-white border border-slate-200 rounded-3xl flex flex-col md:flex-row items-center gap-6">
-               <div className="w-20 h-20 bg-slate-100 rounded-2xl flex items-center justify-center shrink-0">
-                 <Icons.Search className="w-8 h-8 text-blue-800" />
-               </div>
-               <div>
-                 <h4 className="text-xl font-black text-blue-900 mb-2">Tra cứu văn bản nhanh chóng</h4>
-                 <p className="text-slate-600 text-sm font-medium mb-4">Bạn đang tìm kiếm một nghị định hay nội quy cụ thể? Hãy sử dụng công cụ tìm kiếm trên thanh điều hướng hoặc liên hệ VP nhà trường để được hỗ trợ.</p>
-               </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    if (activeMenu === 'Liên hệ' && schoolInfo?.render_type === 'html') {
-      return (
-        <div className="animate-in fade-in duration-500 prose prose-slate max-w-none" 
-             dangerouslySetInnerHTML={{ __html: schoolInfo.html_content }} />
-      );
-    }
-
-    if (activeMenu === 'Trang chủ' && homeContent?.render_type === 'html') {
-      return (
-        <div className="animate-in fade-in duration-500 prose prose-slate max-w-none" 
-             dangerouslySetInnerHTML={{ __html: homeContent.html_content }} />
-      );
-    }
-
-    switch (activeMenu) {
-      case 'Giới thiệu':
-        return (
-          <div className="space-y-8 animate-in fade-in duration-500">
-            <h2 className="text-3xl font-black text-slate-900 uppercase">Về {schoolInfo?.name || 'Trường THPT'}</h2>
-            <div className="h-1.5 w-24 bg-blue-800 rounded-full mb-8"></div>
-            <div className="prose prose-slate max-w-none">
-              <MarkdownContent content={aboutContent?.main_text || 'Đang tải thông tin giới thiệu...'} />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mt-10">
-                <div className="bg-blue-50 p-8 rounded-3xl border border-blue-100">
-                  <h3 className="text-xl font-bold text-blue-900 mb-4">Lịch sử hình thành</h3>
-                  <MarkdownContent content={aboutContent?.history || 'Đang tải lịch sử hình thành...'} />
-                </div>
-                <div className="bg-amber-50 p-8 rounded-3xl border border-amber-100">
-                  <h3 className="text-xl font-bold text-amber-900 mb-4">Giá trị cốt lõi</h3>
-                  <MarkdownContent content={aboutContent?.core_values || 'Đang tải giá trị cốt lõi...'} />
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      case 'Tuyển sinh':
-        const filteredAdmissions = admissions.filter(a => a.title.toLowerCase().includes(searchQuery.toLowerCase()));
-        return (
-          <div className="space-y-8 animate-in fade-in duration-500">
-            <h2 className="text-3xl font-black text-slate-900 uppercase">Thông tin tuyển sinh</h2>
-            <div className="h-1.5 w-24 bg-blue-800 rounded-full mb-8"></div>
-            <div className="space-y-0.5 border-t border-slate-100 pt-4">
-              {filteredAdmissions.length > 0 ? filteredAdmissions.map(item => (
-                <div 
-                  key={item.id} 
-                  className="flex flex-wrap items-center gap-x-4 py-1 border-b border-slate-50 hover:bg-slate-50 transition-colors text-sm"
-                >
-                  <div className="flex items-center gap-1 min-w-0 flex-1">
-                    <span className="font-bold text-slate-900 shrink-0">Tiêu đề:</span>
-                    <span className="text-slate-700 truncate">{item.title}</span>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <span className="font-bold text-slate-900">Thời gian:</span>
-                    <span className="text-slate-500">
-                      {item.deadline ? new Date(item.deadline).toLocaleDateString('vi-VN') : '...'}
-                    </span>
-                  </div>
-                  <button 
-                    onClick={() => {
-                      setSelectedAdmission(item);
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    className="text-blue-600 font-bold hover:underline shrink-0"
-                  >
-                    &lt;xem chi tiết&gt;
-                  </button>
-                </div>
-              )) : (
-                <div className="text-center py-10 bg-slate-50 rounded-xl border border-dashed border-slate-300">
-                  <GraduationCap className="w-12 h-12 text-slate-300 mx-auto mb-2" />
-                  <p className="text-slate-500 text-sm">Hiện chưa có thông tin tuyển sinh mới.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      case 'Tin tức':
-        const filteredNews = news.filter(n => n.title.toLowerCase().includes(searchQuery.toLowerCase()));
-        return (
-          <div className="space-y-8 animate-in fade-in duration-500">
-            <h2 className="text-3xl font-black text-slate-900 uppercase">Tin tức & Sự kiện</h2>
-            <div className="h-1.5 w-24 bg-blue-800 rounded-full mb-8"></div>
-            <div className="space-y-0.5 border-t border-slate-100 pt-4">
-              {filteredNews.map(item => (
-                <div 
-                  key={item.id} 
-                  className="flex flex-wrap items-center gap-x-4 py-1 border-b border-slate-50 hover:bg-slate-50 transition-colors text-sm"
-                >
-                  <div className="flex items-center gap-1 min-w-0 flex-1">
-                    <span className="font-bold text-slate-900 shrink-0">Tiêu đề:</span>
-                    <span className="text-slate-700 truncate">{item.title}</span>
-                    {(item.is_new || !item.date || isNaN(new Date(item.date).getTime())) && (
-                      <span className="ml-1 px-1.5 py-0.5 bg-orange-600 text-white text-[8px] font-black rounded shadow-sm shrink-0">NEW</span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <span className="font-bold text-slate-900">Thời gian:</span>
-                    <span className="text-slate-500">
-                      {item.date && !isNaN(new Date(item.date).getTime()) ? new Date(item.date).toLocaleDateString('vi-VN') : '---'}
-                    </span>
-                  </div>
-                  <button 
-                    onClick={() => {
-                      setSelectedNews(item);
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    className="text-blue-600 font-bold hover:underline shrink-0"
-                  >
-                    &lt;xem chi tiết&gt;
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      case 'Lưu trữ văn bản':
-        const filteredArchive = archiveDocuments.filter(item => 
-          item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.type.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-        return (
-          <div className="space-y-8 animate-in fade-in duration-500">
-            <h2 className="text-3xl font-black text-slate-900 uppercase">Lưu trữ văn bản & Tài liệu</h2>
-            <div className="h-1.5 w-24 bg-blue-800 rounded-full mb-8"></div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {['Nội bộ', 'Sở, Bộ', 'Số bộ'].map(cat => {
-                const docs = filteredArchive.filter(d => d.category === cat || (cat === 'Sở, Bộ' && d.category === 'Số bộ'));
-                if (docs.length === 0 && cat === 'Số bộ') return null; // Group Số bộ with Sở, Bộ
-                if (docs.length === 0 && cat !== 'Sở, Bộ') return null; 
-                
-                return (
-                  <div key={cat} className="space-y-4">
-                    <h3 className="text-xl font-bold text-slate-800 border-b-2 border-slate-100 pb-2 flex items-center gap-2">
-                       <Icons.Archive className="w-5 h-5 text-blue-600" />
-                       {cat === 'Sở, Bộ' ? 'Văn bản Sở, Bộ' : cat}
-                    </h3>
-                    <div className="space-y-2">
-                      {docs.map(doc => (
-                        <div key={doc.id} className="p-4 bg-white border border-slate-100 rounded-2xl hover:shadow-md transition-all flex justify-between items-center group">
-                          <div className="min-w-0 flex-1">
-                            <h4 className="font-bold text-slate-900 group-hover:text-blue-700 transition-colors truncate">{doc.title}</h4>
-                            <div className="flex items-center gap-2 text-xs text-slate-400 mt-1">
-                              <span className="font-medium bg-slate-100 px-2 py-0.5 rounded">{doc.type}</span>
-                              <span className="shrink-0">• {doc.year}</span>
-                              {doc.category === 'Số bộ' && <span className="text-[10px] bg-amber-50 text-amber-600 px-1 rounded border border-amber-100">Cũ</span>}
-                            </div>
-                          </div>
-                          {doc.file_url && (
-                            <a 
-                              href={doc.file_url} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="ml-4 p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors shrink-0"
-                              title="Tải văn bản"
-                            >
-                              <Icons.FileText className="w-5 h-5" />
-                            </a>
-                          )}
-                        </div>
-                      ))}
-                      {docs.length === 0 && (
-                        <p className="text-sm text-slate-400 italic py-4">Chưa có văn bản trong danh mục này.</p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            {filteredArchive.length === 0 && searchQuery && (
-              <div className="text-center py-20 bg-slate-50 rounded-3xl border border-dashed border-slate-300">
-                <Icons.Search className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                <p className="text-slate-500">Không tìm thấy tài liệu phù hợp với "{searchQuery}".</p>
+      {/* Main Content Area */}
+      <main className="flex-1 p-10 overflow-y-auto">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex justify-between items-center mb-10">
+            <h2 className="text-3xl font-bold text-slate-800">
+              {activeTab === 'news' && 'Quản lý Danh sách Tin tức'}
+              {activeTab === 'news_page' && 'Cấu hình Trang Tin tức'}
+              {activeTab === 'admissions' && 'Quản lý Danh sách Tuyển sinh'}
+              {activeTab === 'admissions_page' && 'Cấu hình Trang Tuyển sinh'}
+              {activeTab === 'home' && 'Hiệu chỉnh Trang chủ'}
+              {activeTab === 'features' && 'Quản lý Thẻ Tính năng'}
+              {activeTab === 'about' && 'Hiệu chỉnh Trang giới thiệu'}
+              {activeTab === 'contact' && 'Cấu hình thông tin trường'}
+              {activeTab === 'departments' && 'Quản lý Tổ chuyên môn'}
+            </h2>
+            {saveStatus && (
+              <div className="flex items-center gap-2 text-green-600 font-bold animate-in slide-in-from-top-4">
+                <Check className="w-5 h-5" /> {saveStatus}
               </div>
             )}
           </div>
-        );
-      case 'Liên hệ':
-        return (
-          <div className="space-y-8 animate-in fade-in duration-500">
-            <h2 className="text-3xl font-black text-slate-900 uppercase">Liên hệ với chúng tôi</h2>
-            <div className="h-1.5 w-24 bg-blue-800 rounded-full mb-8"></div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-              <div className="space-y-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-blue-100 text-blue-800 rounded-2xl flex items-center justify-center shrink-0">
-                    <MapPin className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-slate-900">Địa chỉ</h4>
-                    <p className="text-slate-600">{schoolInfo?.address || '123 Đường ABC, Quận XYZ, Hà Nội'}</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-green-100 text-green-800 rounded-2xl flex items-center justify-center shrink-0">
-                    <Phone className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-slate-900">Điện thoại</h4>
-                    <p className="text-slate-600">{schoolInfo?.phone || '024.1234.5678'}</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-purple-100 text-purple-800 rounded-2xl flex items-center justify-center shrink-0">
-                    <Globe className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-slate-900">Email</h4>
-                    <p className="text-slate-600">{schoolInfo?.email || 'contact@thptminhkhai.edu.vn'}</p>
-                  </div>
-                </div>
-              </div>
-              <form className="bg-slate-50 p-8 rounded-3xl border border-slate-200 space-y-4">
-                <input type="text" placeholder="Họ và tên" className="w-full p-3 rounded-xl border border-slate-300 outline-none focus:ring-2 focus:ring-blue-500" />
-                <input type="email" placeholder="Email liên hệ" className="w-full p-3 rounded-xl border border-slate-300 outline-none focus:ring-2 focus:ring-blue-500" />
-                <textarea placeholder="Nội dung tin nhắn" className="w-full p-3 rounded-xl border border-slate-300 outline-none focus:ring-2 focus:ring-blue-500 h-32"></textarea>
-                <button className="w-full py-3 bg-blue-800 text-white font-bold rounded-xl hover:bg-blue-900 transition-colors">Gửi thông tin</button>
-              </form>
-            </div>
-          </div>
-        );
-      case 'Tổ chuyên môn':
-        if (selectedDepartment) {
-          if (selectedDeptActivity) {
-            return (
-              <div className="animate-in slide-in-from-right duration-500 space-y-8">
-                <button 
-                  onClick={() => setSelectedDeptActivity(null)}
-                  className="flex items-center gap-2 text-blue-600 font-bold hover:text-blue-800 transition-colors"
-                >
-                  <Icons.ArrowLeft className="w-5 h-5" /> Quay lại tổ chuyên môn
-                </button>
 
-                <div className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm p-8 md:p-12">
-                  <div className="flex items-center gap-2 text-slate-400 text-sm mb-4">
-                    <Icons.Calendar className="w-4 h-4" />
-                    {selectedDeptActivity.date && !isNaN(new Date(selectedDeptActivity.date).getTime()) ? new Date(selectedDeptActivity.date).toLocaleString('vi-VN') : '...'}
-                  </div>
-                  <h2 className="text-4xl font-black text-slate-900 mb-6 leading-tight">{selectedDeptActivity.title}</h2>
-                  <div className="h-1.5 w-24 bg-blue-800 rounded-full mb-10"></div>
-                  
-                  {selectedDeptActivity.image_url && (
-                    <div className="mb-10 rounded-3xl overflow-hidden shadow-lg">
-                      <img src={selectedDeptActivity.image_url} className="w-full h-auto max-h-[600px] object-cover" referrerPolicy="no-referrer" />
-                    </div>
-                  )}
-
-                  <div className="prose prose-slate max-w-none text-lg text-slate-600 leading-relaxed">
-                    {selectedDeptActivity.summary && (
-                      <p className="text-xl font-bold text-blue-900 mb-8 p-6 bg-blue-50 rounded-2xl border-l-4 border-blue-600">
-                        {selectedDeptActivity.summary}
-                      </p>
-                    )}
-                    <MarkdownContent content={selectedDeptActivity.content || selectedDeptActivity.description} />
-                  </div>
-
-                  <div className="flex flex-wrap gap-4 mt-12 pt-8 border-t border-slate-100">
-                    {selectedDeptActivity.document_url && (
-                      <a 
-                        href={selectedDeptActivity.document_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-3 px-8 py-4 bg-blue-800 text-white font-bold rounded-2xl hover:bg-blue-900 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1"
-                      >
-                        Tài liệu đính kèm <Icons.FileText className="w-5 h-5" />
-                      </a>
-                    )}
+          {activeTab === 'news' && (
+            <div className="space-y-8">
+              <form onSubmit={handleAddNews} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-bold flex items-center gap-2">
+                    {editingNewsId ? <Edit className="w-5 h-5 text-amber-600" /> : <Plus className="w-5 h-5 text-blue-600" />}
+                    {editingNewsId ? 'Hiệu chỉnh tin tức' : 'Thêm tin mới'}
+                  </h3>
+                  <button 
+                    type="button"
+                    onClick={handleClearAllNew}
+                    className="text-xs bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg hover:bg-slate-200 transition-colors font-bold flex items-center gap-1.5 border border-slate-200"
+                  >
+                    <Zap className="w-3.5 h-3.5 text-orange-500" /> Gỡ toàn bộ "NEW"
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <input 
+                    type="text" 
+                    placeholder="Tiêu đề tin tức" 
+                    value={newsForm.title}
+                    onChange={e => setNewsForm({...newsForm, title: e.target.value})}
+                    className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                  <div className="flex gap-4">
+                    <select 
+                      value={newsForm.category}
+                      onChange={e => setNewsForm({...newsForm, category: e.target.value})}
+                      className="flex-1 p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option>Tin tức</option>
+                      <option>Thông báo</option>
+                      <option>Sự kiện</option>
+                    </select>
+                    <label className="flex items-center gap-2 px-4 border rounded-xl bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors">
+                      <input 
+                        type="checkbox" 
+                        checked={newsForm.is_new}
+                        onChange={e => setNewsForm({...newsForm, is_new: e.target.checked})}
+                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-sm font-bold text-slate-700">Hiện "NEW"</span>
+                    </label>
                   </div>
                 </div>
-              </div>
-            );
-          }
-          const IconComponent = (Icons as any)[selectedDepartment.icon] || Icons.BookOpen;
-          return (
-            <div className="animate-in slide-in-from-right duration-500 space-y-8">
-              <button 
-                onClick={() => setSelectedDepartment(null)}
-                className="flex items-center gap-2 text-blue-600 font-bold hover:text-blue-800 transition-colors"
-              >
-                <Icons.ArrowLeft className="w-5 h-5" /> Quay lại danh sách tổ
-              </button>
-              <div className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm p-8 md:p-12">
-                <div className="flex items-center gap-6 mb-8">
-                  <div className="w-20 h-20 bg-blue-100 text-blue-800 rounded-2xl flex items-center justify-center shadow-sm">
-                    <IconComponent className="w-10 h-10" />
-                  </div>
-                  <div>
-                    <h2 className="text-3xl font-black text-slate-900 uppercase">{selectedDepartment.name}</h2>
-                    <div className="h-1.5 w-24 bg-blue-800 rounded-full mt-2"></div>
-                  </div>
-                </div>
-                <div className="prose prose-slate max-w-none text-lg text-slate-600 leading-relaxed">
-                  <p className="font-bold text-xl text-blue-900 mb-8">{selectedDepartment.description}</p>
-                  
-                  {/* Tabs Navigation */}
-                  <div className="flex border-b border-slate-200 mb-8 overflow-x-auto no-scrollbar">
+                <MarkdownToolbar 
+                  textareaRef={newsTextareaRef} 
+                  setter={setNewsForm} 
+                  form={newsForm} 
+                  field="content" 
+                />
+                <textarea 
+                  ref={newsTextareaRef}
+                  placeholder="Nội dung chi tiết" 
+                  value={newsForm.content}
+                  onChange={e => setNewsForm({...newsForm, content: e.target.value})}
+                  className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-32 mb-4 border-t-0"
+                />
+                <div className="flex gap-3">
+                  <button type="submit" className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors">
+                    {editingNewsId ? 'Cập nhật' : 'Đăng tin'}
+                  </button>
+                  {editingNewsId && (
                     <button 
-                      onClick={() => setActiveDeptTab('introduction')}
-                      className={`px-6 py-3 font-bold text-sm uppercase tracking-wider transition-all border-b-2 shrink-0 ${activeDeptTab === 'introduction' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                      type="button" 
+                      onClick={() => {
+                        setEditingNewsId(null);
+                        setNewsForm({ title: '', content: '', category: 'Tin tức', image_url: '', is_new: true });
+                      }}
+                      className="px-6 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
+                    >
+                      Hủy bỏ
+                    </button>
+                  )}
+                </div>
+              </form>
+
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center gap-2">
+                  <Search className="w-5 h-5 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder="Tìm kiếm tin tức..." 
+                    className="bg-transparent border-none outline-none text-sm w-full"
+                    value={adminSearch}
+                    onChange={(e) => setAdminSearch(e.target.value)}
+                  />
+                </div>
+                <table className="w-full text-left">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="p-4 font-bold text-slate-600">Tiêu đề</th>
+                      <th className="p-4 font-bold text-slate-600">Loại</th>
+                      <th className="p-4 font-bold text-slate-600">Ngày đăng</th>
+                      <th className="p-4 font-bold text-slate-600">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {news.filter(item => 
+                      item.title?.toLowerCase().includes(adminSearch.toLowerCase()) || 
+                      item.category?.toLowerCase().includes(adminSearch.toLowerCase())
+                    ).map(item => (
+                      <tr key={item.id} className="border-b border-slate-100 last:border-none">
+                        <td className="p-4 text-sm font-medium">
+                          <div className="flex items-center gap-2">
+                            {item.title}
+                            {item.is_new && <span className="px-1.5 py-0.5 bg-orange-600 text-white text-[8px] font-black rounded shadow-sm shrink-0">NEW</span>}
+                          </div>
+                        </td>
+                        <td className="p-4 text-sm">
+                          <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold">{item.category}</span>
+                        </td>
+                        <td className="p-4 text-sm text-slate-500">
+                          {item.date?.toDate ? item.date.toDate().toLocaleDateString('vi-VN') : 'Đang xử lý...'}
+                        </td>
+                        <td className="p-4 flex gap-2">
+                          <button onClick={() => handleEditNews(item)} className="text-blue-500 hover:text-blue-700 p-2">
+                            <Edit className="w-5 h-5" />
+                          </button>
+                          <button onClick={() => handleDeleteNews(item.id)} className="text-red-500 hover:text-red-700 p-2">
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'admissions' && (
+            <div className="space-y-8">
+              <form onSubmit={handleAddAdmission} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                  {editingAdmissionId ? <Edit className="w-5 h-5 text-amber-600" /> : <Plus className="w-5 h-5 text-blue-600" />}
+                  {editingAdmissionId ? 'Hiệu chỉnh thông tin tuyển sinh' : 'Thêm thông tin tuyển sinh'}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <input 
+                    type="text" 
+                    placeholder="Tiêu đề" 
+                    value={admissionForm.title}
+                    onChange={e => setAdmissionForm({...admissionForm, title: e.target.value})}
+                    className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 col-span-2"
+                    required
+                  />
+                  <input 
+                    type="date" 
+                    value={admissionForm.deadline}
+                    onChange={e => setAdmissionForm({...admissionForm, deadline: e.target.value})}
+                    className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                  <input 
+                    type="text" 
+                    placeholder="Tóm tắt ngắn (hiển thị ở danh sách)" 
+                    value={admissionForm.summary}
+                    onChange={e => setAdmissionForm({...admissionForm, summary: e.target.value})}
+                    className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 md:col-span-3"
+                  />
+                  <input 
+                    type="url" 
+                    placeholder="Link tài liệu đính kèm (tùy chọn)" 
+                    value={admissionForm.document_url}
+                    onChange={e => setAdmissionForm({...admissionForm, document_url: e.target.value})}
+                    className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 md:col-span-3"
+                  />
+                </div>
+                <MarkdownToolbar 
+                  textareaRef={admissionTextareaRef} 
+                  setter={setAdmissionForm} 
+                  form={admissionForm} 
+                  field="content" 
+                />
+                <textarea 
+                  ref={admissionTextareaRef}
+                  placeholder="Nội dung tuyển sinh" 
+                  value={admissionForm.content}
+                  onChange={e => setAdmissionForm({...admissionForm, content: e.target.value})}
+                  className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-32 mb-4 border-t-0"
+                />
+                <div className="flex gap-3">
+                  <button type="submit" className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors">
+                    {editingAdmissionId ? 'Cập nhật' : 'Lưu thông tin'}
+                  </button>
+                  {editingAdmissionId && (
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        setEditingAdmissionId(null);
+                        setAdmissionForm({ title: '', summary: '', content: '', deadline: '', year: 2026, document_url: '' });
+                      }}
+                      className="px-6 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
+                    >
+                      Hủy bỏ
+                    </button>
+                  )}
+                </div>
+              </form>
+
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center gap-2">
+                  <Search className="w-5 h-5 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder="Tìm kiếm tuyển sinh..." 
+                    className="bg-transparent border-none outline-none text-sm w-full"
+                    value={adminSearch}
+                    onChange={(e) => setAdminSearch(e.target.value)}
+                  />
+                </div>
+                <table className="w-full text-left">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="p-4 font-bold text-slate-600">Tiêu đề</th>
+                      <th className="p-4 font-bold text-slate-600">Năm học</th>
+                      <th className="p-4 font-bold text-slate-600">Hạn chót</th>
+                      <th className="p-4 font-bold text-slate-600">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {admissions.filter(item => 
+                      item.title?.toLowerCase().includes(adminSearch.toLowerCase()) || 
+                      item.summary?.toLowerCase().includes(adminSearch.toLowerCase())
+                    ).map(item => (
+                      <tr key={item.id} className="border-b border-slate-100 last:border-none">
+                        <td className="p-4 text-sm font-medium">{item.title}</td>
+                        <td className="p-4 text-sm">{item.year}</td>
+                        <td className="p-4 text-sm text-slate-500">{item.deadline}</td>
+                        <td className="p-4 flex gap-2">
+                          <button onClick={() => handleEditAdmission(item)} className="text-blue-500 hover:text-blue-700 p-2">
+                            <Edit className="w-5 h-5" />
+                          </button>
+                          <button onClick={() => handleDeleteAdmission(item.id)} className="text-red-500 hover:text-red-700 p-2">
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'features' && (
+            <div className="space-y-8">
+              <form onSubmit={handleSaveFeature} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                  {editingFeatureId ? <Edit className="w-5 h-5 text-amber-600" /> : <Plus className="w-5 h-5 text-blue-600" />}
+                  {editingFeatureId ? 'Hiệu chỉnh thẻ' : 'Thêm thẻ mới'}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <input 
+                    type="text" 
+                    placeholder="Tiêu đề" 
+                    value={featureForm.title}
+                    onChange={e => setFeatureForm({...featureForm, title: e.target.value})}
+                    className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                  <input 
+                    type="text" 
+                    placeholder="Icon (ví dụ: BookOpen, Users, Award)" 
+                    value={featureForm.icon}
+                    onChange={e => setFeatureForm({...featureForm, icon: e.target.value})}
+                    className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                  <input 
+                    type="text" 
+                    placeholder="Màu sắc (Tailwind class, ví dụ: bg-blue-100 text-blue-700)" 
+                    value={featureForm.color}
+                    onChange={e => setFeatureForm({...featureForm, color: e.target.value})}
+                    className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                  <input 
+                    type="number" 
+                    placeholder="Thứ tự" 
+                    value={featureForm.order_num}
+                    onChange={e => {
+                      const val = parseInt(e.target.value);
+                      setFeatureForm({...featureForm, order_num: isNaN(val) ? 0 : val});
+                    }}
+                    className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <textarea 
+                  placeholder="Mô tả ngắn" 
+                  value={featureForm.description}
+                  onChange={e => setFeatureForm({...featureForm, description: e.target.value})}
+                  className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-24 mb-4"
+                  required
+                />
+                <div className="flex gap-3">
+                  <button type="submit" className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors">
+                    {editingFeatureId ? 'Cập nhật' : 'Thêm mới'}
+                  </button>
+                  {editingFeatureId && (
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        setEditingFeatureId(null);
+                        setFeatureForm({ title: '', description: '', icon: 'BookOpen', color: 'bg-blue-100 text-blue-700', order_num: 0 });
+                      }}
+                      className="px-6 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
+                    >
+                      Hủy bỏ
+                    </button>
+                  )}
+                </div>
+              </form>
+
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  <Plus className="w-5 h-5 text-blue-600" /> Danh sách thẻ hiện tại
+                </h3>
+                {features.length === 0 && (
+                  <button 
+                    onClick={async () => {
+                      const defaults = [
+                        { title: 'Chương trình đào tạo', description: 'Đổi mới phương pháp dạy học, phát huy tính sáng tạo của học sinh.', icon: 'BookOpen', color: 'bg-blue-100 text-blue-700', order: 1 },
+                        { title: 'Hoạt động ngoại khóa', description: 'Phát triển kỹ năng mềm qua các câu lạc bộ và sự kiện văn thể mỹ.', icon: 'Users', color: 'bg-green-100 text-green-700', order: 2 },
+                        { title: 'Thành tích nổi bật', description: 'Tự hào với nhiều giải thưởng cấp quốc gia và quốc tế hàng năm.', icon: 'Award', color: 'bg-amber-100 text-amber-700', order: 3 }
+                      ];
+                      for (const f of defaults) {
+                        await supabase.from('features').insert([f]);
+                      }
+                    }}
+                    className="text-sm bg-blue-50 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors font-medium"
+                  >
+                    Khôi phục 3 tính năng mặc định
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {features.length > 0 ? features.map(item => (
+                  <div key={item.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 relative group">
+                    <div className="flex justify-end gap-2 mb-4">
+                      <button onClick={() => handleEditFeature(item)} className="text-blue-500 hover:text-blue-700">
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDeleteFeature(item.id)} className="text-red-500 hover:text-red-700">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <h4 className="font-bold mb-2">{item.title}</h4>
+                    <p className="text-sm text-slate-500">{item.description}</p>
+                    <div className="mt-4 text-xs font-mono text-slate-400">Icon: {item.icon}</div>
+                  </div>
+                )) : (
+                  <div className="col-span-full py-12 text-center bg-white rounded-2xl border border-dashed border-slate-300">
+                    <p className="text-slate-400 italic">Chưa có tính năng nào được tạo. Hãy thêm mới hoặc khôi phục mặc định.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          {activeTab === 'home' && (
+            <form onSubmit={handleSaveHome} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
+              <div className="flex items-center gap-3 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <Settings className="w-6 h-6 text-blue-600" />
+                <div>
+                  <h2 className="text-lg font-bold text-slate-800">Cấu hình Trang chủ</h2>
+                  <p className="text-sm text-slate-500">Chỉnh sửa nội dung banner và giao diện trang chủ</p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Tiêu đề Banner</label>
+                  <input 
+                    type="text" 
+                    value={homeForm.banner_title}
+                    onChange={e => setHomeForm({...homeForm, banner_title: e.target.value})}
+                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Mô tả Banner</label>
+                  <textarea 
+                    value={homeForm.banner_description}
+                    onChange={e => setHomeForm({...homeForm, banner_description: e.target.value})}
+                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-24"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">URL Hình ảnh Banner</label>
+                  <input 
+                    type="text" 
+                    value={homeForm.banner_image}
+                    onChange={e => setHomeForm({...homeForm, banner_image: e.target.value})}
+                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              
+              <button type="submit" className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2">
+                <Save className="w-5 h-5" /> Lưu thay đổi
+              </button>
+            </form>
+          )}
+
+          {activeTab === 'about' && (
+            <form onSubmit={handleSaveAbout} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
+              <div className="flex items-center gap-3 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <Info className="w-6 h-6 text-blue-600" />
+                <div>
+                  <h2 className="text-lg font-bold text-slate-800">Cấu hình Trang Giới thiệu</h2>
+                  <p className="text-sm text-slate-500">Chỉnh sửa nội dung giới thiệu, lịch sử và giá trị cốt lõi</p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Văn bản giới thiệu chính</label>
+                  <MarkdownToolbar 
+                    textareaRef={aboutMainTextareaRef} 
+                    setter={setAboutForm} 
+                    form={aboutForm} 
+                    field="main_text" 
+                  />
+                  <textarea 
+                    ref={aboutMainTextareaRef}
+                    value={aboutForm.main_text}
+                    onChange={e => setAboutForm({...aboutForm, main_text: e.target.value})}
+                    className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-48 border-t-0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Lịch sử hình thành</label>
+                  <MarkdownToolbar 
+                    textareaRef={aboutHistoryTextareaRef} 
+                    setter={setAboutForm} 
+                    form={aboutForm} 
+                    field="history" 
+                  />
+                  <textarea 
+                    ref={aboutHistoryTextareaRef}
+                    value={aboutForm.history}
+                    onChange={e => setAboutForm({...aboutForm, history: e.target.value})}
+                    className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-48 border-t-0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Giá trị cốt lõi</label>
+                  <MarkdownToolbar 
+                    textareaRef={aboutCoreValuesTextareaRef} 
+                    setter={setAboutForm} 
+                    form={aboutForm} 
+                    field="core_values" 
+                  />
+                  <textarea 
+                    ref={aboutCoreValuesTextareaRef}
+                    value={aboutForm.core_values}
+                    onChange={e => setAboutForm({...aboutForm, core_values: e.target.value})}
+                    className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-48 border-t-0"
+                  />
+                </div>
+              </div>
+              
+              <button type="submit" className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2">
+                <Save className="w-5 h-5" /> Lưu thay đổi
+              </button>
+            </form>
+          )}
+
+          {activeTab === 'admissions_page' && (
+            <form onSubmit={handleSaveAdmissionsPage} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
+              <div className="flex items-center gap-3 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <GraduationCap className="w-6 h-6 text-blue-600" />
+                <div>
+                  <h2 className="text-lg font-bold text-slate-800">Cấu hình Trang Tuyển sinh</h2>
+                  <p className="text-sm text-slate-500">Chỉnh sửa tiêu đề banner và mô tả trang tuyển sinh</p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Tiêu đề Banner</label>
+                  <input 
+                    type="text" 
+                    value={admissionsPageForm.banner_title}
+                    onChange={e => setAdmissionsPageForm({...admissionsPageForm, banner_title: e.target.value})}
+                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Mô tả Banner</label>
+                  <textarea 
+                    value={admissionsPageForm.banner_description}
+                    onChange={e => setAdmissionsPageForm({...admissionsPageForm, banner_description: e.target.value})}
+                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-24"
+                  />
+                </div>
+                <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100 text-blue-800">
+                  <p className="font-medium text-sm">Hệ thống sẽ tự động hiển thị danh sách các bài đăng từ tab "Danh sách Tuyển sinh" bên dưới phần banner này.</p>
+                </div>
+              </div>
+              
+              <button type="submit" className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2">
+                <Save className="w-5 h-5" /> Lưu cấu hình
+              </button>
+            </form>
+          )}
+
+          {activeTab === 'news_page' && (
+            <form onSubmit={handleSaveNewsPage} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
+              <div className="flex items-center gap-3 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <Bell className="w-6 h-6 text-blue-600" />
+                <div>
+                  <h2 className="text-lg font-bold text-slate-800">Cấu hình Trang Tin tức</h2>
+                  <p className="text-sm text-slate-500">Chỉnh sửa tiêu đề banner và mô tả trang tin tức</p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Tiêu đề Banner</label>
+                  <input 
+                    type="text" 
+                    value={newsPageForm.banner_title}
+                    onChange={e => setNewsPageForm({...newsPageForm, banner_title: e.target.value})}
+                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Mô tả Banner</label>
+                  <textarea 
+                    value={newsPageForm.banner_description}
+                    onChange={e => setNewsPageForm({...newsPageForm, banner_description: e.target.value})}
+                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-24"
+                  />
+                </div>
+                <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100 text-blue-800">
+                  <p className="font-medium text-sm">Hệ thống sẽ tự động hiển thị danh sách các bài đăng từ tab "Danh sách Tin tức" bên dưới phần banner này.</p>
+                </div>
+              </div>
+              
+              <button type="submit" className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2">
+                <Save className="w-5 h-5" /> Lưu cấu hình
+              </button>
+            </form>
+          )}
+
+          {activeTab === 'contact' && (
+            <form onSubmit={handleSaveContact} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
+              <div className="flex items-center gap-3 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <Phone className="w-6 h-6 text-blue-600" />
+                <div>
+                  <h2 className="text-lg font-bold text-slate-800">Thông tin liên hệ & Nhà trường</h2>
+                  <p className="text-sm text-slate-500">Cập nhật thông tin cơ bản, địa chỉ và slogan</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Tên trường</label>
+                  <input 
+                    type="text" 
+                    value={contactForm.name}
+                    onChange={e => setContactForm({...contactForm, name: e.target.value})}
+                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Slogan</label>
+                  <input 
+                    type="text" 
+                    value={contactForm.slogan}
+                    onChange={e => setContactForm({...contactForm, slogan: e.target.value})}
+                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Số điện thoại</label>
+                  <input 
+                    type="text" 
+                    value={contactForm.phone}
+                    onChange={e => setContactForm({...contactForm, phone: e.target.value})}
+                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Email</label>
+                  <input 
+                    type="email" 
+                    value={contactForm.email}
+                    onChange={e => setContactForm({...contactForm, email: e.target.value})}
+                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Địa chỉ</label>
+                <input 
+                  type="text" 
+                  value={contactForm.address}
+                  onChange={e => setContactForm({...contactForm, address: e.target.value})}
+                  className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              
+              <button type="submit" className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2">
+                <Save className="w-5 h-5" /> Lưu cấu hình
+              </button>
+            </form>
+          )}
+
+          {activeTab === 'departments' && (
+            <div className="space-y-8">
+              {!isManagingDeptContent ? (
+                <div className="space-y-8">
+                  <form onSubmit={handleSaveDept} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                      {editingDeptId ? <Edit className="w-5 h-5 text-amber-600" /> : <Plus className="w-5 h-5 text-blue-600" />}
+                      {editingDeptId ? 'Hiệu chỉnh tổ chuyên môn' : 'Thêm tổ chuyên môn mới'}
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <input 
+                        type="text" 
+                        placeholder="Tên tổ (ví dụ: Tổ Toán)" 
+                        value={deptForm.name}
+                        onChange={e => setDeptForm({...deptForm, name: e.target.value})}
+                        className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      />
+                      <input 
+                        type="text" 
+                        placeholder="Icon (ví dụ: Calculator, Zap, FlaskConical)" 
+                        value={deptForm.icon}
+                        onChange={e => setDeptForm({...deptForm, icon: e.target.value})}
+                        className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                    <textarea 
+                      placeholder="Mô tả ngắn về tổ" 
+                      value={deptForm.description}
+                      onChange={e => setDeptForm({...deptForm, description: e.target.value})}
+                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-24 mb-4"
+                      required
+                    />
+                    <div className="flex gap-3">
+                      <button type="submit" className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors">
+                        {editingDeptId ? 'Cập nhật' : 'Thêm tổ'}
+                      </button>
+                      {editingDeptId && (
+                        <button 
+                          type="button" 
+                          onClick={() => {
+                            setEditingDeptId(null);
+                            setDeptForm({ name: '', icon: 'BookOpen', description: '', content: '' });
+                          }}
+                          className="px-6 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
+                        >
+                          Hủy
+                        </button>
+                      )}
+                    </div>
+                  </form>
+
+                  <div className="flex flex-col gap-6">
+                    <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-200">
+                      <Search className="w-5 h-5 text-slate-400" />
+                      <input 
+                        type="text" 
+                        placeholder="Tìm tên tổ chuyên môn..." 
+                        className="bg-transparent border-none outline-none text-sm w-full"
+                        value={adminSearch}
+                        onChange={(e) => setAdminSearch(e.target.value)}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {departmentsList.filter(dept => 
+                        dept.name?.toLowerCase().includes(adminSearch.toLowerCase())
+                      ).map(dept => (
+                      <div 
+                        key={dept.id}
+                        className="p-6 bg-white rounded-2xl border border-slate-200 hover:border-blue-500 hover:shadow-md transition-all text-left group"
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <h4 className="font-bold text-lg text-slate-800 group-hover:text-blue-600">{dept.name}</h4>
+                          <div className="flex gap-1">
+                            <button 
+                              onClick={() => {
+                                setEditingDeptId(dept.id);
+                                setDeptForm({ 
+                                  name: dept.name, 
+                                  icon: dept.icon, 
+                                  description: dept.description,
+                                  content: dept.content || ''
+                                });
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                              }}
+                              className="p-1 text-blue-500 hover:bg-blue-50 rounded"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => handleDeleteDept(dept.id)} className="p-1 text-red-500 hover:bg-red-50 rounded">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                        <p className="text-sm text-slate-500 mt-1 line-clamp-2">{dept.description}</p>
+                        <button 
+                          onClick={() => {
+                            const department = departmentsList.find(d => d.id === dept.id);
+                            if (department) {
+                              setDeptForm({
+                                name: department.name,
+                                icon: department.icon,
+                                description: department.description,
+                                content: department.content || ''
+                              });
+                            }
+                            setSelectedDeptId(dept.id);
+                            setIsManagingDeptContent(true);
+                            setDeptActiveTab('introduction');
+                          }}
+                          className="mt-4 flex items-center gap-1 text-blue-600 text-xs font-bold hover:underline"
+                        >
+                          Quản lý nhân sự & hoạt động <ChevronRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              ) : (
+                <div className="space-y-10">
+                  <button 
+                    onClick={() => setIsManagingDeptContent(false)}
+                    className="flex items-center gap-2 text-blue-600 font-bold hover:text-blue-800"
+                  >
+                    <ArrowLeft className="w-5 h-5" /> Quay lại danh sách tổ
+                  </button>
+
+                  <div className="bg-blue-900 text-white p-8 rounded-3xl shadow-lg">
+                    <h3 className="text-2xl font-bold uppercase tracking-wider">
+                      {departmentsList.find(d => d.id === selectedDeptId)?.name}
+                    </h3>
+                    <p className="text-blue-200 mt-2">Cập nhật thông tin nhân sự, hoạt động và tài liệu của tổ.</p>
+                  </div>
+
+                  {/* Tabs for Department Content */}
+                  <div className="flex gap-4 p-1 bg-slate-100 rounded-xl w-fit mb-6">
+                    <button 
+                      onClick={() => setDeptActiveTab('introduction')}
+                      className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${deptActiveTab === 'introduction' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
                     >
                       Giới thiệu
                     </button>
                     <button 
-                      onClick={() => setActiveDeptTab('personnel')}
-                      className={`px-6 py-3 font-bold text-sm uppercase tracking-wider transition-all border-b-2 shrink-0 ${activeDeptTab === 'personnel' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                      onClick={() => setDeptActiveTab('personnel')}
+                      className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${deptActiveTab === 'personnel' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
                     >
                       Nhân sự
                     </button>
                     <button 
-                      onClick={() => setActiveDeptTab('activities')}
-                      className={`px-6 py-3 font-bold text-sm uppercase tracking-wider transition-all border-b-2 shrink-0 ${activeDeptTab === 'activities' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                      onClick={() => setDeptActiveTab('activities')}
+                      className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${deptActiveTab === 'activities' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
                     >
                       Hoạt động
                     </button>
                     <button 
-                      onClick={() => setActiveDeptTab('documents')}
-                      className={`px-6 py-3 font-bold text-sm uppercase tracking-wider transition-all border-b-2 shrink-0 ${activeDeptTab === 'documents' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                      onClick={() => setDeptActiveTab('documents')}
+                      className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${deptActiveTab === 'documents' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
                     >
                       Tài liệu
                     </button>
                   </div>
 
-                  <div className="mt-8">
-                    {/* Introduction Tab */}
-                    {activeDeptTab === 'introduction' && (
-                      <div className="animate-in fade-in duration-300">
-                        <div className="prose prose-slate max-w-none text-slate-600 leading-relaxed">
-                          <MarkdownContent content={selectedDepartment.content || 'Nội dung giới thiệu đang được cập nhật...'} />
+                  {deptActiveTab === 'introduction' && (
+                    <div className="space-y-6">
+                      <h4 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <Info className="w-6 h-6 text-blue-600" /> Giới thiệu tổ chuyên môn
+                      </h4>
+                      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <MarkdownToolbar 
+                          textareaRef={deptContentTextareaRef} 
+                          setter={setDeptForm} 
+                          form={deptForm} 
+                          field="content" 
+                        />
+                        <textarea 
+                          ref={deptContentTextareaRef}
+                          placeholder="Nội dung giới thiệu chi tiết về tổ chuyên môn (Markdown)" 
+                          value={deptForm.content}
+                          onChange={e => setDeptForm({...deptForm, content: e.target.value})}
+                          className="w-full p-4 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-96 border-t-0 font-sans leading-relaxed"
+                        />
+                        <div className="mt-4 flex justify-end">
+                          <button 
+                            onClick={handleSaveDept}
+                            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-md shadow-blue-200"
+                          >
+                            <Save className="w-4 h-4" /> Lưu thông tin giới thiệu
+                          </button>
                         </div>
                       </div>
-                    )}
+                    </div>
+                  )}
 
-                    {/* Personnel Tab */}
-                    {activeDeptTab === 'personnel' && (
-                      <div className="animate-in fade-in duration-300">
-                        <h4 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-3">
-                          <Icons.Users className="w-7 h-7 text-blue-600" /> Nhân sự của tổ
-                        </h4>
-                        {deptPersonnel.length > 0 ? (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                            {deptPersonnel.map((p) => {
-                              const initials = p.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(-2);
-                              return (
-                                <div key={p.id} className="bg-white p-6 rounded-2xl border border-slate-100 flex flex-col items-center text-center group hover:shadow-xl transition-all duration-300">
-                                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-black shadow-lg mb-4 group-hover:scale-105 transition-transform duration-500 border-4 border-white">
-                                    {initials}
-                                  </div>
-                                  
-                                  <div className="min-w-0">
-                                    <h5 className="font-bold text-slate-900 text-lg leading-tight mb-1">{p.name}</h5>
-                                    <p className="text-blue-600 font-extrabold text-[10px] uppercase tracking-[0.2em] mb-4">{p.position}</p>
-                                    
-                                    <div className="flex flex-col items-center gap-1.5 mb-5">
-                                      {p.birth_date && (
-                                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 bg-slate-50 px-3 py-1 rounded-full border border-slate-100">
-                                          <Icons.Calendar className="w-3 h-3 text-blue-500" />
-                                          <span>Sinh: {p.birth_date}</span>
-                                        </div>
-                                      )}
-                                      {p.education && (
-                                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 px-3">
-                                          <Icons.GraduationCap className="w-3.5 h-3.5 text-blue-400" />
-                                          <span className="line-clamp-1">{p.education}</span>
-                                        </div>
-                                      )}
+                  {deptActiveTab === 'personnel' && (
+                    <div className="space-y-6">
+                      <h4 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <Users className="w-6 h-6 text-blue-600" /> Quản lý Nhân sự
+                      </h4>
+                      <form onSubmit={handleAddPersonnel} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          <input 
+                            type="text" 
+                            placeholder="Họ và tên giáo viên" 
+                            value={personnelForm.name}
+                            onChange={e => setPersonnelForm({...personnelForm, name: e.target.value})}
+                            className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                            required
+                          />
+                          <input 
+                            type="text" 
+                            placeholder="Chức vụ (ví dụ: Tổ trưởng, Giáo viên)" 
+                            value={personnelForm.position}
+                            onChange={e => setPersonnelForm({...personnelForm, position: e.target.value})}
+                            className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                            required
+                          />
+                          <input 
+                            type="text" 
+                            placeholder="Ngày sinh (ví dụ: 01/01/1980)" 
+                            value={personnelForm.birth_date}
+                            onChange={e => setPersonnelForm({...personnelForm, birth_date: e.target.value})}
+                            className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <input 
+                            type="text" 
+                            placeholder="Trình độ chuyên môn (ví dụ: Thạc sĩ Toán học)" 
+                            value={personnelForm.education}
+                            onChange={e => setPersonnelForm({...personnelForm, education: e.target.value})}
+                            className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <textarea 
+                          placeholder="Giới thiệu ngắn gọn" 
+                          value={personnelForm.bio}
+                          onChange={e => setPersonnelForm({...personnelForm, bio: e.target.value})}
+                          className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-24 mb-4"
+                        />
+                        <div className="flex gap-3">
+                          <button type="submit" className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors">
+                            {editingPersonnelId ? 'Cập nhật' : 'Thêm nhân sự'}
+                          </button>
+                          {editingPersonnelId && (
+                            <button 
+                              type="button" 
+                              onClick={() => {
+                                setEditingPersonnelId(null);
+                                setPersonnelForm({ name: '', position: '', bio: '', birth_date: '', education: '', image_url: '' });
+                              }}
+                              className="px-6 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
+                            >
+                              Hủy
+                            </button>
+                          )}
+                        </div>
+                      </form>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {deptPersonnel.map(p => {
+                          const initials = p.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(-2);
+                          return (
+                            <div key={p.id} className="bg-white p-5 rounded-2xl border border-slate-200 flex flex-col group relative overflow-hidden items-center text-center">
+                              <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                <button 
+                                  onClick={() => {
+                                    setEditingPersonnelId(p.id);
+                                    setPersonnelForm({ 
+                                      name: p.name, 
+                                      position: p.position, 
+                                      bio: p.bio || '', 
+                                      birth_date: p.birth_date || '',
+                                      education: p.education || '',
+                                      image_url: p.image_url || '' 
+                                    });
+                                  }}
+                                  className="p-1.5 bg-blue-50 text-blue-500 hover:bg-blue-100 rounded-lg shadow-sm border border-blue-200"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </button>
+                                <button 
+                                  onClick={() => handleDeletePersonnel(p.id)} 
+                                  className="p-1.5 bg-red-50 text-red-500 hover:bg-red-100 rounded-lg shadow-sm border border-red-200"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                              
+                              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white text-xl font-black shadow-md mb-4 border-2 border-white">
+                                {initials}
+                              </div>
+                              
+                              <div className="flex-1 min-w-0">
+                                <h5 className="font-bold text-slate-900 leading-tight mb-1">{p.name}</h5>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-3">{p.position}</p>
+                                
+                                <div className="flex flex-col items-center gap-1">
+                                  {p.birth_date && (
+                                    <div className="flex items-center gap-1.5 text-[10px] text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100">
+                                      <Calendar className="w-3 h-3 text-slate-400" />
+                                      <span>NS: {p.birth_date}</span>
                                     </div>
-                                  </div>
-                                  
-                                  {p.bio && (
-                                    <div className="pt-4 border-t border-slate-50 mt-auto w-full">
-                                      <p className="text-[11px] text-slate-500 italic leading-relaxed leading-snug px-2">
-                                        "{p.bio}"
-                                      </p>
+                                  )}
+                                  {p.education && (
+                                    <div className="flex items-center gap-1.5 text-[10px] text-slate-500 max-w-full">
+                                      <GraduationCap className="w-3 h-3 text-slate-400" />
+                                      <span className="line-clamp-1">{p.education}</span>
                                     </div>
                                   )}
                                 </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className="p-8 bg-slate-50 rounded-3xl border border-dashed border-slate-200 text-center">
-                            <p className="text-slate-400 italic">Dữ liệu nhân sự đang được cập nhật...</p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Activities Tab */}
-                    {activeDeptTab === 'activities' && (
-                      <div className="animate-in fade-in duration-300">
-                        <h4 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-3">
-                          <Icons.Activity className="w-7 h-7 text-green-600" /> Hoạt động chuyên môn
-                        </h4>
-                        {deptActivities.length > 0 ? (
-                          <div className="space-y-6">
-                            {deptActivities.map((a) => (
-                              <div key={a.id} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col md:flex-row gap-6 hover:shadow-md transition-shadow">
-                                {a.image_url && (
-                                  <div className="w-full md:w-48 h-48 md:h-auto rounded-2xl overflow-hidden shrink-0">
-                                    <img src={a.image_url} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                                  </div>
-                                )}
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 text-slate-400 text-sm mb-2">
-                                    <Icons.Calendar className="w-4 h-4" />
-                                    {a.date && !isNaN(new Date(a.date).getTime()) ? new Date(a.date).toLocaleString('vi-VN') : '...'}
-                                  </div>
-                                  <h5 className="text-xl font-bold text-slate-900 mb-3">{a.title}</h5>
-                                  <div className="text-slate-600 leading-relaxed mb-4 line-clamp-3">
-                                    <MarkdownContent content={a.summary || a.content || a.description} />
-                                  </div>
-                                  <div className="flex flex-wrap gap-4">
-                                    <button 
-                                      onClick={() => {
-                                        setSelectedDeptActivity(a);
-                                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                                      }}
-                                      className="inline-flex items-center gap-2 px-6 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-md"
-                                    >
-                                      Xem chi tiết <Icons.ChevronRight className="w-4 h-4" />
-                                    </button>
-                                    {a.document_url && (
-                                      <a 
-                                        href={a.document_url} 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-2 text-slate-500 font-bold hover:text-slate-700 transition-colors"
-                                      >
-                                        <Icons.FileText className="w-4 h-4" /> Tài liệu đính kèm
-                                      </a>
-                                    )}
-                                  </div>
-                                </div>
                               </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="p-8 bg-slate-50 rounded-3xl border border-dashed border-slate-200 text-center">
-                            <p className="text-slate-400 italic">Các hoạt động chuyên môn đang được cập nhật...</p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Documents Tab */}
-                    {activeDeptTab === 'documents' && (
-                      <div className="animate-in fade-in duration-300">
-                        <h4 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-3">
-                          <Icons.BookOpen className="w-7 h-7 text-amber-600" /> Tài liệu tổ chuyên môn
-                        </h4>
-                        {deptDocuments.length > 0 ? (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {deptDocuments.map((docItem) => (
-                              <div key={docItem.id} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all group">
-                                <div className="flex items-start justify-between mb-4">
-                                  <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl group-hover:bg-amber-100 transition-colors">
-                                    <Icons.FileText className="w-6 h-6" />
-                                  </div>
-                                  <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-bold uppercase">
-                                    {docItem.category}
-                                  </span>
+                              
+                              {p.bio && (
+                                <div className="mt-4 pt-4 border-t border-slate-50 w-full">
+                                  <p className="text-[11px] text-slate-500 italic line-clamp-2 leading-relaxed">"{p.bio}"</p>
                                 </div>
-                                <h5 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-blue-800 transition-colors">{docItem.title}</h5>
-                                {docItem.description && (
-                                  <p className="text-sm text-slate-500 mb-4 line-clamp-2 italic">{docItem.description}</p>
-                                )}
-                                <a 
-                                  href={docItem.file_url} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="flex items-center justify-center gap-2 w-full py-3 bg-blue-50 text-blue-700 font-bold rounded-xl hover:bg-blue-600 hover:text-white transition-all"
-                                >
-                                  <Icons.Download className="w-4 h-4" /> Tải tài liệu
-                                </a>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="p-8 bg-slate-50 rounded-3xl border border-dashed border-slate-200 text-center">
-                            <p className="text-slate-400 italic">Kho tài liệu đang được cập nhật...</p>
-                          </div>
-                        )}
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        }
-        const filteredDepts = departmentsList.filter(d => d.name.toLowerCase().includes(searchQuery.toLowerCase()));
-        return (
-          <div className="space-y-8 animate-in fade-in duration-500">
-            <h2 className="text-3xl font-black text-slate-900 uppercase">Tổ chuyên môn</h2>
-            <div className="h-1.5 w-24 bg-blue-800 rounded-full mb-8"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredDepts.map((dept) => {
-                const IconComponent = (Icons as any)[dept.icon] || Icons.BookOpen;
-                return (
-                  <div 
-                    key={dept.id} 
-                    className="p-6 bg-white border border-slate-100 rounded-3xl hover:shadow-xl transition-all cursor-pointer group hover:-translate-y-1"
-                    onClick={() => {
-                      setSelectedDepartment(dept);
-                      setActiveDeptTab('introduction');
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                  >
-                    <div className="w-14 h-14 bg-slate-50 text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-800 rounded-2xl flex items-center justify-center mb-4 transition-colors shadow-sm">
-                      <IconComponent className="w-7 h-7" />
                     </div>
-                    <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-blue-800 transition-colors">{dept.name}</h3>
-                    <p className="text-slate-500 text-sm line-clamp-2">{dept.description}</p>
-                    <div className="mt-4 flex items-center text-blue-600 text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity">
-                      Xem chi tiết <Icons.ChevronRight className="w-4 h-4" />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            {filteredDepts.length === 0 && (
-              <div className="text-center py-20 bg-slate-50 rounded-3xl border border-dashed border-slate-300">
-                <Icons.Search className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                <p className="text-slate-500">Không tìm thấy tổ chuyên môn phù hợp.</p>
-              </div>
-            )}
-          </div>
-        );
-      case 'Hoạt động Đoàn':
-        if (selectedYouthUnion) {
-          return (
-            <div className="animate-in slide-in-from-right duration-500 space-y-8">
-              <button 
-                onClick={() => setSelectedYouthUnion(null)}
-                className="flex items-center gap-2 text-blue-600 font-bold hover:text-blue-800 transition-colors"
-              >
-                <Icons.ArrowLeft className="w-5 h-5" /> Quay lại danh sách
-              </button>
-
-              <div className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm p-8 md:p-12">
-                <div className="flex items-center gap-2 text-slate-400 text-sm mb-4">
-                  <Icons.Calendar className="w-4 h-4" />
-                  {selectedYouthUnion.date && !isNaN(new Date(selectedYouthUnion.date).getTime()) ? new Date(selectedYouthUnion.date).toLocaleString('vi-VN') : '...'}
-                </div>
-                <h2 className="text-4xl font-black text-slate-900 mb-6 leading-tight">{selectedYouthUnion.title}</h2>
-                <div className="h-1.5 w-24 bg-blue-800 rounded-full mb-10"></div>
-                
-                <div className="prose prose-slate max-w-none text-lg text-slate-600 leading-relaxed">
-                  {selectedYouthUnion.summary && (
-                    <p className="text-xl font-bold text-blue-900 mb-8 p-6 bg-blue-50 rounded-2xl border-l-4 border-blue-600">
-                      {selectedYouthUnion.summary}
-                    </p>
                   )}
-                  <MarkdownContent content={selectedYouthUnion.content} />
-                </div>
-              </div>
-            </div>
-          );
-        }
-        const filteredYouth = youthUnion.filter(y => y.title.toLowerCase().includes(searchQuery.toLowerCase()));
-        return (
-          <div className="space-y-8 animate-in fade-in duration-500">
-            <h2 className="text-3xl font-black text-slate-900 uppercase">Hoạt động Đoàn</h2>
-            <div className="h-1.5 w-24 bg-blue-800 rounded-full mb-8"></div>
-            <div className="space-y-0.5 border-t border-slate-100 pt-4">
-              {filteredYouth.map(item => (
-                <div 
-                  key={item.id} 
-                  className="flex flex-wrap items-center gap-x-4 py-1 border-b border-slate-50 hover:bg-slate-50 transition-colors text-sm"
-                >
-                  <div className="flex items-center gap-1 min-w-0 flex-1">
-                    <span className="font-bold text-slate-900 shrink-0">Tiêu đề:</span>
-                    <span className="text-slate-700 truncate">{item.title}</span>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <span className="font-bold text-slate-900">Thời gian:</span>
-                    <span className="text-slate-500">
-                      {item.date && !isNaN(new Date(item.date).getTime()) ? new Date(item.date).toLocaleDateString('vi-VN') : '...'}
-                    </span>
-                  </div>
-                  <button 
-                    onClick={() => {
-                      setSelectedYouthUnion(item);
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    className="text-blue-600 font-bold hover:underline shrink-0"
-                  >
-                    &lt;xem chi tiết&gt;
-                  </button>
-                </div>
-              ))}
-              {filteredYouth.length === 0 && (
-                <div className="text-center py-20 bg-slate-50 rounded-3xl border border-dashed border-slate-300">
-                  <Icons.Users className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-500">Không tìm thấy hoạt động Đoàn phù hợp.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      case 'Thành tích học tập':
-        if (selectedAchievement) {
-          return (
-            <div className="animate-in slide-in-from-right duration-500 space-y-8">
-              <button 
-                onClick={() => setSelectedAchievement(null)}
-                className="flex items-center gap-2 text-blue-600 font-bold hover:text-blue-800 transition-colors"
-              >
-                <Icons.ArrowLeft className="w-5 h-5" /> Quay lại danh sách
-              </button>
 
-              <div className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm p-8 md:p-12">
-                <div className="flex flex-wrap items-center gap-3 mb-6">
-                  <span className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider ${
-                    selectedAchievement.type === 'academic' ? 'bg-blue-100 text-blue-700' :
-                    selectedAchievement.type === 'sport' ? 'bg-green-100 text-green-700' :
-                    selectedAchievement.type === 'art' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-700'
-                  }`}>
-                    {selectedAchievement.type === 'academic' ? 'Học thuật' :
-                     selectedAchievement.type === 'sport' ? 'Thể thao' :
-                     selectedAchievement.type === 'art' ? 'Nghệ thuật' : 'Thành tích khác'}
-                  </span>
-                  <span className="flex items-center gap-1.5 text-slate-400 text-sm font-medium">
-                    <Icons.Calendar className="w-4 h-4" />
-                    Năm học {selectedAchievement.year}
-                  </span>
-                </div>
+                  {deptActiveTab === 'activities' && (
+                    <div className="space-y-6">
+                      <h4 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <Calendar className="w-6 h-6 text-blue-600" /> Hoạt động chuyên môn
+                      </h4>
+                      <form onSubmit={handleAddActivity} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          <input 
+                            type="text" 
+                            placeholder="Tiêu đề hoạt động" 
+                            value={activityForm.title}
+                            onChange={e => setActivityForm({...activityForm, title: e.target.value})}
+                            className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                            required
+                          />
+                          <input 
+                            type="datetime-local" 
+                            value={activityForm.date}
+                            onChange={e => setActivityForm({...activityForm, date: e.target.value})}
+                            className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                            required
+                          />
+                        </div>
+                        <div className="grid grid-cols-1 gap-4 mb-4">
+                          <input 
+                            type="text" 
+                            placeholder="Tóm tắt ngắn (hiển thị ở danh sách)" 
+                            value={activityForm.summary}
+                            onChange={e => setActivityForm({...activityForm, summary: e.target.value})}
+                            className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <MarkdownToolbar 
+                            textareaRef={activityTextareaRef} 
+                            setter={setActivityForm} 
+                            form={activityForm} 
+                            field="content" 
+                          />
+                          <textarea 
+                            ref={activityTextareaRef}
+                            placeholder="Nội dung chi tiết (Markdown)" 
+                            value={activityForm.content}
+                            onChange={e => setActivityForm({...activityForm, content: e.target.value})}
+                            className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-48 border-t-0"
+                          />
+                          <input 
+                            type="url" 
+                            placeholder="Link tài liệu đính kèm (tùy chọn)" 
+                            value={activityForm.document_url}
+                            onChange={e => setActivityForm({...activityForm, document_url: e.target.value})}
+                            className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div className="flex gap-3">
+                          <button type="submit" className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors">
+                            {editingActivityId ? 'Cập nhật' : 'Thêm hoạt động'}
+                          </button>
+                          {editingActivityId && (
+                            <button 
+                              type="button" 
+                              onClick={() => {
+                                setEditingActivityId(null);
+                                setActivityForm({ title: '', date: '', summary: '', description: '', document_url: '', content: '', image_url: '' });
+                              }}
+                              className="px-6 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
+                            >
+                              Hủy
+                            </button>
+                          )}
+                        </div>
+                      </form>
 
-                <h2 className="text-4xl font-black text-slate-900 mb-6 leading-tight">{selectedAchievement.title}</h2>
-                <div className="h-1.5 w-24 bg-blue-800 rounded-full mb-10"></div>
-                
-                {selectedAchievement.image_url && (
-                  <div className="mb-10 rounded-3xl overflow-hidden shadow-lg border border-slate-100">
-                    <img src={selectedAchievement.image_url} className="w-full h-auto max-h-[600px] object-cover" referrerPolicy="no-referrer" />
-                  </div>
-                )}
-
-                <div className="prose prose-slate max-w-none text-lg text-slate-600 leading-relaxed">
-                  <MarkdownContent content={selectedAchievement.description} />
-                </div>
-              </div>
-            </div>
-          );
-        }
-        const filteredAchievements = achievements.filter(a => a.title.toLowerCase().includes(searchQuery.toLowerCase()));
-        return (
-          <div className="space-y-8 animate-in fade-in duration-500">
-            <h2 className="text-3xl font-black text-slate-900 uppercase">Thành tích học tập</h2>
-            <div className="h-1.5 w-24 bg-blue-800 rounded-full mb-8"></div>
-            <div className="space-y-0.5 border-t border-slate-100 pt-4">
-              {filteredAchievements.map(item => (
-                <div 
-                  key={item.id} 
-                  className="flex flex-wrap items-center gap-x-4 py-1 border-b border-slate-50 hover:bg-slate-50 transition-colors text-sm"
-                >
-                  <div className="flex items-center gap-1 min-w-0 flex-1">
-                    <span className="font-bold text-slate-900 shrink-0">Tiêu đề:</span>
-                    <span className="text-slate-700 truncate">{item.title}</span>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <span className="font-bold text-slate-900">Năm học:</span>
-                    <span className="text-slate-500">{item.year}</span>
-                  </div>
-                  <button 
-                    onClick={() => {
-                      setSelectedAchievement(item);
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    className="text-blue-600 font-bold hover:underline shrink-0"
-                  >
-                    &lt;xem chi tiết&gt;
-                  </button>
-                </div>
-              ))}
-              {filteredAchievements.length === 0 && (
-                <div className="col-span-full text-center py-20 bg-slate-50 rounded-3xl border border-dashed border-slate-300">
-                  <Icons.Award className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-500">Không tìm thấy thành tích phù hợp.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      case 'Lịch công tác':
-        if (selectedSchedule && activeMenu === 'Lịch công tác') {
-          return (
-            <div className="space-y-8 animate-in slide-in-from-right duration-500">
-              <button 
-                onClick={() => setSelectedSchedule(null)}
-                className="flex items-center gap-2 text-blue-600 font-bold hover:gap-3 transition-all mb-6"
-              >
-                <Icons.ArrowLeft className="w-5 h-5" /> QUAY LẠI DANH SÁCH
-              </button>
-
-              <div className="bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden">
-                <div className="p-8 md:p-12">
-                  <div className="flex flex-wrap items-center gap-3 mb-6">
-                    <span className="px-4 py-1.5 bg-blue-100 text-blue-700 rounded-full text-xs font-bold uppercase tracking-wider">
-                      Lịch công tác
-                    </span>
-                    <span className="flex items-center gap-1.5 text-slate-400 text-sm font-medium">
-                      <Icons.Calendar className="w-4 h-4" />
-                      {selectedSchedule.start_date ? new Date(selectedSchedule.start_date).toLocaleDateString('vi-VN') : 'Mới'}
-                    </span>
-                  </div>
-
-                  <h1 className="text-3xl md:text-4xl font-black text-slate-900 mb-8 leading-tight">
-                    {selectedSchedule.title}
-                  </h1>
-
-                  <div className="prose prose-slate max-w-none mb-10">
-                    <MarkdownContent content={selectedSchedule.content || 'Đang cập nhật nội dung...'} />
-                  </div>
-
-                </div>
-              </div>
-            </div>
-          );
-        }
-        const filteredSchedules = schedules.filter(s => s.title.toLowerCase().includes(searchQuery.toLowerCase()));
-        return (
-          <div className="space-y-8 animate-in fade-in duration-500">
-            <h2 className="text-3xl font-black text-slate-900 uppercase">Lịch công tác</h2>
-            <div className="h-1.5 w-24 bg-blue-800 rounded-full mb-8"></div>
-            <div className="space-y-0.5 border-t border-slate-100 pt-4">
-              {filteredSchedules.map(item => (
-                <div 
-                  key={item.id} 
-                  className="flex flex-wrap items-center gap-x-4 py-1 border-b border-slate-50 hover:bg-slate-50 transition-colors text-sm"
-                >
-                  <div className="flex items-center gap-1 min-w-0 flex-1">
-                    <span className="font-bold text-slate-900 shrink-0">Tiêu đề:</span>
-                    <span className="text-slate-700 truncate">{item.title}</span>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <span className="font-bold text-slate-900">Thời gian:</span>
-                    <span className="text-slate-500">
-                      {item.start_date ? new Date(item.start_date).toLocaleDateString('vi-VN') : '...'}
-                    </span>
-                  </div>
-                  <button 
-                    onClick={() => {
-                      setSelectedSchedule(item);
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    className="text-blue-600 font-bold hover:underline shrink-0"
-                  >
-                    &lt;xem chi tiết&gt;
-                  </button>
-                </div>
-              ))}
-              {filteredSchedules.length === 0 && (
-                <div className="text-center py-20 bg-slate-50 rounded-3xl border border-dashed border-slate-300">
-                  <Icons.Calendar className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-500">Không tìm thấy lịch công tác phù hợp.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      case 'Thư viện ảnh':
-        return (
-          <div className="space-y-8 animate-in fade-in duration-500">
-            <h2 className="text-3xl font-black text-slate-900 uppercase">Thư viện ảnh</h2>
-            <div className="h-1.5 w-24 bg-blue-800 rounded-full mb-8"></div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {gallery.map(item => (
-                <div 
-                  key={item.id} 
-                  onClick={() => {
-                    const images = JSON.parse(item.images_json || '[]');
-                    if (images.length > 0) {
-                      setActiveSlideshow(item);
-                      setCurrentSlideIndex(0);
-                    }
-                  }}
-                  className={`group bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 ${item.images_json && JSON.parse(item.images_json).length > 0 ? 'cursor-pointer' : ''}`}
-                >
-                  <div className="aspect-square overflow-hidden relative">
-                    <img src={item.image_url} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" referrerPolicy="no-referrer" />
-                    <div className="absolute top-4 left-4 flex flex-col gap-2">
-                      <span className="px-3 py-1 bg-white/90 backdrop-blur-sm text-blue-600 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm w-fit">
-                        {item.category}
-                      </span>
-                      {item.images_json && JSON.parse(item.images_json).length > 0 && (
-                        <span className="px-3 py-1 bg-blue-600/90 backdrop-blur-sm text-white rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm flex items-center gap-1 w-fit">
-                          <Icons.Layers className="w-3 h-3" /> {JSON.parse(item.images_json).length} ảnh
-                        </span>
-                      )}
+                      <div className="space-y-4">
+                        {deptActivities.map(a => (
+                          <div key={a.id} className="bg-white p-6 rounded-2xl border border-slate-200 group">
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <h5 className="font-bold text-lg text-slate-800">{a.title}</h5>
+                                <div className="flex items-center gap-2 text-xs text-slate-400 mt-1">
+                                  <Calendar className="w-3 h-3" />
+                                  {a.date ? new Date(a.date).toLocaleString('vi-VN') : 'Chưa có ngày'}
+                                </div>
+                              </div>
+                              <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button 
+                                  onClick={() => {
+                                    setEditingActivityId(a.id);
+                                    setActivityForm({ 
+                                      title: a.title, 
+                                      content: a.content || '', 
+                                      date: a.date || '', 
+                                      summary: a.summary || '',
+                                      description: a.description || '', 
+                                      image_url: a.image_url || '', 
+                                      document_url: a.document_url || ''
+                                    });
+                                  }}
+                                  className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"
+                                >
+                                  <Edit className="w-5 h-5" />
+                                </button>
+                                <button onClick={() => handleDeleteActivity(a.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
+                                  <Trash2 className="w-5 h-5" />
+                                </button>
+                              </div>
+                            </div>
+                            <div className="text-sm text-slate-500 line-clamp-3 prose prose-slate max-w-none">
+                              <MarkdownContent content={a.content} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                  <div className="p-6">
-                    <h3 className="font-bold text-slate-900 mb-1 group-hover:text-blue-800 transition-colors">{item.title}</h3>
-                    {item.description && <p className="text-xs text-slate-500 line-clamp-2 italic mb-3">{item.description}</p>}
-                    <div className="flex items-center justify-between mt-auto">
-                      {item.images_json && JSON.parse(item.images_json).length > 0 && (
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                          <Icons.Maximize2 className="w-3 h-3" /> Xem bộ ảnh
-                        </span>
-                      )}
+                  )}
+
+                  {deptActiveTab === 'documents' && (
+                    <div className="space-y-6">
+                      <h4 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <FileText className="w-6 h-6 text-blue-600" /> Tài liệu chuyên môn
+                      </h4>
+                      <form onSubmit={handleAddDocument} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          <input 
+                            type="text" 
+                            placeholder="Tên tài liệu" 
+                            value={documentForm.title}
+                            onChange={e => setDocumentForm({...documentForm, title: e.target.value})}
+                            className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                            required
+                          />
+                          <input 
+                            type="url" 
+                            placeholder="Link tải tài liệu (Google Drive, Dropbox...)" 
+                            value={documentForm.file_url}
+                            onChange={e => setDocumentForm({...documentForm, file_url: e.target.value})}
+                            className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                            required
+                          />
+                        </div>
+                        <div className="flex gap-3">
+                          <button type="submit" className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors">
+                            {editingDocumentId ? 'Cập nhật' : 'Thêm tài liệu'}
+                          </button>
+                          {editingDocumentId && (
+                            <button 
+                              type="button" 
+                              onClick={() => {
+                                setEditingDocumentId(null);
+                                setDocumentForm({ title: '', description: '', file_url: '', category: 'Giáo án' });
+                              }}
+                              className="px-6 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
+                            >
+                              Hủy
+                            </button>
+                          )}
+                        </div>
+                      </form>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {deptDocuments.map(d => (
+                          <div key={d.id} className="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between group">
+                            <div className="flex items-center gap-3">
+                              <FileText className="w-8 h-8 text-blue-500" />
+                              <div>
+                                <h5 className="font-bold text-slate-800">{d.title}</h5>
+                                <a href={d.file_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">Xem tài liệu</a>
+                              </div>
+                            </div>
+                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button 
+                                onClick={() => {
+                                  setEditingDocumentId(d.id);
+                                  setDocumentForm({ title: d.title, file_url: d.file_url, description: d.description || '', category: d.category || 'Giáo án' });
+                                }}
+                                className="p-1 text-blue-500 hover:bg-blue-50 rounded"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button onClick={() => handleDeleteDocument(d.id)} className="p-1 text-red-500 hover:bg-red-50 rounded">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                </div>
-              ))}
-              {gallery.length === 0 && (
-                <div className="col-span-full text-center py-20 bg-slate-50 rounded-3xl border border-dashed border-slate-300">
-                  <Icons.Image className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-500">Thư viện ảnh đang được cập nhật...</p>
+                  )}
                 </div>
               )}
-            </div>
-          </div>
-        );
-      default:
-        return (
-          <div className="space-y-10 animate-in fade-in duration-500">
-            <section className="relative rounded-3xl overflow-hidden aspect-[21/9] bg-slate-200 group">
-              <img 
-                src={homeContent?.banner_image || "https://picsum.photos/seed/school/1200/600"} 
-                alt="Trường học" 
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                referrerPolicy="no-referrer"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-blue-900/80 to-transparent flex flex-col justify-end p-8 text-white">
-                <h3 className="text-2xl font-bold mb-2">{homeContent?.banner_title || 'Môi trường giáo dục hiện đại & thân thiện'}</h3>
-                <p className="text-blue-100 max-w-xl">{homeContent?.banner_description || 'Với đội ngũ giáo viên tâm huyết và cơ sở vật chất khang trang, chúng tôi cam kết mang lại chất lượng giáo dục tốt nhất cho học sinh.'}</p>
-              </div>
-            </section>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {features.length > 0 ? features.map((card) => {
-                const IconComponent = (Icons as any)[card.icon] || Icons.HelpCircle;
-                return (
-                  <div key={card.id} className="p-6 border border-slate-100 rounded-2xl hover:shadow-xl transition-all hover:-translate-y-1 bg-white">
-                    <div className={`w-12 h-12 ${card.color} rounded-xl flex items-center justify-center mb-4 shadow-sm`}>
-                      <IconComponent className="w-6 h-6" />
-                    </div>
-                    <h3 className="text-lg font-bold mb-2 text-slate-800">{card.title}</h3>
-                    <p className="text-sm text-slate-500 leading-relaxed">{card.description}</p>
-                  </div>
-                );
-              }) : (
-                [
-                  { title: 'Chương trình đào tạo', desc: 'Đổi mới phương pháp dạy học, phát huy tính sáng tạo của học sinh.', icon: BookOpen, color: 'bg-blue-100 text-blue-700' },
-                  { title: 'Hoạt động ngoại khóa', desc: 'Phát triển kỹ năng mềm qua các câu lạc bộ và sự kiện văn thể mỹ.', icon: Users, color: 'bg-green-100 text-green-700' },
-                  { title: 'Thành tích nổi bật', desc: 'Tự hào với nhiều giải thưởng cấp quốc gia và quốc tế hàng năm.', icon: Award, color: 'bg-amber-100 text-amber-700' }
-                ].map((card, i) => (
-                  <div key={i} className="p-6 border border-slate-100 rounded-2xl hover:shadow-xl transition-all hover:-translate-y-1 bg-white">
-                    <div className={`w-12 h-12 ${card.color} rounded-xl flex items-center justify-center mb-4 shadow-sm`}>
-                      <card.icon className="w-6 h-6" />
-                    </div>
-                    <h3 className="text-lg font-bold mb-2 text-slate-800">{card.title}</h3>
-                    <p className="text-sm text-slate-500 leading-relaxed">{card.desc}</p>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <section className="bg-slate-50 rounded-3xl p-8 border border-slate-200">
-              <div className="flex flex-col md:flex-row gap-8 items-center">
-                <div className="flex-1">
-                  <h3 className="text-2xl font-bold text-blue-900 mb-4">
-                    {admissions[0]?.title || 'Thông tin tuyển sinh'}
-                  </h3>
-                  <p className="text-slate-600 mb-6">
-                    {admissions[0]?.content || 'Đang tải thông tin tuyển sinh mới nhất...'}
-                  </p>
-                  <div className="flex gap-4">
-                    <button onClick={() => handleMenuClick('Tuyển sinh')} className="px-6 py-3 bg-blue-800 text-white font-bold rounded-xl hover:bg-blue-900 transition-colors shadow-lg shadow-blue-200">Xem chi tiết</button>
-                    <button className="px-6 py-3 border-2 border-blue-800 text-blue-800 font-bold rounded-xl hover:bg-blue-50 transition-colors">Tải hồ sơ mẫu</button>
-                  </div>
-                </div>
-                <div className="w-full md:w-64 aspect-square bg-white rounded-2xl shadow-inner border border-slate-200 flex flex-col items-center justify-center p-6 text-center">
-                  <Calendar className="w-12 h-12 text-blue-800 mb-2" />
-                  <span className="text-xs font-bold text-slate-400 uppercase">Hạn chót nộp hồ sơ</span>
-                  <span className="text-3xl font-black text-blue-900">
-                    {admissions[0]?.deadline ? new Date(admissions[0].deadline).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }) : '15/06'}
-                  </span>
-                  <span className="text-sm font-medium text-slate-500">Năm {admissions[0]?.year || 2026}</span>
-                </div>
-              </div>
-            </section>
-          </div>
-        );
-    }
-  };
-  const topMenuItems = ['Trang chủ', 'Giới thiệu', 'Tuyển sinh', 'Tin tức', 'Lưu trữ văn bản', 'Liên hệ'];
-  const subMenuItems = [
-    { name: 'Tổ chuyên môn', icon: BookOpen },
-    { name: 'Hoạt động Đoàn', icon: Users },
-    { name: 'Thành tích học tập', icon: Award },
-    { name: 'Lịch công tác', icon: Calendar },
-    { name: 'Thư viện ảnh', icon: Globe }
-  ];
-
-  const [activeSlideshow, setActiveSlideshow] = useState<any | null>(null);
-  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
-
-  const handleMenuClick = (menu: string) => {
-    setActiveMenu(menu);
-    setSelectedNews(null);
-    setSelectedAdmission(null);
-    setSelectedSchedule(null);
-    setSelectedYouthUnion(null);
-    setSelectedAchievement(null);
-    setSelectedDepartment(null);
-    setSelectedDeptActivity(null);
-    setActiveDeptTab('personnel');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleNewsDetailClick = (item: any) => {
-    setActiveMenu('Tin tức');
-    setSelectedNews(item);
-    setSelectedAdmission(null);
-    setSelectedSchedule(null);
-    setSelectedYouthUnion(null);
-    setSelectedAchievement(null);
-    setSelectedDepartment(null);
-    setSelectedDeptActivity(null);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
-      </div>
-    );
-  }
-
-  if (showAdmin && isAdmin) {
-    return <AdminDashboard onLogout={handleLogout} onExit={() => setShowAdmin(false)} />;
-  }
-
-  return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans">
-      {/* Top Bar (Contact Info) */}
-      <div className="bg-blue-900 text-white py-2 px-6 flex justify-between items-center text-xs font-medium">
-        <div className="flex gap-4">
-          <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {schoolInfo?.phone || '024.1234.5678'}</span>
-          <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {schoolInfo?.address || '123 Đường ABC, Quận XYZ, Hà Nội'}</span>
-        </div>
-        <div className="flex gap-4 items-center">
-          {isAdmin ? (
-            <div className="flex items-center gap-3">
-              <button 
-                onClick={() => setShowAdmin(true)}
-                className="flex items-center gap-1 hover:text-blue-200 transition-colors bg-blue-800 px-3 py-1 rounded-full"
-              >
-                <LayoutDashboard className="w-3 h-3" /> Quản trị hệ thống
-              </button>
-              <button 
-                onClick={handleLogout}
-                className="flex items-center gap-1 hover:text-red-200 transition-colors text-red-300"
-              >
-                <LogOut className="w-3 h-3" /> Đăng xuất
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3">
-              {loginError && (
-                <span className="text-[10px] text-red-200 bg-red-800/50 px-2 py-0.5 rounded animate-pulse max-w-[150px] truncate md:max-w-none">
-                  {loginError}
-                </span>
-              )}
-              <button 
-                onClick={handleLogin}
-                className="flex items-center gap-1 hover:text-blue-200 transition-colors"
-              >
-                <LogIn className="w-3 h-3" /> Đăng nhập quản trị
-              </button>
             </div>
           )}
-          <button className="hover:text-blue-200 transition-colors">Sổ liên lạc điện tử</button>
-        </div>
-      </div>
 
-      {/* Header */}
-      <header className="h-28 border-b border-slate-200 flex items-center px-10 bg-white">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 bg-blue-800 rounded-full flex items-center justify-center text-white shadow-lg">
-            <GraduationCap className="w-10 h-10" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-blue-900 uppercase">{schoolInfo?.name || 'Trường THPT'}</h1>
-            <div className="flex items-center gap-6">
-              <p className="text-sm text-slate-500 italic font-medium">"{schoolInfo?.slogan || 'Trí tuệ - Đạo đức - Sáng tạo'}"</p>
-              
-              {/* Search Bar - Moved closer to title */}
-              <div className="hidden lg:flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200 focus-within:ring-2 focus-within:ring-blue-500 transition-all group" title="Tìm kiếm theo tiêu đề Tin tức hoặc Tuyển sinh">
-                <Icons.Search className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-500 transition-colors" />
-                <input 
-                  type="text" 
-                  placeholder="Tìm tin tức, tuyển sinh..." 
-                  className="bg-transparent border-none outline-none text-xs w-40 font-medium"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Navigation Bar */}
-      <nav className="h-14 border-b border-slate-200 flex items-center px-10 gap-8 bg-white shadow-sm sticky top-0 z-10">
-        {topMenuItems.map((item) => (
-          <button
-            key={item}
-            onClick={() => handleMenuClick(item)}
-            className={`text-sm font-bold uppercase tracking-wide transition-all hover:text-blue-800 relative py-4 ${
-              activeMenu === item ? 'text-blue-800' : 'text-slate-600'
-            }`}
-          >
-            {item}
-            {activeMenu === item && (
-              <span className="absolute bottom-0 left-0 w-full h-1 bg-blue-800 rounded-t-full"></span>
-            )}
-          </button>
-        ))}
-      </nav>
-
-      {/* Main Content Area */}
-      <div className="flex flex-1 max-w-7xl mx-auto w-full">
-        {/* Sidebar */}
-        <aside className="w-72 border-r border-slate-200 bg-white p-6 hidden md:block">
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-blue-900 mb-4 flex items-center gap-2">
-                <Bell className="w-4 h-4" /> Thông báo mới
-              </h2>
-              <div className="space-y-3">
-                {news.length > 0 ? news.map((item) => (
-                  <div 
-                    key={item.id} 
-                    className="text-xs border-b border-slate-100 pb-2 hover:text-blue-600 cursor-pointer transition-colors"
-                    onClick={() => handleNewsDetailClick(item)}
-                  >
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <span className="text-slate-400">
-                        {item.date?.toDate ? item.date.toDate().toLocaleDateString('vi-VN') : 
-                         (item.date && !isNaN(new Date(item.date).getTime()) ? new Date(item.date).toLocaleDateString('vi-VN') : '')}
-                      </span>
-                    </div>
-                    <p className="font-medium line-clamp-2 flex items-center gap-1 flex-wrap">
-                      {item.title}
-                      {(item.is_new || !item.date || isNaN(new Date(item.date).getTime())) && (
-                        <span className="px-1 py-0.5 bg-orange-600 text-white text-[7px] font-black rounded-sm shadow-sm leading-none shrink-0 uppercase">NEW</span>
-                      )}
-                    </p>
-                  </div>
-                )) : (
-                  <p className="text-xs text-slate-400 italic">Chưa có thông báo mới</p>
-                )}
-              </div>
-            </div>
-
-            <div className="pt-4">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-blue-900 mb-4">Danh mục chính</h2>
-              <ul className="space-y-1">
-                {subMenuItems.map((item) => (
-                  <li key={item.name}>
-                    <button 
-                      onClick={() => handleMenuClick(item.name)}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-blue-50 hover:text-blue-800 rounded-lg transition-all group"
-                    >
-                      <item.icon className="w-4 h-4 text-slate-400 group-hover:text-blue-800" />
-                      <span>{item.name}</span>
-                      <ChevronRight className="w-4 h-4 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </aside>
-
-        {/* Main Content */}
-        <main className="flex-1 p-8 bg-white">
-          <div className="mb-10">
-            <div className="flex items-center gap-2 text-blue-800 mb-2">
-              <Home className="w-4 h-4" />
-              <span className="text-xs font-bold uppercase tracking-widest">Trang chủ / {activeMenu}</span>
-            </div>
-          </div>
-          
-          {renderContent()}
-        </main>
-      </div>
-
-      {/* Footer */}
-      <footer className="bg-slate-900 text-white pt-12 pb-6 px-10">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
-          <div>
-            <div className="flex items-center gap-3 mb-4">
-              <GraduationCap className="w-8 h-8 text-blue-400" />
-              <h4 className="text-xl font-bold uppercase tracking-tight">{schoolInfo?.name || 'Trường THPT'}</h4>
-            </div>
-            <p className="text-slate-400 text-sm leading-relaxed">
-              Nơi đào tạo những thế hệ học sinh năng động, sáng tạo và có trách nhiệm với cộng đồng.
-            </p>
-          </div>
-          <div>
-            <h4 className="text-lg font-bold mb-4 border-l-4 border-blue-500 pl-3">Liên kết nhanh</h4>
-            <ul className="space-y-2 text-sm text-slate-400">
-              <li><a href="https://hanoi.edu.vn" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Sở Giáo dục & Đào tạo Hà Nội</a></li>
-              <li><a href="https://moet.gov.vn" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Bộ Giáo dục & Đào tạo</a></li>
-              <li><a href="https://thisinh.thitotnghiepthpt.edu.vn/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Cổng thông tin thi THPT Quốc gia</a></li>
-              <li><a href="https://hcm.edu.vn/homehcm" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Sở Giáo dục & Đào tạo TPHCM</a></li>
-              <li><a href="https://hoclieu.vn" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Thư viện học liệu số</a></li>
-              <li><a href="https://truonghocviet.vn/" target="_blank" rel="noopener noreferrer" className="hover:text-white text-blue-400 font-bold transition-colors flex items-center gap-1">Sổ liên lạc điện tử <ExternalLink className="w-3 h-3" /></a></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="text-lg font-bold mb-4 border-l-4 border-blue-500 pl-3">Thông tin liên hệ</h4>
-            <ul className="space-y-3 text-sm text-slate-400">
-              <li className="flex items-start gap-2"><MapPin className="w-4 h-4 text-blue-400 shrink-0" /> {schoolInfo?.address || '123 Đường ABC, Quận XYZ, Hà Nội'}</li>
-              <li className="flex items-center gap-2"><Phone className="w-4 h-4 text-blue-400 shrink-0" /> {schoolInfo?.phone || '024.1234.5678'}</li>
-              <li className="flex items-center gap-2"><Globe className="w-4 h-4 text-blue-400 shrink-0" /> {schoolInfo?.email || 'trieuhaminh.gmail.vn'}</li>
-            </ul>
-          </div>
-        </div>
-        <div className="max-w-7xl mx-auto border-t border-slate-800 pt-6 text-center text-xs text-slate-500">
-          &copy; 2026 {schoolInfo?.name || 'Trường THPT Nguyễn Hữu Cầu'}. Thiết kế và vận hành bởi Tổ CNTT.
-        </div>
-      </footer>
-
-      {/* Slideshow Modal */}
-      <AnimatePresence>
-        {activeSlideshow && (
-          <div className="fixed inset-0 z-[10000] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 md:p-10">
-            <motion.button 
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.5 }}
-              onClick={() => setActiveSlideshow(null)}
-              className="absolute top-6 right-6 text-white/60 hover:text-white p-3 bg-white/10 hover:bg-white/20 rounded-full transition-all z-10"
-            >
-              <X className="w-8 h-8" />
-            </motion.button>
-
-            <div className="relative w-full max-w-6xl h-[70vh] md:h-[75vh] flex items-center justify-center group mt-4">
-              <AnimatePresence mode="wait">
-                <motion.img 
-                  key={currentSlideIndex}
-                  initial={{ opacity: 0, scale: 0.95, filter: 'blur(10px)' }}
-                  animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-                  exit={{ opacity: 0, scale: 1.05, filter: 'blur(10px)' }}
-                  transition={{ duration: 0.3, ease: "easeOut" }}
-                  src={JSON.parse(activeSlideshow.images_json)[currentSlideIndex].url} 
-                  className="max-w-full max-h-full object-contain shadow-2xl rounded-xl"
-                  referrerPolicy="no-referrer"
-                />
-              </AnimatePresence>
-
-              {JSON.parse(activeSlideshow.images_json).length > 1 && (
-                <>
-                  <button 
-                    onClick={() => setCurrentSlideIndex((currentSlideIndex - 1 + JSON.parse(activeSlideshow.images_json).length) % JSON.parse(activeSlideshow.images_json).length)}
-                    className="absolute left-0 md:-left-20 p-4 bg-white/5 hover:bg-white/20 text-white rounded-full transition-all opacity-0 group-hover:opacity-100 shadow-xl backdrop-blur-sm"
-                  >
-                    <ChevronLeft className="w-10 h-10" />
-                  </button>
-                  <button 
-                    onClick={() => setCurrentSlideIndex((currentSlideIndex + 1) % JSON.parse(activeSlideshow.images_json).length)}
-                    className="absolute right-0 md:-right-20 p-4 bg-white/5 hover:bg-white/20 text-white rounded-full transition-all opacity-0 group-hover:opacity-100 shadow-xl backdrop-blur-sm"
-                  >
-                    <ChevronRight className="w-10 h-10" />
-                  </button>
-                </>
-              )}
-            </div>
-
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-4 text-center max-w-5xl px-6"
-            >
-              <div className="flex flex-wrap items-center justify-center gap-3 mb-4">
-                <div className="px-2 py-0.5 bg-blue-600 text-white text-[9px] font-bold uppercase tracking-widest rounded">
-                  {activeSlideshow.category}
-                </div>
-                <h3 className="text-base font-bold text-white tracking-tight">{activeSlideshow.title}</h3>
-                {JSON.parse(activeSlideshow.images_json)[currentSlideIndex].caption && (
-                  <p className="text-blue-200 text-sm italic font-medium">
-                    — "{JSON.parse(activeSlideshow.images_json)[currentSlideIndex].caption}"
-                  </p>
-                )}
-              </div>
-              
-              <div className="flex flex-col items-center gap-3">
-                <div className="flex justify-center gap-2 overflow-x-auto max-w-full no-scrollbar">
-                  {JSON.parse(activeSlideshow.images_json).map((_, i) => (
-                    <button 
-                      key={i}
-                      onClick={() => setCurrentSlideIndex(i)}
-                      className={`h-1.5 rounded-full transition-all duration-300 ${i === currentSlideIndex ? 'bg-blue-500 w-8' : 'bg-white/20 w-2 hover:bg-white/40'}`}
-                    />
-                  ))}
-                </div>
-                
-                <div className="text-white/30 text-[10px] font-bold uppercase tracking-widest">
-                  Ảnh {currentSlideIndex + 1} / {JSON.parse(activeSlideshow.images_json).length}
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Login Modal */}
-      {showLoginModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
-          >
-            <div className="bg-blue-900 p-8 text-white relative">
-              <button 
-                onClick={() => setShowLoginModal(false)}
-                className="absolute top-4 right-4 text-white/60 hover:text-white transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center">
-                  <GraduationCap className="w-8 h-8 text-blue-300" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold">Đăng nhập Quản trị</h3>
-                  <p className="text-blue-300 text-sm">Truy cập hệ thống quản lý trường học</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="p-8">
-              <form onSubmit={handlePasswordLogin} className="space-y-6">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Mật khẩu admin</label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+          {activeTab === 'youth_union' && (
+            <div className="space-y-8">
+              <form onSubmit={handleSaveYouthUnion} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
+                <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                  {editingYouthUnionId ? <Edit className="w-6 h-6 text-amber-600" /> : <Plus className="w-6 h-6 text-blue-600" />}
+                  {editingYouthUnionId ? 'Hiệu chỉnh hoạt động Đoàn' : 'Thêm hoạt động Đoàn mới'}
+                </h3>
+                <div className="grid grid-cols-1 gap-6">
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Tiêu đề</label>
                     <input 
-                      type="password"
-                      value={adminPasswordInput}
-                      onChange={(e) => setAdminPasswordInput(e.target.value)}
-                      placeholder="Nhập mật khẩu..."
-                      className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
-                      autoFocus
+                      type="text" 
+                      value={youthUnionForm.title}
+                      onChange={e => setYouthUnionForm({...youthUnionForm, title: e.target.value})}
+                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                      required
                     />
                   </div>
-                  {loginError && (
-                    <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" /> {loginError}
-                    </p>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Tóm tắt ngắn (hiển thị ở danh sách)</label>
+                    <input 
+                      type="text" 
+                      value={youthUnionForm.summary}
+                      onChange={e => setYouthUnionForm({...youthUnionForm, summary: e.target.value})}
+                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Nội dung (Markdown)</label>
+                    <MarkdownToolbar 
+                      textareaRef={youthUnionTextareaRef} 
+                      setter={setYouthUnionForm} 
+                      form={youthUnionForm} 
+                      field="content" 
+                    />
+                    <textarea 
+                      ref={youthUnionTextareaRef}
+                      value={youthUnionForm.content}
+                      onChange={e => setYouthUnionForm({...youthUnionForm, content: e.target.value})}
+                      className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-64 border-t-0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Ngày diễn ra</label>
+                    <input 
+                      type="datetime-local" 
+                      value={youthUnionForm.date}
+                      onChange={e => setYouthUnionForm({...youthUnionForm, date: e.target.value})}
+                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button type="submit" className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2">
+                    <Save className="w-5 h-5" /> {editingYouthUnionId ? 'Cập nhật' : 'Lưu hoạt động'}
+                  </button>
+                  {editingYouthUnionId && (
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        setEditingYouthUnionId(null);
+                        setYouthUnionForm({ title: '', summary: '', content: '', date: '', image_url: '' });
+                      }}
+                      className="px-8 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-all"
+                    >
+                      Hủy
+                    </button>
                   )}
                 </div>
-
-                <button 
-                  type="submit"
-                  className="w-full bg-blue-900 text-white py-3 rounded-xl font-bold hover:bg-blue-800 transition-all shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2"
-                >
-                  <LogIn className="w-5 h-5" /> Đăng nhập
-                </button>
               </form>
 
-              <div className="relative my-8">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-200"></div>
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center gap-2">
+                  <Search className="w-5 h-5 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder="Tìm kiếm hoạt động Đoàn..." 
+                    className="bg-transparent border-none outline-none text-sm w-full"
+                    value={adminSearch}
+                    onChange={(e) => setAdminSearch(e.target.value)}
+                  />
                 </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-white text-slate-500 font-medium">Hoặc đăng nhập với</span>
+                <div className="grid grid-cols-1 gap-4 p-4">
+                  {youthUnion.filter(item => 
+                    item.title?.toLowerCase().includes(adminSearch.toLowerCase()) || 
+                    item.content?.toLowerCase().includes(adminSearch.toLowerCase())
+                  ).map(item => (
+                  <div key={item.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center group">
+                    <div className="flex items-center gap-4">
+                      {item.image_url && <img src={item.image_url} className="w-16 h-16 rounded-lg object-cover" />}
+                      <div>
+                        <h4 className="font-bold text-slate-800">{item.title}</h4>
+                        <div className="flex items-center gap-2 text-xs text-slate-400 mt-1">
+                          <Calendar className="w-3 h-3" />
+                          {item.date && !isNaN(new Date(item.date).getTime()) ? new Date(item.date).toLocaleString('vi-VN') : 'Chưa có ngày'}
+                        </div>
+                        <p className="text-sm text-slate-500 line-clamp-1 mt-1">{item.content}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => {
+                          setEditingYouthUnionId(item.id);
+                          setYouthUnionForm({ title: item.title, summary: item.summary || '', content: item.content, date: item.date || '', image_url: item.image_url || '' });
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"
+                      >
+                        <Edit className="w-5 h-5" />
+                      </button>
+                      <button onClick={() => handleDeleteYouthUnion(item.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+          {activeTab === 'achievements' && (
+            <div className="space-y-8">
+              <form onSubmit={handleSaveAchievement} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
+                <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                  {editingAchievementId ? <Edit className="w-6 h-6 text-amber-600" /> : <Plus className="w-6 h-6 text-blue-600" />}
+                  {editingAchievementId ? 'Hiệu chỉnh thành tích' : 'Thêm thành tích mới'}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Tiêu đề thành tích</label>
+                    <input 
+                      type="text" 
+                      value={achievementForm.title}
+                      onChange={e => setAchievementForm({...achievementForm, title: e.target.value})}
+                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Năm học</label>
+                    <input 
+                      type="text" 
+                      value={achievementForm.year}
+                      onChange={e => setAchievementForm({...achievementForm, year: e.target.value})}
+                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Loại thành tích</label>
+                    <select 
+                      value={achievementForm.type}
+                      onChange={e => setAchievementForm({...achievementForm, type: e.target.value as any})}
+                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="academic">Học thuật</option>
+                      <option value="sport">Thể thao</option>
+                      <option value="art">Nghệ thuật</option>
+                      <option value="other">Khác</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Mô tả chi tiết (Markdown)</label>
+                    <MarkdownToolbar 
+                      textareaRef={achievementTextareaRef} 
+                      setter={setAchievementForm} 
+                      form={achievementForm} 
+                      field="description" 
+                    />
+                    <textarea 
+                      ref={achievementTextareaRef}
+                      value={achievementForm.description}
+                      onChange={e => setAchievementForm({...achievementForm, description: e.target.value})}
+                      className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-64 font-mono text-sm border-t-0"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button type="submit" className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2">
+                    <Save className="w-5 h-5" /> {editingAchievementId ? 'Cập nhật' : 'Lưu thành tích'}
+                  </button>
+                  {editingAchievementId && (
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        setEditingAchievementId(null);
+                        setAchievementForm({ title: '', student_name: '', class: '', year: '2025-2026', award: '', type: 'academic', description: '', image_url: '' });
+                      }}
+                      className="px-8 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-all"
+                    >
+                      Hủy
+                    </button>
+                  )}
+                </div>
+              </form>
+
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center gap-2">
+                  <Search className="w-5 h-5 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder="Tìm kiếm thành tích..." 
+                    className="bg-transparent border-none outline-none text-sm w-full"
+                    value={adminSearch}
+                    onChange={(e) => setAdminSearch(e.target.value)}
+                  />
+                </div>
+                <div className="grid grid-cols-1 gap-4 p-4">
+                  {achievements.filter(item => 
+                    item.title?.toLowerCase().includes(adminSearch.toLowerCase()) || 
+                    item.content?.toLowerCase().includes(adminSearch.toLowerCase())
+                  ).map(item => (
+                  <div key={item.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center group">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                          item.type === 'academic' ? 'bg-blue-100 text-blue-600' :
+                          item.type === 'sport' ? 'bg-green-100 text-green-600' :
+                          item.type === 'art' ? 'bg-purple-100 text-purple-600' : 'bg-slate-100 text-slate-600'
+                        }`}>
+                          {item.type}
+                        </span>
+                        <span className="text-xs font-bold text-slate-400">{item.year}</span>
+                      </div>
+                      <h4 className="font-bold text-slate-800">{item.title}</h4>
+                      <p className="text-sm text-slate-500 line-clamp-1">{item.description}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => {
+                          setEditingAchievementId(item.id);
+                          setAchievementForm({ title: item.title, description: item.description, year: item.year, type: item.type, student_name: item.student_name || '', class: item.class || '', award: item.award || '', image_url: item.image_url || '' });
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"
+                      >
+                        <Edit className="w-5 h-5" />
+                      </button>
+                      <button onClick={() => handleDeleteAchievement(item.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+          {activeTab === 'schedule' && (
+            <div className="space-y-8">
+              <form onSubmit={handleSaveSchedule} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
+                <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                  {editingScheduleId ? <Edit className="w-6 h-6 text-amber-600" /> : <Plus className="w-6 h-6 text-blue-600" />}
+                  {editingScheduleId ? 'Hiệu chỉnh lịch công tác' : 'Thêm lịch công tác mới'}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Tiêu đề lịch (ví dụ: Lịch tuần 25)</label>
+                    <input 
+                      type="text" 
+                      value={scheduleForm.title}
+                      onChange={e => setScheduleForm({...scheduleForm, title: e.target.value})}
+                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Ngày bắt đầu</label>
+                    <input 
+                      type="datetime-local" 
+                      value={scheduleForm.start_date}
+                      onChange={e => setScheduleForm({...scheduleForm, start_date: e.target.value})}
+                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Ngày kết thúc</label>
+                    <input 
+                      type="datetime-local" 
+                      value={scheduleForm.end_date}
+                      onChange={e => setScheduleForm({...scheduleForm, end_date: e.target.value})}
+                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Nội dung lịch (Markdown/HTML)</label>
+                    
+                    <MarkdownToolbar 
+                      textareaRef={scheduleTextareaRef} 
+                      setter={setScheduleForm} 
+                      form={scheduleForm} 
+                      field="content" 
+                    />
+
+                    <textarea 
+                      ref={scheduleTextareaRef}
+                      value={scheduleForm.content}
+                      onChange={e => setScheduleForm({...scheduleForm, content: e.target.value})}
+                      className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-64 font-mono text-sm border-t-0"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button type="submit" className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2">
+                    <Save className="w-5 h-5" /> {editingScheduleId ? 'Cập nhật' : 'Lưu lịch'}
+                  </button>
+                  {editingScheduleId && (
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        setEditingScheduleId(null);
+                        setScheduleForm({ title: '', week: '', date_range: '', content: '', file_url: '', start_date: '', end_date: '' });
+                      }}
+                      className="px-8 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-all"
+                    >
+                      Hủy
+                    </button>
+                  )}
+                </div>
+              </form>
+
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center gap-2">
+                  <Search className="w-5 h-5 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder="Tìm kiếm lịch công tác..." 
+                    className="bg-transparent border-none outline-none text-sm w-full"
+                    value={adminSearch}
+                    onChange={(e) => setAdminSearch(e.target.value)}
+                  />
+                </div>
+                <div className="grid grid-cols-1 gap-4 p-4">
+                  {schedule.filter(item => 
+                    item.title?.toLowerCase().includes(adminSearch.toLowerCase()) || 
+                    item.content?.toLowerCase().includes(adminSearch.toLowerCase())
+                  ).map(item => (
+                  <div key={item.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center group">
+                    <div>
+                      <h4 className="font-bold text-slate-800">{item.title}</h4>
+                      <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">
+                        {item.start_date ? new Date(item.start_date).toLocaleString('vi-VN') : '...'} — 
+                        {item.end_date ? new Date(item.end_date).toLocaleString('vi-VN') : '...'}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => {
+                          setEditingScheduleId(item.id);
+                          setScheduleForm({ title: item.title, content: item.content, start_date: item.start_date, end_date: item.end_date, week: item.week || '', date_range: item.date_range || '', file_url: item.file_url || '' });
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"
+                      >
+                        <Edit className="w-5 h-5" />
+                      </button>
+                      <button onClick={() => handleDeleteSchedule(item.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+          {activeTab === 'gallery' && (
+            <div className="space-y-8">
+              <form onSubmit={handleSaveGallery} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
+                <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                  {editingGalleryId ? <Edit className="w-6 h-6 text-amber-600" /> : <Plus className="w-6 h-6 text-blue-600" />}
+                  {editingGalleryId ? 'Hiệu chỉnh ảnh' : 'Thêm ảnh mới'}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Tiêu đề ảnh/Sự kiện</label>
+                    <input 
+                      type="text" 
+                      value={galleryForm.title}
+                      onChange={e => setGalleryForm({...galleryForm, title: e.target.value})}
+                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Link ảnh (URL)</label>
+                    <input 
+                      type="url" 
+                      value={galleryForm.image_url}
+                      onChange={e => setGalleryForm({...galleryForm, image_url: e.target.value})}
+                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Danh mục</label>
+                    <input 
+                      type="text" 
+                      value={galleryForm.category}
+                      onChange={e => setGalleryForm({...galleryForm, category: e.target.value})}
+                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Hoạt động, Cơ sở vật chất..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Mô tả (tùy chọn)</label>
+                    <input 
+                      type="text" 
+                      value={galleryForm.description}
+                      onChange={e => setGalleryForm({...galleryForm, description: e.target.value})}
+                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  {/* Multi-image management */}
+                  <div className="md:col-span-2 space-y-4 pt-4 border-t border-slate-100">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-sm font-bold text-slate-700">Bộ sưu tập ảnh (Slideshow)</label>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-1 rounded-md">Tùy chọn</span>
+                    </div>
+                    <p className="text-xs text-slate-500">Thêm nhiều ảnh để tạo hiệu ứng slideshow khi xem chi tiết.</p>
+                    
+                    <div className="grid grid-cols-1 gap-3">
+                      {galleryImages.map((img, index) => (
+                        <div key={index} className="flex gap-3 items-start bg-slate-50 p-4 rounded-2xl border border-slate-200 group/item">
+                          <div className="flex-1 space-y-3">
+                            <div className="flex items-center gap-2">
+                              <ImageIcon className="w-4 h-4 text-slate-400" />
+                              <input 
+                                type="url" 
+                                placeholder="Link ảnh (URL)" 
+                                value={img.url}
+                                onChange={e => {
+                                  const newImages = [...galleryImages];
+                                  newImages[index].url = e.target.value;
+                                  setGalleryImages(newImages);
+                                }}
+                                className="flex-1 p-2 text-sm border-0 bg-transparent outline-none focus:ring-0 placeholder:text-slate-400"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Type className="w-4 h-4 text-slate-400" />
+                              <input 
+                                type="text" 
+                                placeholder="Chú thích cho ảnh này" 
+                                value={img.caption}
+                                onChange={e => {
+                                  const newImages = [...galleryImages];
+                                  newImages[index].caption = e.target.value;
+                                  setGalleryImages(newImages);
+                                }}
+                                className="flex-1 p-2 text-sm border-0 bg-transparent outline-none focus:ring-0 placeholder:text-slate-400"
+                              />
+                            </div>
+                          </div>
+                          <button 
+                            type="button"
+                            onClick={() => setGalleryImages(galleryImages.filter((_, i) => i !== index))}
+                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                      
+                      <button 
+                        type="button"
+                        onClick={() => setGalleryImages([...galleryImages, { url: '', caption: '' }])}
+                        className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-200 rounded-2xl text-slate-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 transition-all group"
+                      >
+                        <Plus className="w-5 h-5 group-hover:scale-110 transition-transform" /> 
+                        <span className="font-bold text-sm">Thêm ảnh vào bộ sưu tập</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button type="submit" className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2">
+                    <Save className="w-5 h-5" /> {editingGalleryId ? 'Cập nhật' : 'Lưu ảnh'}
+                  </button>
+                  {editingGalleryId && (
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        setEditingGalleryId(null);
+                        setGalleryForm({ title: '', image_url: '', description: '', category: 'Hoạt động trường', images_json: '[]' });
+                        setGalleryImages([]);
+                      }}
+                      className="px-8 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-all"
+                    >
+                      Hủy
+                    </button>
+                  )}
+                </div>
+              </form>
+
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+                <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center gap-2">
+                  <Search className="w-5 h-5 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder="Tìm kiếm bộ ảnh..." 
+                    className="bg-transparent border-none outline-none text-sm w-full"
+                    value={adminSearch}
+                    onChange={(e) => setAdminSearch(e.target.value)}
+                  />
                 </div>
               </div>
 
-              <button 
-                onClick={handleGoogleLogin}
-                className="w-full border border-slate-200 py-3 rounded-xl font-semibold text-slate-700 hover:bg-slate-50 transition-all flex items-center justify-center gap-3"
-              >
-                <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
-                Tiếp tục với Google
-              </button>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {gallery.filter(item => 
+                  item.title?.toLowerCase().includes(adminSearch.toLowerCase()) || 
+                  item.category?.toLowerCase().includes(adminSearch.toLowerCase())
+                ).map(item => (
+                  <div key={item.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden group relative aspect-square">
+                    <img src={item.image_url} className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-4 text-center">
+                      <h4 className="text-white font-bold text-sm mb-1">{item.title}</h4>
+                      <p className="text-white/70 text-[10px] mb-4">{item.category}</p>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => {
+                            setEditingGalleryId(item.id);
+                            setGalleryForm({ 
+                              title: item.title, 
+                              image_url: item.image_url, 
+                              description: item.description || '', 
+                              category: item.category || '', 
+                              images_json: item.images_json || '[]'
+                            });
+                            try {
+                              setGalleryImages(JSON.parse(item.images_json || '[]'));
+                            } catch (e) {
+                              setGalleryImages([]);
+                            }
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          className="p-2 bg-white/20 hover:bg-white/40 rounded-lg text-white"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => handleDeleteGallery(item.id)} className="p-2 bg-red-500/80 hover:bg-red-500 rounded-lg text-white">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            
-            <div className="bg-slate-50 p-4 text-center">
-              <p className="text-xs text-slate-500">
-                Chỉ dành cho cán bộ quản lý và giáo viên được cấp quyền.
-              </p>
+          )}
+
+          {activeTab === 'archive' && (
+            <div className="space-y-8">
+              <form onSubmit={handleSaveArchive} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                  {editingArchiveId ? <Edit className="w-5 h-5 text-amber-600" /> : <Plus className="w-5 h-5 text-blue-600" />}
+                  {editingArchiveId ? 'Hiệu chỉnh văn bản' : 'Thêm văn bản mới'}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <input 
+                    type="text" 
+                    placeholder="Tiêu đề văn bản" 
+                    value={archiveForm.title}
+                    onChange={e => setArchiveForm({...archiveForm, title: e.target.value})}
+                    className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 col-span-2"
+                    required
+                  />
+                  <div className="flex gap-4">
+                    <select 
+                      value={archiveForm.category}
+                      onChange={e => setArchiveForm({...archiveForm, category: e.target.value})}
+                      className="flex-1 p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option>Nội bộ</option>
+                      <option>Sở, Bộ</option>
+                      <option>Số bộ</option>
+                    </select>
+                    <select 
+                      value={archiveForm.type}
+                      onChange={e => setArchiveForm({...archiveForm, type: e.target.value})}
+                      className="flex-1 p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option>Chương trình</option>
+                      <option>Nội quy</option>
+                      <option>Quy chế</option>
+                      <option>Nghị định</option>
+                      <option>Khác</option>
+                    </select>
+                  </div>
+                  <div className="flex gap-4">
+                    <input 
+                      type="number" 
+                      placeholder="Năm" 
+                      value={archiveForm.year}
+                      onChange={e => setArchiveForm({...archiveForm, year: parseInt(e.target.value) || 0})}
+                      className="flex-1 p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <div className="flex-[2] flex gap-2">
+                       <input 
+                        type="url" 
+                        placeholder="Link file đính kèm" 
+                        value={archiveForm.file_url}
+                        onChange={e => setArchiveForm({...archiveForm, file_url: e.target.value})}
+                        className="flex-1 p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <div className="relative">
+                        <input 
+                          type="file" 
+                          accept="image/*,application/pdf"
+                          onChange={(e) => handleFileUpload(e, setArchiveForm, archiveForm, 'file_url')}
+                          className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                        />
+                        <button type="button" className="p-3 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-colors">
+                          <Upload className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <textarea 
+                    placeholder="Mô tả ngắn gọn" 
+                    value={archiveForm.description}
+                    onChange={e => setArchiveForm({...archiveForm, description: e.target.value})}
+                    className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 col-span-2 h-20"
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button type="submit" className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors">
+                    {editingArchiveId ? 'Cập nhật' : 'Lưu văn bản'}
+                  </button>
+                  {editingArchiveId && (
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        setEditingArchiveId(null);
+                        setArchiveForm({ title: '', category: 'Nội bộ', year: new Date().getFullYear(), type: 'Chương trình', file_url: '', description: '' });
+                      }}
+                      className="px-6 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
+                    >
+                      Hủy bỏ
+                    </button>
+                  )}
+                </div>
+              </form>
+
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center gap-2">
+                  <Search className="w-5 h-5 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder="Tìm kiếm văn bản..." 
+                    className="bg-transparent border-none outline-none text-sm w-full"
+                    value={adminSearch}
+                    onChange={(e) => setAdminSearch(e.target.value)}
+                  />
+                </div>
+                <table className="w-full text-left">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="p-4 font-bold text-slate-600">Tiêu đề</th>
+                      <th className="p-4 font-bold text-slate-600">Nhóm</th>
+                      <th className="p-4 font-bold text-slate-600">Loại</th>
+                      <th className="p-4 font-bold text-slate-600">Năm</th>
+                      <th className="p-4 font-bold text-slate-600">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {archiveDocuments.filter(item => 
+                      item.title?.toLowerCase().includes(adminSearch.toLowerCase()) || 
+                      item.category?.toLowerCase().includes(adminSearch.toLowerCase()) ||
+                      item.type?.toLowerCase().includes(adminSearch.toLowerCase())
+                    ).map(item => (
+                      <tr key={item.id} className="border-b border-slate-100 last:border-none">
+                        <td className="p-4 text-sm font-medium">{item.title}</td>
+                        <td className="p-4 text-sm">
+                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${item.category === 'Nội bộ' ? 'bg-emerald-100 text-emerald-700' : 'bg-purple-100 text-purple-700'}`}>
+                            {item.category}
+                          </span>
+                        </td>
+                        <td className="p-4 text-sm text-slate-500">{item.type}</td>
+                        <td className="p-4 text-sm text-slate-500">{item.year}</td>
+                        <td className="p-4 flex gap-2">
+                          <button onClick={() => handleEditArchive(item)} className="text-blue-500 hover:text-blue-700 p-2">
+                            <Edit className="w-5 h-5" />
+                          </button>
+                          <button onClick={() => handleDeleteArchive(item.id)} className="text-red-500 hover:text-red-700 p-2">
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </motion.div>
+          )}
+        </div>
+      </main>
+
+      {/* Custom Modal */}
+      {modal.show && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-8">
+              <h3 className="text-2xl font-black text-slate-900 mb-4">{modal.title}</h3>
+              <p className="text-slate-600 leading-relaxed">{modal.message}</p>
+            </div>
+            <div className="bg-slate-50 p-6 flex justify-end gap-3">
+              {modal.type === 'confirm' ? (
+                <>
+                  <button 
+                    onClick={() => setModal({ ...modal, show: false })}
+                    className="px-6 py-3 bg-white border border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-100 transition-colors"
+                  >
+                    Hủy bỏ
+                  </button>
+                  <button 
+                    onClick={() => {
+                      modal.onConfirm?.();
+                      setModal({ ...modal, show: false });
+                    }}
+                    className="px-6 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors shadow-lg shadow-red-200"
+                  >
+                    Xác nhận
+                  </button>
+                </>
+              ) : (
+                <button 
+                  onClick={() => setModal({ ...modal, show: false })}
+                  className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200"
+                >
+                  Đóng
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
