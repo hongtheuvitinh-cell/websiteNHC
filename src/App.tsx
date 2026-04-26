@@ -805,6 +805,9 @@ export default function App() {
                   <div className="flex items-center gap-1 min-w-0 flex-1">
                     <span className="font-bold text-slate-900 shrink-0">Tiêu đề:</span>
                     <span className="text-slate-700 truncate">{item.title}</span>
+                    {item.is_new && (
+                      <span className="ml-1 px-1.5 py-0.5 bg-orange-600 text-white text-[8px] font-black rounded shadow-sm shrink-0 uppercase tracking-wider">NEW</span>
+                    )}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <span className="font-bold text-slate-900">Thời gian:</span>
