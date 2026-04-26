@@ -66,6 +66,302 @@ import remarkBreaks from 'remark-breaks';
 import 'katex/dist/katex.min.css';
 import { Loader2 } from 'lucide-react';
 
+// --- Markdown Helpers Start ---
+const insertMarkdown = (
+  ref: React.RefObject<HTMLTextAreaElement>, 
+  setter: React.Dispatch<React.SetStateAction<any>>, 
+  form: any, 
+  field: string, 
+  type: string
+) => {
+  const textarea = ref.current;
+  if (!textarea) return;
+
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  const text = form[field] || '';
+  const selectedText = text.substring(start, end);
+
+  let insertion = '';
+  let newCursorPos = start;
+
+  switch (type) {
+    case 'bold':
+      insertion = `**${selectedText || 'bold text'}**`;
+      newCursorPos = start + 2;
+      break;
+    case 'italic':
+      insertion = `*${selectedText || 'italic text'}*`;
+      newCursorPos = start + 1;
+      break;
+    case 'heading':
+      insertion = `\n### ${selectedText || 'Heading'}\n`;
+      newCursorPos = start + 5;
+      break;
+    case 'list':
+      insertion = `\n- ${selectedText || 'list item'}\n`;
+      newCursorPos = start + 3;
+      break;
+    case 'table':
+      insertion = `\n| Title 1 | Title 2 |\n|---|---|\n| Content 1 | Content 2 |\n`;
+      newCursorPos = start + 2;
+      break;
+    case 'link':
+      insertion = `[${selectedText || 'link name'}](https://example.com)`;
+      newCursorPos = start + 1;
+      break;
+    case 'align-left':
+      insertion = `:::left\n${selectedText || 'left aligned text'}\n:::`;
+      newCursorPos = start + 8;
+      break;
+    case 'align-center':
+      insertion = `:::center\n${selectedText || 'center aligned text'}\n:::`;
+      newCursorPos = start + 10;
+      break;
+    case 'align-right':
+      insertion = `:::right\n${selectedText || 'right aligned text'}\n:::`;
+      newCursorPos = start + 9;
+      break;
+    case 'align-justify':
+      insertion = `:::justify\n${selectedText || 'justified text'}\n:::`;
+      newCursorPos = start + 11;
+      break;
+    case 'font-size':
+      insertion = `<span style="font-size: 20px">${selectedText || 'text'}</span>`;
+      newCursorPos = start + 25;
+      break;
+    case 'font-family':
+      insertion = `<span style="font-family: 'Times New Roman'">${selectedText || 'text'}</span>`;
+      newCursorPos = start + 40;
+      break;
+    case 'text-color':
+      insertion = `<span style="color:blue">${selectedText || 'blue text'}</span>`;
+      newCursorPos = start + 20;
+      break;
+    default:
+      return;
+  }
+
+  const newText = text.substring(0, start) + insertion + text.substring(end);
+  setter({ ...form, [field]: newText });
+
+  setTimeout(() => {
+    textarea.focus();
+    textarea.setSelectionRange(newCursorPos, newCursorPos + (selectedText.length || insertion.length - (insertion.indexOf(selectedText) === -1 ? 0 : insertion.length - selectedText.length)));
+  }, 0);
+};
+
+interface MarkdownToolbarProps {
+  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  setter: React.Dispatch<React.SetStateAction<any>>;
+  form: any;
+  field: string;
+  isUploading: boolean;
+  handleFileUpload: (
+    e: React.ChangeEvent<HTMLInputElement>,
+    setter: React.Dispatch<React.SetStateAction<any>>,
+    form: any,
+    field: string,
+    refTextarea?: React.RefObject<HTMLTextAreaElement>
+  ) => Promise<void>;
+}
+
+const MarkdownToolbar = ({ 
+  textareaRef, 
+  setter, 
+  form, 
+  field,
+  isUploading,
+  handleFileUpload
+}: MarkdownToolbarProps) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <div className="flex flex-wrap gap-2 mb-0 p-2 bg-slate-50 rounded-t-xl border border-slate-200">
+      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'bold')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Bôi đậm">
+        <Bold className="w-4 h-4" />
+      </button>
+      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'italic')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="In nghiêng">
+        <Italic className="w-4 h-4" />
+      </button>
+      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'heading')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Tiêu đề">
+        <Heading3 className="w-4 h-4" />
+      </button>
+      <div className="w-px h-6 bg-slate-300 mx-1 self-center" />
+      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'list')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Danh sách">
+        <List className="w-4 h-4" />
+      </button>
+      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'table')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Bảng biểu">
+        <Table2 className="w-4 h-4" />
+      </button>
+      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'link')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Chèn liên kết">
+        <LinkIcon className="w-4 h-4" />
+      </button>
+      <div className="w-px h-6 bg-slate-300 mx-1 self-center" />
+      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'align-left')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Canh trái">
+        <AlignLeft className="w-4 h-4" />
+      </button>
+      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'align-center')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Canh giữa">
+        <AlignCenter className="w-4 h-4" />
+      </button>
+      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'align-right')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Canh phải">
+        <AlignRight className="w-4 h-4" />
+      </button>
+      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'align-justify')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Canh đều">
+        <div className="flex flex-col gap-0.5 items-center">
+          <div className="w-4 h-[1px] bg-current"></div>
+          <div className="w-4 h-[1px] bg-current"></div>
+          <div className="w-4 h-[1px] bg-current"></div>
+          <div className="w-4 h-[1px] bg-current"></div>
+        </div>
+      </button>
+      <div className="w-px h-6 bg-slate-300 mx-1 self-center" />
+      
+      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'font-size')} className="p-2 hover:bg-slate-200 rounded transition-colors flex items-center gap-1 group" title="Kích cỡ chữ">
+        <Type className="w-4 h-4" />
+        <span className="text-[10px] font-black group-hover:text-blue-600">SIZE</span>
+      </button>
+      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'font-family')} className="p-2 hover:bg-slate-200 rounded transition-colors flex items-center gap-1 group" title="Kiểu Font">
+        <Type className="w-4 h-4 opacity-50" />
+        <span className="text-[10px] font-black group-hover:text-blue-600">FONT</span>
+      </button>
+      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'text-color')} className="p-2 hover:bg-slate-200 rounded transition-colors flex items-center gap-1 group" title="Màu chữ">
+        <Palette className="w-4 h-4 text-blue-600" />
+        <span className="text-[10px] font-black group-hover:text-blue-600">COLOR</span>
+      </button>
+
+      <div className="w-px h-6 bg-slate-300 mx-1 self-center" />
+      
+      <input 
+        type="file" 
+        ref={fileInputRef}
+        className="hidden" 
+        accept="image/*,application/pdf"
+        onChange={(e) => handleFileUpload(e, setter, form, field, textareaRef)}
+      />
+      
+      <button 
+        type="button" 
+        disabled={isUploading}
+        onClick={() => fileInputRef.current?.click()} 
+        className="p-2 hover:bg-slate-200 rounded transition-colors relative flex items-center justify-center disabled:opacity-50" 
+        title="Tải ảnh/tài liệu lên"
+      >
+        {isUploading ? (
+          <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+        ) : (
+          <ImageIcon className="w-4 h-4" />
+        )}
+      </button>
+      
+      <button 
+        type="button" 
+        onClick={() => {
+          const url = prompt('Nhập link ảnh:');
+          if (url) {
+            const textarea = textareaRef.current;
+            if (!textarea) return;
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const text = form[field] || '';
+            const insertion = `\n![hình ảnh](${url})\n`;
+            const newText = text.substring(0, start) + insertion + text.substring(end);
+            setter({ ...form, [field]: newText });
+            
+            setTimeout(() => {
+              textarea.focus();
+              const newPos = start + insertion.length;
+              textarea.setSelectionRange(newPos, newPos);
+            }, 0);
+          }
+        }} 
+        className="p-2 hover:bg-slate-200 rounded transition-colors" 
+        title="Chèn link từ URL"
+      >
+        <LinkIcon className="w-4 h-3 opacity-60" />
+      </button>
+    </div>
+  );
+};
+
+const MarkdownContent = ({ content }: { content: string }) => {
+  if (!content) return null;
+  
+  const parts = content.split(/(:::(?:center|right|left|justify)[\s\S]*?:::)/g);
+  
+  const sharedComponents = {
+    img: ({ node, ...props }: any) => (
+      <img 
+        {...props} 
+        className="max-w-full h-auto rounded-xl shadow-sm my-2 mx-auto block" 
+        referrerPolicy="no-referrer"
+        loading="lazy"
+      />
+    ),
+    a: ({ node, ...props }: any) => (
+      <a 
+        {...props} 
+        target="_blank" 
+        rel="noopener noreferrer" 
+        className="text-blue-600 hover:underline font-medium"
+      />
+    ),
+    span: ({ node, ...props }: any) => {
+      const style = props.style || {};
+      return <span {...props} style={style} />;
+    }
+  };
+
+  const sharedPlugins = {
+    remarkPlugins: [remarkMath, remarkGfm, remarkBreaks],
+    rehypePlugins: [rehypeKatex, rehypeRaw]
+  };
+
+  return (
+    <div className="markdown-body prose prose-slate prose-sm max-w-none">
+      {parts.map((part, index) => {
+        if (part.startsWith(':::center')) {
+          const inner = part.replace(/^:::center\n?/, '').replace(/\n?:::$/, '').trim();
+          return (
+            <div key={index} className="flex flex-col items-center text-center w-full my-4">
+              <ReactMarkdown {...sharedPlugins} components={sharedComponents}>{inner}</ReactMarkdown>
+            </div>
+          );
+        }
+        if (part.startsWith(':::right')) {
+          const inner = part.replace(/^:::right\n?/, '').replace(/\n?:::$/, '').trim();
+          return (
+            <div key={index} className="flex flex-col items-end text-right w-full my-4">
+              <ReactMarkdown {...sharedPlugins} components={sharedComponents}>{inner}</ReactMarkdown>
+            </div>
+          );
+        }
+        if (part.startsWith(':::left')) {
+          const inner = part.replace(/^:::left\n?/, '').replace(/\n?:::$/, '').trim();
+          return (
+            <div key={index} className="flex flex-col items-start text-left w-full my-4">
+              <ReactMarkdown {...sharedPlugins} components={sharedComponents}>{inner}</ReactMarkdown>
+            </div>
+          );
+        }
+        if (part.startsWith(':::justify')) {
+          const inner = part.replace(/^:::justify\n?/, '').replace(/\n?:::$/, '').trim();
+          return (
+            <div key={index} className="flex flex-col w-full my-4 text-justify">
+              <ReactMarkdown {...sharedPlugins} components={sharedComponents}>{inner}</ReactMarkdown>
+            </div>
+          );
+        }
+        if (!part.trim()) return null;
+        return (
+          <ReactMarkdown key={index} {...sharedPlugins} components={sharedComponents}>{part}</ReactMarkdown>
+        );
+      })}
+    </div>
+  );
+};
+// --- Markdown Helpers End ---
+
 type TabType = 'news' | 'admissions' | 'home' | 'about' | 'contact' | 'admissions_page' | 'news_page' | 'features' | 'departments' | 'youth_union' | 'achievements' | 'schedule' | 'gallery' | 'archive';
 
 interface AdminDashboardProps {
@@ -118,94 +414,11 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
   const aboutCoreValuesTextareaRef = useRef<HTMLTextAreaElement>(null);
   const deptContentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const insertMarkdown = (
-    ref: React.RefObject<HTMLTextAreaElement>, 
-    setter: React.Dispatch<React.SetStateAction<any>>, 
-    form: any, 
-    field: string, 
-    type: string
-  ) => {
-    const textarea = ref.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = form[field];
-    const selectedText = text.substring(start, end);
-
-    let insertion = '';
-    let newCursorPos = start;
-
-    switch (type) {
-      case 'bold':
-        insertion = `**${selectedText || 'văn bản đậm'}**`;
-        newCursorPos = start + 2;
-        break;
-      case 'italic':
-        insertion = `*${selectedText || 'văn bản nghiêng'}*`;
-        newCursorPos = start + 1;
-        break;
-      case 'heading':
-        insertion = `\n### ${selectedText || 'Tiêu đề'}\n`;
-        newCursorPos = start + 5;
-        break;
-      case 'list':
-        insertion = `\n- ${selectedText || 'mục danh sách'}\n`;
-        newCursorPos = start + 3;
-        break;
-      case 'table':
-        insertion = `\n| Tiêu đề 1 | Tiêu đề 2 |\n|---|---|\n| Nội dung 1 | Nội dung 2 |\n`;
-        newCursorPos = start + 2;
-        break;
-      case 'link':
-        insertion = `[${selectedText || 'tên liên kết'}](https://example.com)`;
-        newCursorPos = start + 1;
-        break;
-      case 'align-left':
-        insertion = `:::left\n${selectedText || 'văn bản canh trái'}\n:::`;
-        newCursorPos = start + 8;
-        break;
-      case 'align-center':
-        insertion = `:::center\n${selectedText || 'văn bản canh giữa'}\n:::`;
-        newCursorPos = start + 10;
-        break;
-      case 'align-right':
-        insertion = `:::right\n${selectedText || 'văn bản canh phải'}\n:::`;
-        newCursorPos = start + 9;
-        break;
-      case 'align-justify':
-        insertion = `:::justify\n${selectedText || 'văn bản canh đều'}\n:::`;
-        newCursorPos = start + 11;
-        break;
-      case 'font-size':
-        insertion = `<span style="font-size: 20px">${selectedText || 'văn bản'}</span>`;
-        newCursorPos = start + 25;
-        break;
-      case 'font-family':
-        insertion = `<span style="font-family: 'Times New Roman'">${selectedText || 'văn bản'}</span>`;
-        newCursorPos = start + 40;
-        break;
-      case 'text-color':
-        insertion = `<span style="color:blue">${selectedText || 'văn bản màu xanh'}</span>`;
-        newCursorPos = start + 20;
-        break;
-      default:
-        return;
-    }
-
-    const newText = text.substring(0, start) + insertion + text.substring(end);
-    setter({ ...form, [field]: newText });
-
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(newCursorPos, newCursorPos + (selectedText.length || insertion.length - (insertion.indexOf(selectedText) === -1 ? 0 : insertion.length - selectedText.length)));
-    }, 0);
-  };
 
   const [isUploading, setIsUploading] = useState(false);
   const [adminSearch, setAdminSearch] = useState('');
 
-  const handleFileUpload = async (
+  const handleFileUpload = useCallback(async (
     e: React.ChangeEvent<HTMLInputElement>,
     setter: React.Dispatch<React.SetStateAction<any>>,
     form: any,
@@ -232,7 +445,13 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
 
     setIsUploading(true);
     try {
-      const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+      // More aggressive sanitization for Supabase storage
+      const sanitizedName = file.name
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Remove accents
+        .replace(/[^a-zA-Z0-9.-]/g, '_'); // Replace special chars with underscore
+      
+      const fileName = `${Date.now()}_${sanitizedName}`;
       
       const { data, error } = await supabase.storage
         .from('images')
@@ -241,7 +460,10 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
           upsert: false
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase upload error:', error);
+        throw error;
+      }
 
       const { data: { publicUrl } } = supabase.storage
         .from('images')
@@ -253,7 +475,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
         const textarea = refTextarea.current;
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
-        const text = form[field];
+        const text = form[field] || '';
         
         const insertion = isPdf ? `\n[Tải file: ${file.name}](${downloadURL})\n` : `\n![${file.name}](${downloadURL})\n`;
         const newText = text.substring(0, start) + insertion + text.substring(end);
@@ -269,220 +491,15 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
       }
     } catch (error) {
       console.error('Upload failed:', error);
-      alert('Tải file thất bại. Lỗi: ' + (error instanceof Error ? error.message : 'Không xác định'));
+      alert('Tải file thất bại. Có thể do lỗi kết nối hoặc phân quyền storage. Lỗi: ' + (error instanceof Error ? error.message : 'Không xác định'));
     } finally {
       setIsUploading(false);
+      // Important to reset value to allow re-uploading same file
       e.target.value = '';
     }
-  };
+  }, []);
 
-  const MarkdownToolbar = ({ 
-    textareaRef, 
-    setter, 
-    form, 
-    field 
-  }: { 
-    textareaRef: React.RefObject<HTMLTextAreaElement>, 
-    setter: React.Dispatch<React.SetStateAction<any>>, 
-    form: any, 
-    field: string 
-  }) => {
-    const fileInputRef = useRef<HTMLInputElement>(null);
 
-    return (
-      <div className="flex flex-wrap gap-2 mb-0 p-2 bg-slate-50 rounded-t-xl border border-slate-200">
-        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'bold')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Đậm">
-          <Bold className="w-4 h-4" />
-        </button>
-        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'italic')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Nghiêng">
-          <Italic className="w-4 h-4" />
-        </button>
-        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'heading')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Tiêu đề">
-          <Heading3 className="w-4 h-4" />
-        </button>
-        <div className="w-px h-6 bg-slate-300 mx-1 self-center" />
-        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'list')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Danh sách">
-          <List className="w-4 h-4" />
-        </button>
-        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'table')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Bảng biểu">
-          <Table2 className="w-4 h-4" />
-        </button>
-        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'link')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Chèn liên kết">
-          <LinkIcon className="w-4 h-4" />
-        </button>
-        <div className="w-px h-6 bg-slate-300 mx-1 self-center" />
-        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'align-left')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Canh trái">
-          <AlignLeft className="w-4 h-4" />
-        </button>
-        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'align-center')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Canh giữa">
-          <AlignCenter className="w-4 h-4" />
-        </button>
-        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'align-right')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Canh phải">
-          <AlignRight className="w-4 h-4" />
-        </button>
-        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'align-justify')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Canh đều">
-          <div className="flex flex-col gap-0.5 items-center">
-            <div className="w-4 h-[1px] bg-current"></div>
-            <div className="w-4 h-[1px] bg-current"></div>
-            <div className="w-4 h-[1px] bg-current"></div>
-            <div className="w-4 h-[1px] bg-current"></div>
-          </div>
-        </button>
-        <div className="w-px h-6 bg-slate-300 mx-1 self-center" />
-        
-        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'font-size')} className="p-2 hover:bg-slate-200 rounded transition-colors flex items-center gap-1 group" title="Kích cỡ chữ">
-          <Type className="w-4 h-4" />
-          <span className="text-[10px] font-black group-hover:text-blue-600">SIZE</span>
-        </button>
-        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'font-family')} className="p-2 hover:bg-slate-200 rounded transition-colors flex items-center gap-1 group" title="Kiểu Font">
-          <Type className="w-4 h-4 opacity-50" />
-          <span className="text-[10px] font-black group-hover:text-blue-600">FONT</span>
-        </button>
-        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'text-color')} className="p-2 hover:bg-slate-200 rounded transition-colors flex items-center gap-1 group" title="Màu chữ">
-          <Palette className="w-4 h-4 text-blue-600" />
-          <span className="text-[10px] font-black group-hover:text-blue-600">COLOR</span>
-        </button>
-
-        <div className="w-px h-6 bg-slate-300 mx-1 self-center" />
-        
-        <input 
-          type="file" 
-          ref={fileInputRef}
-          className="hidden" 
-          accept="image/*,application/pdf"
-          onChange={(e) => handleFileUpload(e, setter, form, field, textareaRef)}
-        />
-        
-        <button 
-          type="button" 
-          disabled={isUploading}
-          onClick={() => fileInputRef.current?.click()} 
-          className="p-2 hover:bg-slate-200 rounded transition-colors relative flex items-center justify-center" 
-          title="Tải ảnh lên"
-        >
-          {isUploading ? (
-            <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-          ) : (
-            <ImageIcon className="w-4 h-4" />
-          )}
-        </button>
-        
-        <button 
-          type="button" 
-          onClick={() => {
-            const url = prompt('Nhập link ảnh:');
-            if (url) {
-              const textarea = textareaRef.current;
-              if (!textarea) return;
-              const start = textarea.selectionStart;
-              const end = textarea.selectionEnd;
-              const text = form[field];
-              const insertion = `\n![hình ảnh](${url})\n`;
-              const newText = text.substring(0, start) + insertion + text.substring(end);
-              setter({ ...form, [field]: newText });
-              
-              setTimeout(() => {
-                textarea.focus();
-                const newPos = start + insertion.length;
-                textarea.setSelectionRange(newPos, newPos);
-              }, 0);
-            }
-          }} 
-          className="p-2 hover:bg-slate-200 rounded transition-colors" 
-          title="Chèn link từ URL"
-        >
-          <LinkIcon className="w-4 h-3 opacity-60" />
-        </button>
-      </div>
-    );
-  };
-
-  const MarkdownContent = ({ content }: { content: string }) => {
-    if (!content) return null;
-    
-    // Split content into parts based on alignment markers :::center ... :::
-    const parts = content.split(/(:::(?:center|right|left|justify)[\s\S]*?:::)/g);
-    
-    const sharedComponents = {
-      img: ({ node, ...props }: any) => (
-        <img 
-          {...props} 
-          className="max-w-full h-auto rounded-xl shadow-sm my-2 mx-auto block" 
-          referrerPolicy="no-referrer"
-          loading="lazy"
-        />
-      ),
-      a: ({ node, ...props }: any) => (
-        <a 
-          {...props} 
-          target="_blank" 
-          rel="noopener noreferrer" 
-          className="text-blue-600 hover:underline font-medium"
-        />
-      ),
-      span: ({ node, ...props }: any) => (
-        <span {...props} style={props.style} />
-      )
-    };
-
-    const sharedPlugins = {
-      remarkPlugins: [remarkMath, remarkGfm, remarkBreaks],
-      rehypePlugins: [rehypeKatex, rehypeRaw]
-    };
-
-    return (
-      <div className="markdown-body prose prose-slate prose-sm max-w-none prose-p:my-0.5 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-0.5 prose-li:my-0">
-        {parts.map((part, index) => {
-          if (part.startsWith(':::center')) {
-            const inner = part.replace(/^:::center\n?/, '').replace(/\n?:::$/, '').trim();
-            return (
-              <div key={index} className="flex flex-col items-center text-center w-full my-4">
-                <ReactMarkdown {...sharedPlugins} components={sharedComponents}>
-                  {inner}
-                </ReactMarkdown>
-              </div>
-            );
-          }
-          if (part.startsWith(':::right')) {
-            const inner = part.replace(/^:::right\n?/, '').replace(/\n?:::$/, '').trim();
-            return (
-              <div key={index} className="flex flex-col items-end text-right w-full my-4">
-                <ReactMarkdown {...sharedPlugins} components={sharedComponents}>
-                  {inner}
-                </ReactMarkdown>
-              </div>
-            );
-          }
-          if (part.startsWith(':::left')) {
-            const inner = part.replace(/^:::left\n?/, '').replace(/\n?:::$/, '').trim();
-            return (
-              <div key={index} className="flex flex-col items-start text-left w-full my-4">
-                <ReactMarkdown {...sharedPlugins} components={sharedComponents}>
-                  {inner}
-                </ReactMarkdown>
-              </div>
-            );
-          }
-          if (part.startsWith(':::justify')) {
-            const inner = part.replace(/^:::justify\n?/, '').replace(/\n?:::$/, '').trim();
-            return (
-              <div key={index} className="flex flex-col w-full my-4 text-justify">
-                <ReactMarkdown {...sharedPlugins} components={sharedComponents}>
-                  {inner}
-                </ReactMarkdown>
-              </div>
-            );
-          }
-          if (!part.trim()) return null;
-          return (
-            <ReactMarkdown key={index} {...sharedPlugins} components={sharedComponents}>
-              {part}
-            </ReactMarkdown>
-          );
-        })}
-      </div>
-    );
-  };
 
   const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
   const [isManagingDeptContent, setIsManagingDeptContent] = useState(false);
@@ -1427,6 +1444,8 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                   setter={setNewsForm} 
                   form={newsForm} 
                   field="content" 
+                  isUploading={isUploading}
+                  handleFileUpload={handleFileUpload}
                 />
                 <textarea 
                   ref={newsTextareaRef}
@@ -1567,6 +1586,8 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                   setter={setAdmissionForm} 
                   form={admissionForm} 
                   field="content" 
+                  isUploading={isUploading}
+                  handleFileUpload={handleFileUpload}
                 />
                 <textarea 
                   ref={admissionTextareaRef}
@@ -1828,6 +1849,8 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                     setter={setAboutForm} 
                     form={aboutForm} 
                     field="main_text" 
+                    isUploading={isUploading}
+                    handleFileUpload={handleFileUpload}
                   />
                   <textarea 
                     ref={aboutMainTextareaRef}
@@ -1843,6 +1866,8 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                     setter={setAboutForm} 
                     form={aboutForm} 
                     field="history" 
+                    isUploading={isUploading}
+                    handleFileUpload={handleFileUpload}
                   />
                   <textarea 
                     ref={aboutHistoryTextareaRef}
@@ -1858,6 +1883,8 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                     setter={setAboutForm} 
                     form={aboutForm} 
                     field="core_values" 
+                    isUploading={isUploading}
+                    handleFileUpload={handleFileUpload}
                   />
                   <textarea 
                     ref={aboutCoreValuesTextareaRef}
@@ -2191,6 +2218,8 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                           setter={setDeptForm} 
                           form={deptForm} 
                           field="content" 
+                          isUploading={isUploading}
+                          handleFileUpload={handleFileUpload}
                         />
                         <textarea 
                           ref={deptContentTextareaRef}
@@ -2376,6 +2405,8 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                             setter={setActivityForm} 
                             form={activityForm} 
                             field="content" 
+                            isUploading={isUploading}
+                            handleFileUpload={handleFileUpload}
                           />
                           <textarea 
                             ref={activityTextareaRef}
@@ -2657,6 +2688,8 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       setter={setYouthUnionForm} 
                       form={youthUnionForm} 
                       field="content" 
+                      isUploading={isUploading}
+                      handleFileUpload={handleFileUpload}
                     />
                     <textarea 
                       ref={youthUnionTextareaRef}
@@ -2796,6 +2829,8 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       setter={setAchievementForm} 
                       form={achievementForm} 
                       field="description" 
+                      isUploading={isUploading}
+                      handleFileUpload={handleFileUpload}
                     />
                     <textarea 
                       ref={achievementTextareaRef}
@@ -2926,6 +2961,8 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       setter={setScheduleForm} 
                       form={scheduleForm} 
                       field="content" 
+                      isUploading={isUploading}
+                      handleFileUpload={handleFileUpload}
                     />
 
                     <textarea 
