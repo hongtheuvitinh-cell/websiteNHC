@@ -511,7 +511,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
 
   // Form states
   const [newsForm, setNewsForm] = useState({ title: '', content: '', category: 'Tin tức', image_url: '', is_new: true });
-  const [admissionForm, setAdmissionForm] = useState({ title: '', summary: '', content: '', deadline: '', year: 2026, document_url: '' });
+  const [admissionForm, setAdmissionForm] = useState({ title: '', summary: '', content: '', deadline: '', year: 2026, document_url: '', is_new: true });
   const [featureForm, setFeatureForm] = useState({ title: '', description: '', icon: 'BookOpen', color: 'bg-blue-100 text-blue-700', order_num: 0 });
   const [deptForm, setDeptForm] = useState({ name: '', icon: 'BookOpen', description: '', content: '' });
   const [youthUnionForm, setYouthUnionForm] = useState({ title: '', summary: '', content: '', date: '', image_url: '' });
@@ -575,7 +575,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
       const { data } = await supabase.from('news').select('*').order('date', { ascending: false });
       if (data) setNews(data);
     } else if (activeTab === 'admissions') {
-      const { data } = await supabase.from('admissions').select('*').order('year', { ascending: false });
+      const { data } = await supabase.from('admissions').select('*').order('year', { ascending: false }).order('created_at', { ascending: false });
       if (data) setAdmissions(data);
     } else if (activeTab === 'home') {
       const { data } = await supabase.from('home_content').select('*').eq('id', 'main').maybeSingle();
@@ -751,7 +751,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
         const { error } = await supabase.from('admissions').insert([{ ...admissionForm }]);
         if (error) throw error;
       }
-      setAdmissionForm({ title: '', summary: '', content: '', deadline: '', year: 2026, document_url: '' });
+      setAdmissionForm({ title: '', summary: '', content: '', deadline: '', year: 2026, document_url: '', is_new: true });
       showSuccess();
       fetchData();
     } catch (error: any) {
@@ -767,7 +767,8 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
       content: item.content,
       deadline: item.deadline,
       year: item.year,
-      document_url: item.document_url || ''
+      document_url: item.document_url || '',
+      is_new: item.is_new ?? true
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -1467,6 +1468,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                 <table className="w-full text-left">
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
+                      <th className="p-4 font-bold text-slate-600">ID (để trỏ link)</th>
                       <th className="p-4 font-bold text-slate-600">Tiêu đề</th>
                       <th className="p-4 font-bold text-slate-600">Loại</th>
                       <th className="p-4 font-bold text-slate-600">Ngày đăng</th>
@@ -1479,6 +1481,9 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       item.category?.toLowerCase().includes(adminSearch.toLowerCase())
                     ).map(item => (
                       <tr key={item.id} className="border-b border-slate-100 last:border-none">
+                        <td className="p-4 text-[10px] font-mono text-slate-400 select-all">
+                          {item.id}
+                        </td>
                         <td className="p-4 text-sm font-medium">
                           <div className="flex items-center gap-2">
                             {item.title}
@@ -1542,8 +1547,20 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                     placeholder="Link tài liệu đính kèm (tùy chọn)" 
                     value={admissionForm.document_url}
                     onChange={e => setAdmissionForm({...admissionForm, document_url: e.target.value})}
-                    className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 md:col-span-3"
+                    className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 md:col-span-2"
                   />
+                  <div className="flex items-center justify-end">
+                    <button 
+                      type="button"
+                      onClick={() => setAdmissionForm({...admissionForm, is_new: !admissionForm.is_new})}
+                      className={`flex items-center gap-2 px-4 py-3 rounded-xl border transition-all h-full w-full justify-center ${admissionForm.is_new ? 'bg-orange-50 border-orange-200 text-orange-600' : 'bg-slate-50 border-slate-200 text-slate-400'}`}
+                    >
+                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${admissionForm.is_new ? 'border-orange-500 bg-orange-500' : 'border-slate-300'}`}>
+                        {admissionForm.is_new && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                      </div>
+                      <span className="text-sm font-bold uppercase tracking-wider">Tin tuyển sinh mới</span>
+                    </button>
+                  </div>
                 </div>
                 <MarkdownToolbar 
                   textareaRef={admissionTextareaRef} 
@@ -1567,7 +1584,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       type="button" 
                       onClick={() => {
                         setEditingAdmissionId(null);
-                        setAdmissionForm({ title: '', summary: '', content: '', deadline: '', year: 2026, document_url: '' });
+                        setAdmissionForm({ title: '', summary: '', content: '', deadline: '', year: 2026, document_url: '', is_new: true });
                       }}
                       className="px-6 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors"
                     >
@@ -1591,6 +1608,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                 <table className="w-full text-left">
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
+                      <th className="p-4 font-bold text-slate-600">ID (để trỏ link)</th>
                       <th className="p-4 font-bold text-slate-600">Tiêu đề</th>
                       <th className="p-4 font-bold text-slate-600">Năm học</th>
                       <th className="p-4 font-bold text-slate-600">Hạn chót</th>
@@ -1603,7 +1621,17 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       item.summary?.toLowerCase().includes(adminSearch.toLowerCase())
                     ).map(item => (
                       <tr key={item.id} className="border-b border-slate-100 last:border-none">
-                        <td className="p-4 text-sm font-medium">{item.title}</td>
+                        <td className="p-4 text-[10px] font-mono text-slate-400 select-all">
+                          {item.id}
+                        </td>
+                        <td className="p-4 text-sm font-medium">
+                          <div className="flex items-center gap-2">
+                            {item.title}
+                            {item.is_new && (
+                              <span className="px-1.5 py-0.5 bg-orange-600 text-white text-[8px] font-black rounded shadow-sm shrink-0 uppercase tracking-wider">NEW</span>
+                            )}
+                          </div>
+                        </td>
                         <td className="p-4 text-sm">{item.year}</td>
                         <td className="p-4 text-sm text-slate-500">{item.deadline}</td>
                         <td className="p-4 flex gap-2">
@@ -2687,7 +2715,10 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                     <div className="flex items-center gap-4">
                       {item.image_url && <img src={item.image_url} className="w-16 h-16 rounded-lg object-cover" />}
                       <div>
-                        <h4 className="font-bold text-slate-800">{item.title}</h4>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-slate-800">{item.title}</h4>
+                          <span className="text-[10px] font-mono text-slate-400 bg-slate-100 px-1 rounded select-all">ID: {item.id}</span>
+                        </div>
                         <div className="flex items-center gap-2 text-xs text-slate-400 mt-1">
                           <Calendar className="w-3 h-3" />
                           {item.date && !isNaN(new Date(item.date).getTime()) ? new Date(item.date).toLocaleString('vi-VN') : 'Chưa có ngày'}
@@ -2822,7 +2853,10 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                         <span className="text-xs font-bold text-slate-400">{item.year}</span>
                       </div>
                       <h4 className="font-bold text-slate-800">{item.title}</h4>
-                      <p className="text-sm text-slate-500 line-clamp-1">{item.description}</p>
+                      <div className="text-[10px] font-mono text-slate-400 mt-1">
+                        ID: <span className="bg-slate-100 px-1 rounded select-all">{item.id}</span>
+                      </div>
+                      <p className="text-sm text-slate-500 line-clamp-1 mt-1">{item.description}</p>
                     </div>
                     <div className="flex gap-2">
                       <button 
@@ -3260,6 +3294,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                 <table className="w-full text-left">
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
+                      <th className="p-4 font-bold text-slate-600">ID (để trỏ link)</th>
                       <th className="p-4 font-bold text-slate-600">Tiêu đề</th>
                       <th className="p-4 font-bold text-slate-600">Nhóm</th>
                       <th className="p-4 font-bold text-slate-600">Loại</th>
@@ -3274,6 +3309,9 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       item.type?.toLowerCase().includes(adminSearch.toLowerCase())
                     ).map(item => (
                       <tr key={item.id} className="border-b border-slate-100 last:border-none">
+                        <td className="p-4 text-[10px] font-mono text-slate-400 select-all">
+                          {item.id}
+                        </td>
                         <td className="p-4 text-sm font-medium">{item.title}</td>
                         <td className="p-4 text-sm">
                           <span className={`px-2 py-1 rounded-full text-xs font-bold ${item.category === 'Nội bộ' ? 'bg-emerald-100 text-emerald-700' : 'bg-purple-100 text-purple-700'}`}>
