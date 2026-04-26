@@ -2004,7 +2004,7 @@ export default function App() {
               </button>
             </div>
           )}
-          <button className="hover:text-blue-200 transition-colors">Sổ liên lạc điện tử</button>
+          <a href="https://truonghocviet.vn/" target="_blank" rel="noopener noreferrer" className="hover:text-white text-blue-400 font-bold transition-colors flex items-center gap-1">Sổ liên lạc điện tử <ExternalLink className="w-3 h-3" /></a>
         </div>
       </div>
 
