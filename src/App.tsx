@@ -482,6 +482,20 @@ export default function App() {
     );
   };
 
+  const [admissionRotationIndex, setAdmissionRotationIndex] = useState(0);
+
+  useEffect(() => {
+    const newAdmissions = admissions.filter(item => item.is_new);
+    if (newAdmissions.length > 1) {
+      const interval = setInterval(() => {
+        setAdmissionRotationIndex(prev => (prev + 1) >= newAdmissions.length ? 0 : prev + 1);
+      }, 4000); // Rotate every 4 seconds
+      return () => clearInterval(interval);
+    } else {
+      setAdmissionRotationIndex(0);
+    }
+  }, [admissions]);
+
   const renderContent = () => {
     if (selectedNews && activeMenu === 'Tin tức') {
       return (
@@ -1019,7 +1033,7 @@ export default function App() {
                 <Icons.ArrowLeft className="w-5 h-5" /> Quay lại danh sách tổ
               </button>
               <div className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm p-8 md:p-12">
-                <div className="flex flex-col lg:flex-row lg:items-center gap-6 mb-10">
+                <div className="flex flex-col md:flex-row md:items-center gap-6 mb-10">
                   <div className="flex items-center gap-6 shrink-0">
                     <div className="w-20 h-20 bg-blue-100 text-blue-800 rounded-2xl flex items-center justify-center shadow-sm">
                       <IconComponent className="w-10 h-10" />
@@ -1031,9 +1045,9 @@ export default function App() {
                   </div>
                   
                   {selectedDepartment.description && (
-                    <div className="flex-1 px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-3xl relative overflow-hidden group hover:border-blue-200 transition-colors">
-                      <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-600"></div>
-                      <p className="text-xs md:text-sm font-bold text-blue-900 italic leading-relaxed uppercase tracking-wide">
+                    <div className="px-6 py-4 bg-white border-2 border-blue-50 rounded-2xl relative shadow-sm max-w-xl">
+                      <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-1.5 h-10 bg-blue-600 rounded-full"></div>
+                      <p className="text-[11px] font-black text-blue-800 italic leading-relaxed uppercase tracking-widest opacity-80">
                         {selectedDepartment.description}
                       </p>
                     </div>
@@ -1654,29 +1668,96 @@ export default function App() {
               )}
             </div>
 
-            <section className="bg-slate-50 rounded-3xl p-8 border border-slate-200">
-              <div className="flex flex-col md:flex-row gap-8 items-center">
-                <div className="flex-1">
-                  <h3 className="text-2xl font-bold text-blue-900 mb-4 truncate">
-                    {admissions[0]?.title || 'Thông tin tuyển sinh'}
-                  </h3>
-                  <p className="text-slate-600 mb-6 line-clamp-3">
-                    {admissions[0]?.content || 'Đang tải thông tin tuyển sinh mới nhất...'}
-                  </p>
-                  <div className="flex gap-4">
-                    <button onClick={() => handleMenuClick('Tuyển sinh')} className="px-6 py-3 bg-blue-800 text-white font-bold rounded-xl hover:bg-blue-900 transition-colors shadow-lg shadow-blue-200">Xem chi tiết</button>
-                    <button className="px-6 py-3 border-2 border-blue-800 text-blue-800 font-bold rounded-xl hover:bg-blue-50 transition-colors">Tải hồ sơ mẫu</button>
-                  </div>
-                </div>
-                <div className="w-full md:w-64 aspect-square bg-white rounded-2xl shadow-inner border border-slate-200 flex flex-col items-center justify-center p-6 text-center">
-                  <Calendar className="w-12 h-12 text-blue-800 mb-2" />
-                  <span className="text-xs font-bold text-slate-400 uppercase">Hạn chót nộp hồ sơ</span>
-                  <span className="text-3xl font-black text-blue-900">
-                    {admissions[0]?.deadline ? new Date(admissions[0].deadline).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }) : '15/06'}
-                  </span>
-                  <span className="text-sm font-medium text-slate-500">Năm {admissions[0]?.year || 2026}</span>
-                </div>
+            <section className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tight flex items-center gap-3">
+                  <Icons.GraduationCap className="w-8 h-8 text-blue-800" /> Thông tin tuyển sinh
+                </h3>
+                <button onClick={() => handleMenuClick('Tuyển sinh')} className="text-sm font-bold text-blue-600 hover:underline flex items-center gap-1">
+                  Xem tất cả <Icons.ArrowRight className="w-4 h-4" />
+                </button>
               </div>
+              
+              <div className="relative min-h-[300px]">
+                <AnimatePresence mode="wait">
+                  {(() => {
+                    const newItems = admissions.filter(item => item.is_new);
+                    const currentItem = newItems.length > 0 ? newItems[admissionRotationIndex % newItems.length] : admissions[0];
+                    
+                    if (!currentItem) return (
+                      <div key="empty" className="bg-slate-50 rounded-3xl p-12 border border-dashed border-slate-200 text-center">
+                        <Icons.Info className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                        <p className="text-slate-500 font-medium italic">Hiện chưa có thông báo tuyển sinh mới.</p>
+                      </div>
+                    );
+
+                    return (
+                      <motion.div
+                        key={currentItem.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.5 }}
+                        className="bg-slate-50 rounded-3xl p-8 border border-slate-200 shadow-sm relative overflow-hidden"
+                      >
+                        <div className="absolute top-0 right-0">
+                          <div className="bg-orange-600 text-white text-[10px] font-black px-6 py-1.5 rotate-45 translate-x-4 -translate-y-1 shadow-md">NEW</div>
+                        </div>
+                        
+                        <div className="flex flex-col md:flex-row gap-8 items-center relative z-10">
+                          <div className="flex-1">
+                            <h3 className="text-2xl font-bold text-blue-900 mb-4 line-clamp-2">
+                              {currentItem.title}
+                            </h3>
+                            <p className="text-slate-600 mb-6 line-clamp-3 italic">
+                              {currentItem.summary || 'Đang cập nhật tóm tắt thông tin tuyển sinh...'}
+                            </p>
+                            <div className="flex gap-4">
+                              <button 
+                                onClick={() => {
+                                  setActiveMenu('Tuyển sinh');
+                                  setSelectedAdmission(currentItem);
+                                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                                }} 
+                                className="px-6 py-3 bg-blue-800 text-white font-bold rounded-xl hover:bg-blue-900 transition-colors shadow-lg shadow-blue-200"
+                              >
+                                Xem chi tiết
+                              </button>
+                              {currentItem.document_url && (
+                                <InternalLinkHandler 
+                                  url={currentItem.document_url} 
+                                  label="Tải tài liệu" 
+                                  className="px-6 py-3 border-2 border-blue-800 text-blue-800 font-bold rounded-xl hover:bg-blue-50 transition-colors flex items-center gap-2"
+                                />
+                              )}
+                            </div>
+                          </div>
+                          <div className="w-full md:w-64 aspect-square bg-white rounded-2xl shadow-inner border border-slate-200 flex flex-col items-center justify-center p-6 text-center shrink-0">
+                            <Icons.Calendar className="w-12 h-12 text-blue-800 mb-2" />
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Hạn chót nộp hồ sơ</span>
+                            <span className="text-3xl font-black text-red-600 my-1">
+                              {currentItem.deadline ? new Date(currentItem.deadline).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }) : '---'}
+                            </span>
+                            <span className="text-sm font-bold text-slate-500 bg-slate-100 px-3 py-0.5 rounded-full uppercase tracking-widest text-[10px]">Năm {currentItem.year}</span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })()}
+                </AnimatePresence>
+              </div>
+
+              {admissions.filter(item => item.is_new).length > 1 && (
+                <div className="flex justify-center gap-2 mt-2">
+                  {admissions.filter(item => item.is_new).map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setAdmissionRotationIndex(i)}
+                      className={`h-1.5 rounded-full transition-all duration-300 ${admissionRotationIndex === i ? 'bg-blue-600 w-8' : 'bg-slate-200 w-2 hover:bg-slate-300'}`}
+                    />
+                  ))}
+                </div>
+              )}
             </section>
           </div>
         );
