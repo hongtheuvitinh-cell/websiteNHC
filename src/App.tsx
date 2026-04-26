@@ -77,6 +77,16 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [archiveSearch, setArchiveSearch] = useState('');
   const [archiveTypeFilter, setArchiveTypeFilter] = useState('Tất cả');
+  const [showCopyToast, setShowCopyToast] = useState(false);
+
+  const copyToClipboard = (type: string, id: string) => {
+    const baseUrl = window.location.origin + window.location.pathname;
+    const shareUrl = `${baseUrl}?${type}=${id}`;
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      setShowCopyToast(true);
+      setTimeout(() => setShowCopyToast(false), 2000);
+    });
+  };
 
   const [departmentsList, setDepartmentsList] = useState<any[]>([]);
   const [youthUnion, setYouthUnion] = useState<any[]>([]);
@@ -244,6 +254,59 @@ export default function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    // Deep link handling
+    const handleDeepLink = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const newsId = params.get('news');
+      const admissionId = params.get('admission');
+      const youthId = params.get('youth');
+      const achId = params.get('achievement');
+      const scheduleId = params.get('schedule');
+
+      if (newsId) {
+        const { data } = await supabase.from('news').select('*').eq('id', newsId).maybeSingle();
+        if (data) {
+          setActiveMenu('Tin tức');
+          setSelectedNews(data);
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+      } else if (admissionId) {
+        const { data } = await supabase.from('admissions').select('*').eq('id', admissionId).maybeSingle();
+        if (data) {
+          setActiveMenu('Tuyển sinh');
+          setSelectedAdmission(data);
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+      } else if (youthId) {
+        const { data } = await supabase.from('youth_union').select('*').eq('id', youthId).maybeSingle();
+        if (data) {
+          setActiveMenu('Đoàn thanh niên');
+          setSelectedYouthUnion(data);
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+      } else if (achId) {
+        const { data } = await supabase.from('achievements').select('*').eq('id', achId).maybeSingle();
+        if (data) {
+          setActiveMenu('Thành tích');
+          setSelectedAchievement(data);
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+      } else if (scheduleId) {
+        const { data } = await supabase.from('schedules').select('*').eq('id', scheduleId).maybeSingle();
+        if (data) {
+          setActiveMenu('Lịch công tác');
+          setSelectedSchedule(data);
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+      }
+    };
+
+    if (!loading) {
+      handleDeepLink();
+    }
+  }, [loading]);
 
   useEffect(() => {
     // News
@@ -500,12 +563,20 @@ export default function App() {
     if (selectedNews && activeMenu === 'Tin tức') {
       return (
         <div className="animate-in slide-in-from-right duration-500 space-y-4">
-          <button 
-            onClick={() => setSelectedNews(null)}
-            className="group flex items-center gap-1.5 text-blue-600 text-xs font-black uppercase tracking-wider hover:text-blue-800 transition-all mb-4 bg-white px-3 py-1.5 rounded-full border border-blue-100 shadow-sm"
-          >
-            <Icons.ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" /> Quay lại
-          </button>
+          <div className="flex items-center justify-between mb-4">
+            <button 
+              onClick={() => setSelectedNews(null)}
+              className="group flex items-center gap-1.5 text-blue-600 text-xs font-black uppercase tracking-wider hover:text-blue-800 transition-all bg-white px-3 py-1.5 rounded-full border border-blue-100 shadow-sm"
+            >
+              <Icons.ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" /> Quay lại
+            </button>
+            <button 
+              onClick={() => copyToClipboard('news', selectedNews.id)}
+              className="flex items-center gap-1.5 text-orange-600 text-xs font-black uppercase tracking-wider hover:text-orange-800 transition-all bg-white px-3 py-1.5 rounded-full border border-orange-100 shadow-sm"
+            >
+              <Icons.ExternalLink className="w-3.5 h-3.5" /> Chia sẻ link
+            </button>
+          </div>
           <div className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm p-6 md:p-10">
             <div className="space-y-6">
               <div className="flex items-center gap-4">
@@ -559,12 +630,20 @@ export default function App() {
     if (selectedAdmission && activeMenu === 'Tuyển sinh') {
       return (
         <div className="animate-in slide-in-from-right duration-500 space-y-8">
-          <button 
-            onClick={() => setSelectedAdmission(null)}
-            className="flex items-center gap-2 text-blue-600 font-bold hover:text-blue-800 transition-colors"
-          >
-            <Icons.ArrowLeft className="w-5 h-5" /> Quay lại danh sách
-          </button>
+          <div className="flex items-center justify-between">
+            <button 
+              onClick={() => setSelectedAdmission(null)}
+              className="flex items-center gap-2 text-blue-600 font-bold hover:text-blue-800 transition-colors"
+            >
+              <Icons.ArrowLeft className="w-5 h-5" /> Quay lại danh sách
+            </button>
+            <button 
+              onClick={() => copyToClipboard('admission', selectedAdmission.id)}
+              className="flex items-center gap-1.5 text-orange-600 text-xs font-black uppercase tracking-wider hover:text-orange-800 transition-all bg-white px-3 py-1.5 rounded-full border border-orange-100 shadow-sm"
+            >
+              <Icons.ExternalLink className="w-3.5 h-3.5" /> Chia sẻ link
+            </button>
+          </div>
           <div className="bg-white border border-slate-200 rounded-3xl p-8 md:p-12 shadow-sm space-y-8">
             <div className="flex flex-col md:flex-row justify-between items-start gap-4">
               <div className="space-y-2">
@@ -1345,12 +1424,20 @@ export default function App() {
         if (selectedYouthUnion) {
           return (
             <div className="animate-in slide-in-from-right duration-500 space-y-8">
-              <button 
-                onClick={() => setSelectedYouthUnion(null)}
-                className="flex items-center gap-2 text-blue-600 font-bold hover:text-blue-800 transition-colors"
-              >
-                <Icons.ArrowLeft className="w-5 h-5" /> Quay lại danh sách
-              </button>
+              <div className="flex items-center justify-between">
+                <button 
+                  onClick={() => setSelectedYouthUnion(null)}
+                  className="flex items-center gap-2 text-blue-600 font-bold hover:text-blue-800 transition-colors"
+                >
+                  <Icons.ArrowLeft className="w-5 h-5" /> Quay lại danh sách
+                </button>
+                <button 
+                  onClick={() => copyToClipboard('youth', selectedYouthUnion.id)}
+                  className="flex items-center gap-1.5 text-orange-600 text-xs font-black uppercase tracking-wider hover:text-orange-800 transition-all bg-white px-3 py-1.5 rounded-full border border-orange-100 shadow-sm"
+                >
+                  <Icons.ExternalLink className="w-3.5 h-3.5" /> Chia sẻ link
+                </button>
+              </div>
 
               <div className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm p-8 md:p-12">
                 <div className="flex items-center gap-2 text-slate-400 text-sm mb-4">
@@ -1417,12 +1504,20 @@ export default function App() {
         if (selectedAchievement) {
           return (
             <div className="animate-in slide-in-from-right duration-500 space-y-8">
-              <button 
-                onClick={() => setSelectedAchievement(null)}
-                className="flex items-center gap-2 text-blue-600 font-bold hover:text-blue-800 transition-colors"
-              >
-                <Icons.ArrowLeft className="w-5 h-5" /> Quay lại danh sách
-              </button>
+              <div className="flex items-center justify-between">
+                <button 
+                  onClick={() => setSelectedAchievement(null)}
+                  className="flex items-center gap-2 text-blue-600 font-bold hover:text-blue-800 transition-colors"
+                >
+                  <Icons.ArrowLeft className="w-5 h-5" /> Quay lại danh sách
+                </button>
+                <button 
+                  onClick={() => copyToClipboard('achievement', selectedAchievement.id)}
+                  className="flex items-center gap-1.5 text-orange-600 text-xs font-black uppercase tracking-wider hover:text-orange-800 transition-all bg-white px-3 py-1.5 rounded-full border border-orange-100 shadow-sm"
+                >
+                  <Icons.ExternalLink className="w-3.5 h-3.5" /> Chia sẻ link
+                </button>
+              </div>
 
               <div className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm p-8 md:p-12">
                 <div className="flex flex-wrap items-center gap-3 mb-6">
@@ -1500,12 +1595,20 @@ export default function App() {
         if (selectedSchedule && activeMenu === 'Lịch công tác') {
           return (
             <div className="space-y-8 animate-in slide-in-from-right duration-500">
-              <button 
-                onClick={() => setSelectedSchedule(null)}
-                className="flex items-center gap-2 text-blue-600 font-bold hover:gap-3 transition-all mb-6"
-              >
-                <Icons.ArrowLeft className="w-5 h-5" /> QUAY LẠI DANH SÁCH
-              </button>
+              <div className="flex items-center justify-between mb-2">
+                <button 
+                  onClick={() => setSelectedSchedule(null)}
+                  className="flex items-center gap-2 text-blue-600 font-bold hover:gap-3 transition-all"
+                >
+                  <Icons.ArrowLeft className="w-5 h-5" /> QUAY LẠI DANH SÁCH
+                </button>
+                <button 
+                  onClick={() => copyToClipboard('schedule', selectedSchedule.id)}
+                  className="flex items-center gap-1.5 text-orange-600 text-xs font-black uppercase tracking-wider hover:text-orange-800 transition-all bg-white px-3 py-1.5 rounded-full border border-orange-100 shadow-sm"
+                >
+                  <Icons.ExternalLink className="w-3.5 h-3.5" /> Chia sẻ link
+                </button>
+              </div>
 
               <div className="bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden">
                 <div className="p-8 md:p-12">
@@ -2173,6 +2276,20 @@ export default function App() {
           </motion.div>
         </div>
       )}
+
+      <AnimatePresence>
+        {showCopyToast && (
+          <motion.div 
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-2xl z-[10000] flex items-center gap-3 font-bold"
+          >
+            <Icons.CheckCircle2 className="w-5 h-5 text-green-400" />
+            Đã sao chép liên kết thành công!
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
