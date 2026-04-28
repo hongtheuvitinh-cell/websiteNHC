@@ -24,6 +24,7 @@ import {
   Activity,
   BookOpen,
   ChevronRight,
+  Newspaper,
   ArrowLeft,
   Award,
   Calendar,
@@ -55,7 +56,9 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
-  Palette
+  Palette,
+  Eye,
+  ChevronDown
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
@@ -65,6 +68,7 @@ import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import 'katex/dist/katex.min.css';
 import { Loader2 } from 'lucide-react';
+import { motion } from 'motion/react';
 
 // --- Markdown Helpers Start ---
 const insertMarkdown = (
@@ -72,7 +76,8 @@ const insertMarkdown = (
   setter: React.Dispatch<React.SetStateAction<any>>, 
   form: any, 
   field: string, 
-  type: string
+  type: string,
+  value?: string
 ) => {
   const textarea = ref.current;
   if (!textarea) return;
@@ -103,12 +108,32 @@ const insertMarkdown = (
       newCursorPos = start + 3;
       break;
     case 'table':
-      insertion = `\n| Title 1 | Title 2 |\n|---|---|\n| Content 1 | Content 2 |\n`;
-      newCursorPos = start + 2;
+      const [rows, cols] = (value || '2,2').split(',').map(Number);
+      let header = '|';
+      let separator = '|';
+      for (let i = 0; i < cols; i++) {
+        header += ` Tiêu đề ${i + 1} |`;
+        separator += '---|';
+      }
+      insertion = `\n${header}\n${separator}\n`;
+      for (let r = 0; r < rows; r++) {
+        insertion += '|';
+        for (let c = 0; c < cols; c++) {
+          insertion += ' ... |';
+        }
+        insertion += '\n';
+      }
+      newCursorPos = start + insertion.length;
       break;
     case 'link':
       insertion = `[${selectedText || 'link name'}](https://example.com)`;
       newCursorPos = start + 1;
+      break;
+    case 'formula':
+      const formulaPattern = value || 'x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}';
+      const formulaPrefix = '\n$$ ';
+      insertion = `${formulaPrefix}${selectedText || formulaPattern} $$\n`;
+      newCursorPos = start + formulaPrefix.length;
       break;
     case 'align-left':
       insertion = `:::left\n${selectedText || 'left aligned text'}\n:::`;
@@ -126,18 +151,27 @@ const insertMarkdown = (
       insertion = `:::justify\n${selectedText || 'justified text'}\n:::`;
       newCursorPos = start + 11;
       break;
-    case 'font-size':
-      insertion = `<span style="font-size: 20px">${selectedText || 'text'}</span>`;
-      newCursorPos = start + 25;
+    case 'font-size': {
+      const size = value || '16px';
+      const prefix = `<span style="font-size: ${size}">`;
+      insertion = `${prefix}${selectedText || 'văn bản'}</span>`;
+      newCursorPos = start + prefix.length;
       break;
-    case 'font-family':
-      insertion = `<span style="font-family: 'Times New Roman'">${selectedText || 'text'}</span>`;
-      newCursorPos = start + 40;
+    }
+    case 'font-family': {
+      const font = value || "'Inter', sans-serif";
+      const prefix = `<span style="font-family: ${font}">`;
+      insertion = `${prefix}${selectedText || 'văn bản'}</span>`;
+      newCursorPos = start + prefix.length;
       break;
-    case 'text-color':
-      insertion = `<span style="color:blue">${selectedText || 'blue text'}</span>`;
-      newCursorPos = start + 20;
+    }
+    case 'text-color': {
+      const color = value || 'blue';
+      const prefix = `<span style="color: ${color}">`;
+      insertion = `${prefix}${selectedText || 'văn bản'}</span>`;
+      newCursorPos = start + prefix.length;
       break;
+    }
     default:
       return;
   }
@@ -147,7 +181,17 @@ const insertMarkdown = (
 
   setTimeout(() => {
     textarea.focus();
-    textarea.setSelectionRange(newCursorPos, newCursorPos + (selectedText.length || insertion.length - (insertion.indexOf(selectedText) === -1 ? 0 : insertion.length - selectedText.length)));
+    if (type === 'table' || type === 'heading') {
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    } else {
+      const contentText = selectedText || 
+                          (type === 'bold' ? 'bold text' : 
+                          type === 'italic' ? 'italic text' :
+                          (type === 'font-size' || type === 'font-family' || type === 'text-color') ? 'văn bản' :
+                          type === 'formula' ? (value || 'x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}') :
+                          'text');
+      textarea.setSelectionRange(newCursorPos, newCursorPos + contentText.length);
+    }
   }, 0);
 };
 
@@ -164,6 +208,7 @@ interface MarkdownToolbarProps {
     field: string,
     refTextarea?: React.RefObject<HTMLTextAreaElement>
   ) => Promise<void>;
+  onShowInternalLinkPicker?: () => void;
 }
 
 const MarkdownToolbar = ({ 
@@ -172,114 +217,342 @@ const MarkdownToolbar = ({
   form, 
   field,
   isUploading,
-  handleFileUpload
+  handleFileUpload,
+  onShowInternalLinkPicker
 }: MarkdownToolbarProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeMenu, setActiveMenu] = useState<'size' | 'font' | 'color' | 'table' | 'formula' | null>(null);
+  const [tableGrid, setTableGrid] = useState({ rows: 2, cols: 2 });
+
+  const fontSizes = [
+    { label: 'XS (12PX)', value: '12px' },
+    { label: 'SM (14PX)', value: '14px' },
+    { label: 'REG (16PX)', value: '16px' },
+    { label: 'LG (20PX)', value: '20px' },
+    { label: 'XL (24PX)', value: '24px' },
+    { label: '2XL (32PX)', value: '32px' },
+    { label: '3XL (48PX)', value: '48px' },
+  ];
+
+  const fontFamilies = [
+    { label: 'Sans (Inter)', value: "'Inter', sans-serif" },
+    { label: 'Serif (Times)', value: "'Times New Roman', serif" },
+    { label: 'Mono (Space)', value: "'Space Mono', monospace" },
+    { label: 'Display (Outfit)', value: "'Outfit', sans-serif" },
+  ];
+
+  const colors = [
+    { label: 'Đen', value: '#000000', class: 'bg-black' },
+    { label: 'Xám', value: '#64748b', class: 'bg-slate-500' },
+    { label: 'Đỏ', value: '#ef4444', class: 'bg-red-500' },
+    { label: 'Cam', value: '#f97316', class: 'bg-orange-500' },
+    { label: 'Vàng', value: '#eab308', class: 'bg-yellow-500' },
+    { label: 'Xanh lá', value: '#22c55e', class: 'bg-green-500' },
+    { label: 'Xanh dương', value: '#3b82f6', class: 'bg-blue-500' },
+    { label: 'Tím', value: '#a855f7', class: 'bg-purple-500' },
+    { label: 'Hồng', value: '#ec4899', class: 'bg-pink-500' },
+  ];
+
+  const formulas = [
+    { label: 'Phân số', value: '\\frac{a}{b}', display: 'a/b' },
+    { label: 'Căn bậc 2', value: '\\sqrt{x}', display: '√x' },
+    { label: 'Căn bậc n', value: '\\sqrt[n]{x}', display: 'ⁿ√x' },
+    { label: 'Mũ', value: 'x^{n}', display: 'xⁿ' },
+    { label: 'Số hạ', value: 'x_{i}', display: 'xᵢ' },
+    { label: 'Tổng (Σ)', value: '\\sum_{i=1}^{n} x_i', display: 'Σ' },
+    { label: 'Tích phân (∫)', value: '\\int_{a}^{b} f(x) dx', display: '∫' },
+    { label: 'Giới hạn (lim)', value: '\\lim_{x \\to \\infty} f(x)', display: 'lim' },
+    { label: 'Vector', value: '\\vec{v}', display: '→v' },
+    { label: 'Góc', value: '\\hat{A}', display: '∠A' },
+    { label: 'Tam giác', value: '\\Delta ABC', display: 'Δ' },
+    { label: 'Hệ phương trình', value: '\\begin{cases} x+y=1 \\\\ x-y=0 \\end{cases}', display: '{' },
+  ];
 
   return (
-    <div className="flex flex-wrap gap-2 mb-0 p-2 bg-slate-50 rounded-t-xl border border-slate-200">
-      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'bold')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Bôi đậm">
-        <Bold className="w-4 h-4" />
-      </button>
-      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'italic')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="In nghiêng">
-        <Italic className="w-4 h-4" />
-      </button>
-      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'heading')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Tiêu đề">
-        <Heading3 className="w-4 h-4" />
-      </button>
-      <div className="w-px h-6 bg-slate-300 mx-1 self-center" />
-      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'list')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Danh sách">
-        <List className="w-4 h-4" />
-      </button>
-      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'table')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Bảng biểu">
-        <Table2 className="w-4 h-4" />
-      </button>
-      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'link')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Chèn liên kết">
-        <LinkIcon className="w-4 h-4" />
-      </button>
-      <div className="w-px h-6 bg-slate-300 mx-1 self-center" />
-      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'align-left')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Canh trái">
-        <AlignLeft className="w-4 h-4" />
-      </button>
-      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'align-center')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Canh giữa">
-        <AlignCenter className="w-4 h-4" />
-      </button>
-      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'align-right')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Canh phải">
-        <AlignRight className="w-4 h-4" />
-      </button>
-      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'align-justify')} className="p-2 hover:bg-slate-200 rounded transition-colors" title="Canh đều">
-        <div className="flex flex-col gap-0.5 items-center">
-          <div className="w-4 h-[1px] bg-current"></div>
-          <div className="w-4 h-[1px] bg-current"></div>
-          <div className="w-4 h-[1px] bg-current"></div>
-          <div className="w-4 h-[1px] bg-current"></div>
-        </div>
-      </button>
-      <div className="w-px h-6 bg-slate-300 mx-1 self-center" />
-      
-      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'font-size')} className="p-2 hover:bg-slate-200 rounded transition-colors flex items-center gap-1 group" title="Kích cỡ chữ">
-        <Type className="w-4 h-4" />
-        <span className="text-[10px] font-black group-hover:text-blue-600">SIZE</span>
-      </button>
-      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'font-family')} className="p-2 hover:bg-slate-200 rounded transition-colors flex items-center gap-1 group" title="Kiểu Font">
-        <Type className="w-4 h-4 opacity-50" />
-        <span className="text-[10px] font-black group-hover:text-blue-600">FONT</span>
-      </button>
-      <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'text-color')} className="p-2 hover:bg-slate-200 rounded transition-colors flex items-center gap-1 group" title="Màu chữ">
-        <Palette className="w-4 h-4 text-blue-600" />
-        <span className="text-[10px] font-black group-hover:text-blue-600">COLOR</span>
-      </button>
+    <div className="flex flex-wrap gap-1 mb-0 p-1.5 bg-white rounded-t-xl border border-slate-200 border-b-0">
+      <div className="flex items-center gap-1 pr-2 border-r border-slate-100">
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'bold')} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors" title="Bôi đậm">
+          <Bold className="w-4 h-4" />
+        </button>
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'italic')} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors" title="In nghiêng">
+          <Italic className="w-4 h-4" />
+        </button>
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'heading')} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors" title="Tiêu đề">
+          <Heading3 className="w-4 h-4" />
+        </button>
+      </div>
 
-      <div className="w-px h-6 bg-slate-300 mx-1 self-center" />
-      
-      <input 
-        type="file" 
-        ref={fileInputRef}
-        className="hidden" 
-        accept="image/*,application/pdf"
-        onChange={(e) => handleFileUpload(e, setter, form, field, textareaRef)}
-      />
-      
-      <button 
-        type="button" 
-        disabled={isUploading}
-        onClick={() => fileInputRef.current?.click()} 
-        className="p-2 hover:bg-slate-200 rounded transition-colors relative flex items-center justify-center disabled:opacity-50" 
-        title="Tải ảnh/tài liệu lên"
-      >
-        {isUploading ? (
-          <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-        ) : (
-          <ImageIcon className="w-4 h-4" />
-        )}
-      </button>
-      
-      <button 
-        type="button" 
-        onClick={() => {
-          const url = prompt('Nhập link ảnh:');
-          if (url) {
-            const textarea = textareaRef.current;
-            if (!textarea) return;
-            const start = textarea.selectionStart;
-            const end = textarea.selectionEnd;
-            const text = form[field] || '';
-            const insertion = `\n![hình ảnh](${url})\n`;
-            const newText = text.substring(0, start) + insertion + text.substring(end);
-            setter({ ...form, [field]: newText });
-            
-            setTimeout(() => {
-              textarea.focus();
-              const newPos = start + insertion.length;
-              textarea.setSelectionRange(newPos, newPos);
-            }, 0);
-          }
-        }} 
-        className="p-2 hover:bg-slate-200 rounded transition-colors" 
-        title="Chèn link từ URL"
-      >
-        <LinkIcon className="w-4 h-3 opacity-60" />
-      </button>
+      <div className="flex items-center gap-1 px-2 border-r border-slate-100">
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'list')} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors" title="Danh sách">
+          <List className="w-4 h-4" />
+        </button>
+        
+        {/* Table Dropdown */}
+        <div className="relative">
+          <button 
+            type="button" 
+            onClick={() => setActiveMenu(activeMenu === 'table' ? null : 'table')}
+            className={`p-2 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-1.5 ${activeMenu === 'table' ? 'bg-blue-50 text-blue-600' : 'text-slate-600'}`}
+            title="Bảng biểu"
+          >
+            <Table2 className="w-4 h-4" />
+            <ChevronDown className="w-3 h-3" />
+          </button>
+          
+          {activeMenu === 'table' && (
+            <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-slate-200 rounded-xl shadow-xl z-[100] p-4 animate-in fade-in zoom-in-95 duration-200">
+              <p className="text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest">Kích thước bảng</p>
+              
+              <div className="flex flex-col gap-4">
+                {/* Visual Grid Selector */}
+                <div className="grid grid-cols-10 gap-1 mb-2">
+                  {[...Array(50)].map((_, i) => {
+                    const r = Math.floor(i / 10) + 1;
+                    const c = (i % 10) + 1;
+                    const isActive = r <= tableGrid.rows && c <= tableGrid.cols;
+                    return (
+                      <div 
+                        key={i}
+                        onMouseEnter={() => setTableGrid({ rows: r, cols: c })}
+                        onClick={() => {
+                          insertMarkdown(textareaRef, setter, form, field, 'table', `${r},${c}`);
+                          setActiveMenu(null);
+                        }}
+                        className={`w-4 h-4 border rounded-sm cursor-pointer transition-colors ${isActive ? 'bg-blue-500 border-blue-600' : 'bg-slate-50 border-slate-200 hover:bg-blue-100'}`}
+                      />
+                    );
+                  })}
+                </div>
+                
+                <div className="flex items-center justify-between gap-4 border-t border-slate-50 pt-3">
+                  <span className="text-[11px] font-black text-slate-600 uppercase tracking-tight">{tableGrid.rows} dòng x {tableGrid.cols} cột</span>
+                  <div className="flex gap-2">
+                    <input 
+                      type="number" 
+                      min="1" 
+                      max="50" 
+                      value={tableGrid.rows} 
+                      onChange={e => setTableGrid({...tableGrid, rows: Math.min(50, Math.max(1, parseInt(e.target.value) || 1))})}
+                      className="w-10 p-1 border rounded text-[10px] font-bold text-center"
+                    />
+                    <input 
+                      type="number" 
+                      min="1" 
+                      max="10" 
+                      value={tableGrid.cols} 
+                      onChange={e => setTableGrid({...tableGrid, cols: Math.min(10, Math.max(1, parseInt(e.target.value) || 1))})}
+                      className="w-10 p-1 border rounded text-[10px] font-bold text-center"
+                    />
+                  </div>
+                </div>
+
+                <button 
+                  type="button"
+                  onClick={() => {
+                    insertMarkdown(textareaRef, setter, form, field, 'table', `${tableGrid.rows},${tableGrid.cols}`);
+                    setActiveMenu(null);
+                  }}
+                  className="w-full py-2 bg-blue-600 text-white rounded-lg text-xs font-black uppercase tracking-wider hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200"
+                >
+                  Chèn ({tableGrid.rows}x{tableGrid.cols})
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'link')} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors" title="Chèn liên kết">
+          <LinkIcon className="w-4 h-4" />
+        </button>
+
+        {/* Formula Dropdown */}
+        <div className="relative">
+          <button 
+            type="button" 
+            onClick={() => setActiveMenu(activeMenu === 'formula' ? null : 'formula')}
+            className={`p-2 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-1.5 ${activeMenu === 'formula' ? 'bg-orange-50 text-orange-600' : 'text-slate-600'}`}
+            title="Công thức Toán học (LaTeX)"
+          >
+            <Calculator className="w-4 h-4" />
+            <ChevronDown className="w-3 h-3" />
+          </button>
+          
+          {activeMenu === 'formula' && (
+            <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-slate-200 rounded-xl shadow-xl z-[100] p-3 grid grid-cols-3 gap-1.5 animate-in fade-in zoom-in-95 duration-200">
+              <p className="col-span-3 text-[10px] font-black uppercase text-slate-400 p-1tracking-widest border-b border-slate-50 mb-1 flex items-center justify-between">
+                <span>Công thức LaTeX</span>
+                <span className="text-[8px] bg-orange-100 text-orange-600 px-1 rounded">PRO</span>
+              </p>
+              {formulas.map((f) => (
+                <button
+                  key={f.label}
+                  type="button"
+                  onClick={() => {
+                    insertMarkdown(textareaRef, setter, form, field, 'formula', f.value);
+                    setActiveMenu(null);
+                  }}
+                  className="flex flex-col items-center justify-center p-2.5 rounded-xl hover:bg-orange-50 border border-transparent hover:border-orange-100 transition-all gap-1.5 group h-16"
+                >
+                  <span className="text-[12px] font-black font-mono text-orange-600 group-hover:scale-110 transition-transform">{f.display}</span>
+                  <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter truncate w-full text-center group-hover:text-slate-600">{f.label}</span>
+                </button>
+              ))}
+              <div className="col-span-3 mt-2 p-2 bg-slate-50 rounded-lg border border-slate-100">
+                 <p className="text-[8px] text-slate-500 font-medium leading-tight">
+                   Mẹo: Bạn có thể nhập công thức LaTeX trực tiếp giữa hai cặp dấu $$ (vd: $$ x^2 $$) để hiển thị công thức toán.
+                 </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-1 px-2 border-r border-slate-100">
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'align-left')} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors" title="Canh trái">
+          <AlignLeft className="w-4 h-4" />
+        </button>
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'align-center')} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors" title="Canh giữa">
+          <AlignCenter className="w-4 h-4" />
+        </button>
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'align-right')} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors" title="Canh phải">
+          <AlignRight className="w-4 h-4" />
+        </button>
+        <button type="button" onClick={() => insertMarkdown(textareaRef, setter, form, field, 'align-justify')} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors" title="Canh đều">
+          <div className="flex flex-col gap-0.5 items-center">
+            <div className="w-4 h-[1.5px] bg-current"></div>
+            <div className="w-4 h-[1.5px] bg-current"></div>
+            <div className="w-4 h-[1.5px] bg-current"></div>
+            <div className="w-3 h-[1.5px] bg-current mr-auto"></div>
+          </div>
+        </button>
+      </div>
+
+      <div className="flex items-center gap-1 pl-2">
+        {/* Size Dropdown */}
+        <div className="relative">
+          <button 
+            type="button" 
+            onClick={() => setActiveMenu(activeMenu === 'size' ? null : 'size')}
+            className={`p-2 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-1.5 ${activeMenu === 'size' ? 'bg-blue-50 text-blue-600' : 'text-slate-600'}`}
+          >
+            <Type className="w-4 h-4" />
+            <span className="text-[10px] font-black uppercase tracking-wider">Size</span>
+            <ChevronDown className={`w-3 h-3 transition-transform ${activeMenu === 'size' ? 'rotate-180' : ''}`} />
+          </button>
+          
+          {activeMenu === 'size' && (
+            <div className="absolute top-full left-0 mt-1 w-32 bg-white border border-slate-200 rounded-xl shadow-xl z-[100] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              {fontSizes.map((s) => (
+                <button
+                  key={s.value}
+                  type="button"
+                  onClick={() => {
+                    insertMarkdown(textareaRef, setter, form, field, 'font-size', s.value);
+                    setActiveMenu(null);
+                  }}
+                  className="w-full text-left px-4 py-2 text-[11px] font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition-colors flex items-center justify-between"
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Font Dropdown */}
+        <div className="relative">
+          <button 
+            type="button" 
+            onClick={() => setActiveMenu(activeMenu === 'font' ? null : 'font')}
+            className={`p-2 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-1.5 ${activeMenu === 'font' ? 'bg-blue-50 text-blue-600' : 'text-slate-600'}`}
+          >
+            <Type className="w-4 h-4 opacity-50" />
+            <span className="text-[10px] font-black uppercase tracking-wider">Font</span>
+            <ChevronDown className={`w-3 h-3 transition-transform ${activeMenu === 'font' ? 'rotate-180' : ''}`} />
+          </button>
+          
+          {activeMenu === 'font' && (
+            <div className="absolute top-full left-0 mt-1 w-40 bg-white border border-slate-200 rounded-xl shadow-xl z-[100] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              {fontFamilies.map((f) => (
+                <button
+                  key={f.value}
+                  type="button"
+                  style={{ fontFamily: f.value }}
+                  onClick={() => {
+                    insertMarkdown(textareaRef, setter, form, field, 'font-family', f.value);
+                    setActiveMenu(null);
+                  }}
+                  className="w-full text-left px-4 py-2 text-xs font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Color Dropdown */}
+        <div className="relative">
+          <button 
+            type="button" 
+            onClick={() => setActiveMenu(activeMenu === 'color' ? null : 'color')}
+            className={`p-2 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-1.5 ${activeMenu === 'color' ? 'bg-blue-50 text-blue-600' : 'text-slate-600'}`}
+          >
+            <Palette className="w-4 h-4 text-blue-600" />
+            <span className="text-[10px] font-black uppercase tracking-wider">Color</span>
+            <ChevronDown className={`w-3 h-3 transition-transform ${activeMenu === 'color' ? 'rotate-180' : ''}`} />
+          </button>
+          
+          {activeMenu === 'color' && (
+            <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-[100] p-3 grid grid-cols-3 gap-2 animate-in fade-in zoom-in-95 duration-200">
+              {colors.map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  onClick={() => {
+                    insertMarkdown(textareaRef, setter, form, field, 'text-color', c.value);
+                    setActiveMenu(null);
+                  }}
+                  className="group flex flex-col items-center gap-1"
+                >
+                  <div className={`w-10 h-10 rounded-lg ${c.class} shadow-sm border border-black/5 group-hover:scale-110 transition-transform`} />
+                  <span className="text-[8px] font-black text-slate-400 group-hover:text-slate-900 uppercase">{c.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="w-px h-6 bg-slate-100 mx-2" />
+
+        <input 
+          type="file" 
+          ref={fileInputRef}
+          className="hidden" 
+          accept="image/*,application/pdf"
+          onChange={(e) => handleFileUpload(e, setter, form, field, textareaRef)}
+        />
+        
+        <button 
+          type="button" 
+          disabled={isUploading}
+          onClick={() => fileInputRef.current?.click()} 
+          className="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors disabled:opacity-50" 
+          title="Tải ảnh/tài liệu lên"
+        >
+          {isUploading ? <Loader2 className="w-4 h-4 animate-spin text-blue-500" /> : <ImageIcon className="w-4 h-4" />}
+        </button>
+        
+        <button 
+          type="button" 
+          onClick={onShowInternalLinkPicker}
+          className="p-2 hover:bg-slate-100 rounded-lg text-orange-600 transition-colors flex items-center gap-1 group" 
+          title="Liên kết nội bộ"
+        >
+          <Search className="w-4 h-4" />
+          <span className="text-[10px] font-black uppercase tracking-wider">Link</span>
+        </button>
+      </div>
     </div>
   );
 };
@@ -360,6 +633,79 @@ const MarkdownContent = ({ content }: { content: string }) => {
     </div>
   );
 };
+const MarkdownEditorWithPreview = ({
+  textareaRef,
+  setter,
+  form,
+  field,
+  isUploading,
+  handleFileUpload,
+  onShowInternalLinkPicker,
+  placeholder,
+  rows = 15,
+  label
+}: {
+  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  setter: React.Dispatch<React.SetStateAction<any>>;
+  form: any;
+  field: string;
+  isUploading: boolean;
+  handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<any>>, form: any, field: string, refTextarea?: React.RefObject<HTMLTextAreaElement>) => Promise<void>;
+  onShowInternalLinkPicker?: () => void;
+  placeholder?: string;
+  rows?: number;
+  label: string;
+}) => {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <label className="block text-sm font-black text-slate-700 uppercase tracking-widest">{label}</label>
+        <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+          <Monitor className="w-3 h-3" /> Chế độ xem trước thời gian thực
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full min-h-[500px]">
+        {/* Editor Side */}
+        <div className="flex flex-col h-full">
+          <MarkdownToolbar 
+            textareaRef={textareaRef}
+            setter={setter}
+            form={form}
+            field={field}
+            isUploading={isUploading}
+            handleFileUpload={handleFileUpload}
+            onShowInternalLinkPicker={onShowInternalLinkPicker}
+          />
+          <textarea 
+            ref={textareaRef}
+            className="w-full flex-1 p-6 bg-slate-50 border border-slate-200 border-t-0 rounded-b-xl text-slate-800 outline-none focus:ring-2 focus:ring-blue-500/20 font-mono text-sm leading-relaxed"
+            rows={rows}
+            placeholder={placeholder}
+            value={form[field] || ''}
+            onChange={(e) => setter({ ...form, [field]: e.target.value })}
+          />
+        </div>
+        {/* Preview Side */}
+        <div className="flex flex-col h-full">
+          <div className="p-3.5 bg-slate-50 border border-slate-200 border-b-0 rounded-t-xl flex items-center gap-2">
+            <Eye className="w-4 h-4 text-blue-600" />
+            <span className="text-[10px] font-black text-blue-900 uppercase tracking-widest">Bản xem trước (Preview)</span>
+          </div>
+          <div className="w-full flex-1 p-6 bg-white border border-slate-200 border-t-0 rounded-b-xl overflow-y-auto max-h-[600px]">
+            {form[field] ? (
+              <MarkdownContent content={form[field]} />
+            ) : (
+              <div className="h-full flex items-center justify-center text-slate-300 italic text-sm">
+                Nội dung xem trước sẽ hiển thị tại đây...
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 // --- Markdown Helpers End ---
 
 type TabType = 'news' | 'admissions' | 'home' | 'about' | 'contact' | 'admissions_page' | 'news_page' | 'features' | 'departments' | 'youth_union' | 'achievements' | 'schedule' | 'gallery' | 'archive';
@@ -417,6 +763,17 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
 
   const [isUploading, setIsUploading] = useState(false);
   const [adminSearch, setAdminSearch] = useState('');
+  const [showLinkPicker, setShowLinkPicker] = useState<{ field: string, setter: any, form: any, ref: any } | null>(null);
+  const [allNewsForPicker, setAllNewsForPicker] = useState<any[]>([]);
+  const [allAdmissionsForPicker, setAllAdmissionsForPicker] = useState<any[]>([]);
+  const [pickerSearch, setPickerSearch] = useState('');
+
+  const fetchPickerData = async () => {
+    const { data: newsData } = await supabase.from('news').select('id, title').order('date', { ascending: false });
+    if (newsData) setAllNewsForPicker(newsData);
+    const { data: admData } = await supabase.from('admissions').select('id, title').order('created_at', { ascending: false });
+    if (admData) setAllAdmissionsForPicker(admData);
+  };
 
   const handleFileUpload = useCallback(async (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -1439,22 +1796,21 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                     </label>
                   </div>
                 </div>
-                <MarkdownToolbar 
+                <MarkdownEditorWithPreview 
                   textareaRef={newsTextareaRef} 
                   setter={setNewsForm} 
                   form={newsForm} 
                   field="content" 
                   isUploading={isUploading}
                   handleFileUpload={handleFileUpload}
+                  label="Nội dung chi tiết"
+                  placeholder="Nhập nội dung bài viết tin tức tại đây (sử dụng Markdown)..."
+                  onShowInternalLinkPicker={() => {
+                    fetchPickerData();
+                    setShowLinkPicker({ field: 'content', setter: setNewsForm, form: newsForm, ref: newsTextareaRef });
+                  }}
                 />
-                <textarea 
-                  ref={newsTextareaRef}
-                  placeholder="Nội dung chi tiết" 
-                  value={newsForm.content}
-                  onChange={e => setNewsForm({...newsForm, content: e.target.value})}
-                  className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-32 mb-4 border-t-0"
-                />
-                <div className="flex gap-3">
+                <div className="mt-4 flex gap-3">
                   <button type="submit" className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors">
                     {editingNewsId ? 'Cập nhật' : 'Đăng tin'}
                   </button>
@@ -1581,22 +1937,21 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                     </button>
                   </div>
                 </div>
-                <MarkdownToolbar 
+                <MarkdownEditorWithPreview 
                   textareaRef={admissionTextareaRef} 
                   setter={setAdmissionForm} 
                   form={admissionForm} 
                   field="content" 
                   isUploading={isUploading}
                   handleFileUpload={handleFileUpload}
+                  label="Nội dung tuyển sinh"
+                  placeholder="Nhập nội dung tuyển sinh chi tiết..."
+                  onShowInternalLinkPicker={() => {
+                    fetchPickerData();
+                    setShowLinkPicker({ field: 'content', setter: setAdmissionForm, form: admissionForm, ref: admissionTextareaRef });
+                  }}
                 />
-                <textarea 
-                  ref={admissionTextareaRef}
-                  placeholder="Nội dung tuyển sinh" 
-                  value={admissionForm.content}
-                  onChange={e => setAdmissionForm({...admissionForm, content: e.target.value})}
-                  className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-32 mb-4 border-t-0"
-                />
-                <div className="flex gap-3">
+                <div className="mt-4 flex gap-3">
                   <button type="submit" className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors">
                     {editingAdmissionId ? 'Cập nhật' : 'Lưu thông tin'}
                   </button>
@@ -1842,57 +2197,48 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
               </div>
 
               <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Văn bản giới thiệu chính</label>
-                  <MarkdownToolbar 
-                    textareaRef={aboutMainTextareaRef} 
-                    setter={setAboutForm} 
-                    form={aboutForm} 
-                    field="main_text" 
-                    isUploading={isUploading}
-                    handleFileUpload={handleFileUpload}
-                  />
-                  <textarea 
-                    ref={aboutMainTextareaRef}
-                    value={aboutForm.main_text}
-                    onChange={e => setAboutForm({...aboutForm, main_text: e.target.value})}
-                    className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-48 border-t-0"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Lịch sử hình thành</label>
-                  <MarkdownToolbar 
-                    textareaRef={aboutHistoryTextareaRef} 
-                    setter={setAboutForm} 
-                    form={aboutForm} 
-                    field="history" 
-                    isUploading={isUploading}
-                    handleFileUpload={handleFileUpload}
-                  />
-                  <textarea 
-                    ref={aboutHistoryTextareaRef}
-                    value={aboutForm.history}
-                    onChange={e => setAboutForm({...aboutForm, history: e.target.value})}
-                    className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-48 border-t-0"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Giá trị cốt lõi</label>
-                  <MarkdownToolbar 
-                    textareaRef={aboutCoreValuesTextareaRef} 
-                    setter={setAboutForm} 
-                    form={aboutForm} 
-                    field="core_values" 
-                    isUploading={isUploading}
-                    handleFileUpload={handleFileUpload}
-                  />
-                  <textarea 
-                    ref={aboutCoreValuesTextareaRef}
-                    value={aboutForm.core_values}
-                    onChange={e => setAboutForm({...aboutForm, core_values: e.target.value})}
-                    className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-48 border-t-0"
-                  />
-                </div>
+                <MarkdownEditorWithPreview 
+                  textareaRef={aboutMainTextareaRef} 
+                  setter={setAboutForm} 
+                  form={aboutForm} 
+                  field="main_text" 
+                  isUploading={isUploading}
+                  handleFileUpload={handleFileUpload}
+                  label="Văn bản giới thiệu chính"
+                  placeholder="Nhập nội dung giới thiệu chính..."
+                  onShowInternalLinkPicker={() => {
+                    fetchPickerData();
+                    setShowLinkPicker({ field: 'main_text', setter: setAboutForm, form: aboutForm, ref: aboutMainTextareaRef });
+                  }}
+                />
+                <MarkdownEditorWithPreview 
+                  textareaRef={aboutHistoryTextareaRef} 
+                  setter={setAboutForm} 
+                  form={aboutForm} 
+                  field="history" 
+                  isUploading={isUploading}
+                  handleFileUpload={handleFileUpload}
+                  label="Lịch sử hình thành"
+                  placeholder="Nhập nội dung lịch sử hình thành..."
+                  onShowInternalLinkPicker={() => {
+                    fetchPickerData();
+                    setShowLinkPicker({ field: 'history', setter: setAboutForm, form: aboutForm, ref: aboutHistoryTextareaRef });
+                  }}
+                />
+                <MarkdownEditorWithPreview 
+                  textareaRef={aboutCoreValuesTextareaRef} 
+                  setter={setAboutForm} 
+                  form={aboutForm} 
+                  field="core_values" 
+                  isUploading={isUploading}
+                  handleFileUpload={handleFileUpload}
+                  label="Giá trị cốt lõi"
+                  placeholder="Nhập nội dung giá trị cốt lõi..."
+                  onShowInternalLinkPicker={() => {
+                    fetchPickerData();
+                    setShowLinkPicker({ field: 'core_values', setter: setAboutForm, form: aboutForm, ref: aboutCoreValuesTextareaRef });
+                  }}
+                />
               </div>
               
               <button type="submit" className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2">
@@ -2213,22 +2559,21 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                         <Info className="w-6 h-6 text-blue-600" /> Giới thiệu tổ chuyên môn
                       </h4>
                       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                        <MarkdownToolbar 
-                          textareaRef={deptContentTextareaRef} 
-                          setter={setDeptForm} 
-                          form={deptForm} 
-                          field="content" 
-                          isUploading={isUploading}
-                          handleFileUpload={handleFileUpload}
-                        />
-                        <textarea 
-                          ref={deptContentTextareaRef}
-                          placeholder="Nội dung giới thiệu chi tiết về tổ chuyên môn (Markdown)" 
-                          value={deptForm.content}
-                          onChange={e => setDeptForm({...deptForm, content: e.target.value})}
-                          className="w-full p-4 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-96 border-t-0 font-sans leading-relaxed"
-                        />
-                        <div className="mt-4 flex justify-end">
+                      <MarkdownEditorWithPreview 
+                        textareaRef={deptContentTextareaRef} 
+                        setter={setDeptForm} 
+                        form={deptForm} 
+                        field="content" 
+                        isUploading={isUploading}
+                        handleFileUpload={handleFileUpload}
+                        label="Giới thiệu tổ chuyên môn"
+                        placeholder="Nội dung giới thiệu chi tiết về tổ chuyên môn (Markdown)"
+                        onShowInternalLinkPicker={() => {
+                          fetchPickerData();
+                          setShowLinkPicker({ field: 'content', setter: setDeptForm, form: deptForm, ref: deptContentTextareaRef });
+                        }}
+                      />
+                      <div className="mt-4 flex justify-end">
                           <button 
                             onClick={handleSaveDept}
                             className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-md shadow-blue-200"
@@ -2400,20 +2745,19 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                             onChange={e => setActivityForm({...activityForm, summary: e.target.value})}
                             className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                           />
-                          <MarkdownToolbar 
+                          <MarkdownEditorWithPreview 
                             textareaRef={activityTextareaRef} 
                             setter={setActivityForm} 
                             form={activityForm} 
                             field="content" 
                             isUploading={isUploading}
                             handleFileUpload={handleFileUpload}
-                          />
-                          <textarea 
-                            ref={activityTextareaRef}
-                            placeholder="Nội dung chi tiết (Markdown)" 
-                            value={activityForm.content}
-                            onChange={e => setActivityForm({...activityForm, content: e.target.value})}
-                            className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-48 border-t-0"
+                            label="Nội dung chi tiết"
+                            placeholder="Nhập nội dung chi tiết (Markdown)"
+                            onShowInternalLinkPicker={() => {
+                              fetchPickerData();
+                              setShowLinkPicker({ field: 'content', setter: setActivityForm, form: activityForm, ref: activityTextareaRef });
+                            }}
                           />
                           <input 
                             type="url" 
@@ -2681,23 +3025,20 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                       className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Nội dung (Markdown)</label>
-                    <MarkdownToolbar 
-                      textareaRef={youthUnionTextareaRef} 
-                      setter={setYouthUnionForm} 
-                      form={youthUnionForm} 
-                      field="content" 
-                      isUploading={isUploading}
-                      handleFileUpload={handleFileUpload}
-                    />
-                    <textarea 
-                      ref={youthUnionTextareaRef}
-                      value={youthUnionForm.content}
-                      onChange={e => setYouthUnionForm({...youthUnionForm, content: e.target.value})}
-                      className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-64 border-t-0"
-                    />
-                  </div>
+                  <MarkdownEditorWithPreview 
+                    textareaRef={youthUnionTextareaRef} 
+                    setter={setYouthUnionForm} 
+                    form={youthUnionForm} 
+                    field="content" 
+                    isUploading={isUploading} 
+                    handleFileUpload={handleFileUpload}
+                    label="Nội dung"
+                    placeholder="Nhập nội dung hoạt động (Markdown)..."
+                    onShowInternalLinkPicker={() => {
+                      fetchPickerData();
+                      setShowLinkPicker({ field: 'content', setter: setYouthUnionForm, form: youthUnionForm, ref: youthUnionTextareaRef });
+                    }}
+                  />
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-2">Ngày diễn ra</label>
                     <input 
@@ -2823,20 +3164,19 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                     </select>
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Mô tả chi tiết (Markdown)</label>
-                    <MarkdownToolbar 
+                    <MarkdownEditorWithPreview 
                       textareaRef={achievementTextareaRef} 
                       setter={setAchievementForm} 
                       form={achievementForm} 
                       field="description" 
                       isUploading={isUploading}
                       handleFileUpload={handleFileUpload}
-                    />
-                    <textarea 
-                      ref={achievementTextareaRef}
-                      value={achievementForm.description}
-                      onChange={e => setAchievementForm({...achievementForm, description: e.target.value})}
-                      className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-64 font-mono text-sm border-t-0"
+                      label="Mô tả chi tiết"
+                      placeholder="Nhập mô tả thành tích (Markdown)..."
+                      onShowInternalLinkPicker={() => {
+                        fetchPickerData();
+                        setShowLinkPicker({ field: 'description', setter: setAchievementForm, form: achievementForm, ref: achievementTextareaRef });
+                      }}
                     />
                   </div>
                 </div>
@@ -2954,22 +3294,19 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Nội dung lịch (Markdown/HTML)</label>
-                    
-                    <MarkdownToolbar 
+                    <MarkdownEditorWithPreview 
                       textareaRef={scheduleTextareaRef} 
                       setter={setScheduleForm} 
                       form={scheduleForm} 
                       field="content" 
                       isUploading={isUploading}
                       handleFileUpload={handleFileUpload}
-                    />
-
-                    <textarea 
-                      ref={scheduleTextareaRef}
-                      value={scheduleForm.content}
-                      onChange={e => setScheduleForm({...scheduleForm, content: e.target.value})}
-                      className="w-full p-3 border rounded-b-xl outline-none focus:ring-2 focus:ring-blue-500 h-64 font-mono text-sm border-t-0"
+                      label="Nội dung lịch (Markdown/HTML)"
+                      placeholder="Nhập nội dung lịch công tác..."
+                      onShowInternalLinkPicker={() => {
+                        fetchPickerData();
+                        setShowLinkPicker({ field: 'content', setter: setScheduleForm, form: scheduleForm, ref: scheduleTextareaRef });
+                      }}
                     />
                   </div>
                 </div>
@@ -3412,6 +3749,162 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Internal Link Picker Modal */}
+      {showLinkPicker && (
+        <div className="fixed inset-0 bg-black/50 z-[10000] flex items-center justify-center p-4 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
+          >
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <h3 className="text-xl font-black text-slate-800 flex items-center gap-2">
+                <Search className="w-6 h-6 text-orange-600" />
+                Chèn liên kết nội bộ
+              </h3>
+              <button 
+                onClick={() => {
+                  setShowLinkPicker(null);
+                  setPickerSearch('');
+                }}
+                className="p-2 hover:bg-slate-200 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 border-b border-slate-100 bg-white">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input 
+                  type="text"
+                  placeholder="Tìm kiếm tiêu đề tin tức, tuyển sinh..."
+                  className="w-full pl-12 pr-4 py-3 bg-slate-100 border-none rounded-2xl focus:ring-4 focus:ring-orange-100 focus:bg-white transition-all text-slate-800 placeholder:text-slate-400"
+                  value={pickerSearch}
+                  onChange={(e) => setPickerSearch(e.target.value)}
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide">
+              {/* Tin tức Section */}
+              <section>
+                <div className="flex items-center justify-between mb-4 px-2">
+                  <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest">Tin tức mới nhất</h4>
+                  <span className="text-[10px] bg-slate-100 text-slate-500 py-1 px-2 rounded-lg font-bold">TOP 20</span>
+                </div>
+                <div className="grid grid-cols-1 gap-2">
+                  {allNewsForPicker
+                    .filter(n => n.title.toLowerCase().includes(pickerSearch.toLowerCase()))
+                    .slice(0, 20)
+                    .map(item => (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          const textarea = showLinkPicker.ref.current;
+                          if (textarea) {
+                            const start = textarea.selectionStart;
+                            const end = textarea.selectionEnd;
+                            const text = showLinkPicker.form[showLinkPicker.field] || '';
+                            const insertion = ` [${item.title}](news:${item.id}) `;
+                            const newText = text.substring(0, start) + insertion + text.substring(end);
+                            showLinkPicker.setter({ ...showLinkPicker.form, [showLinkPicker.field]: newText });
+                            setShowLinkPicker(null);
+                            setPickerSearch('');
+                            
+                            setTimeout(() => {
+                              textarea.focus();
+                              const newPos = start + insertion.length;
+                              textarea.setSelectionRange(newPos, newPos);
+                            }, 50);
+                          }
+                        }}
+                        className="w-full text-left p-4 hover:bg-orange-50 rounded-2xl transition-all flex items-center justify-between group border border-transparent hover:border-orange-100"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 font-bold group-hover:bg-orange-100 group-hover:text-orange-600 transition-colors">
+                            <Newspaper className="w-5 h-5" />
+                          </div>
+                          <span className="font-bold text-slate-700 line-clamp-1 group-hover:text-slate-900">{item.title}</span>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-orange-500 transform group-hover:translate-x-1 transition-all" />
+                      </button>
+                    ))}
+                  {allNewsForPicker.filter(n => n.title.toLowerCase().includes(pickerSearch.toLowerCase())).length === 0 && (
+                    <div className="text-center py-8 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                      <p className="text-slate-400 font-medium italic">Không tìm thấy tin tức phù hợp</p>
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              {/* Tuyển sinh Section */}
+              <section>
+                <div className="flex items-center justify-between mb-4 px-2">
+                  <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest">Thông tin tuyển sinh</h4>
+                </div>
+                <div className="grid grid-cols-1 gap-2">
+                  {allAdmissionsForPicker
+                    .filter(n => n.title.toLowerCase().includes(pickerSearch.toLowerCase()))
+                    .slice(0, 20)
+                    .map(item => (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          const textarea = showLinkPicker.ref.current;
+                          if (textarea) {
+                            const start = textarea.selectionStart;
+                            const end = textarea.selectionEnd;
+                            const text = showLinkPicker.form[showLinkPicker.field] || '';
+                            const insertion = ` [${item.title}](admission:${item.id}) `;
+                            const newText = text.substring(0, start) + insertion + text.substring(end);
+                            showLinkPicker.setter({ ...showLinkPicker.form, [showLinkPicker.field]: newText });
+                            setShowLinkPicker(null);
+                            setPickerSearch('');
+
+                            setTimeout(() => {
+                              textarea.focus();
+                              const newPos = start + insertion.length;
+                              textarea.setSelectionRange(newPos, newPos);
+                            }, 50);
+                          }
+                        }}
+                        className="w-full text-left p-4 hover:bg-blue-50 rounded-2xl transition-all flex items-center justify-between group border border-transparent hover:border-blue-100"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 font-bold group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
+                            <GraduationCap className="w-5 h-5" />
+                          </div>
+                          <span className="font-bold text-slate-700 line-clamp-1 group-hover:text-slate-900">{item.title}</span>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500 transform group-hover:translate-x-1 transition-all" />
+                      </button>
+                    ))}
+                  {allAdmissionsForPicker.filter(n => n.title.toLowerCase().includes(pickerSearch.toLowerCase())).length === 0 && (
+                    <div className="text-center py-8 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                      <p className="text-slate-400 font-medium italic">Không tìm thấy thông tin tuyển sinh phù hợp</p>
+                    </div>
+                  )}
+                </div>
+              </section>
+            </div>
+            
+            <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end">
+              <button 
+                onClick={() => {
+                  setShowLinkPicker(null);
+                  setPickerSearch('');
+                }}
+                className="px-8 py-3 bg-slate-200 text-slate-700 font-black rounded-2xl hover:bg-slate-300 transition-all active:scale-95"
+              >
+                Đóng
+              </button>
+            </div>
+          </motion.div>
         </div>
       )}
     </div>
