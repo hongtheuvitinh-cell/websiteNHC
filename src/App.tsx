@@ -9,6 +9,7 @@ import {
   GraduationCap, 
   BookOpen, 
   Users, 
+  User,
   Calendar, 
   Phone, 
   ChevronRight, 
@@ -46,9 +47,12 @@ export default function App() {
   const [activeMenu, setActiveMenu] = useState('Trang chủ');
   const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [adminUser, setAdminUser] = useState<any>(null);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [adminUsernameInput, setAdminUsernameInput] = useState('');
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [visitorCount, setVisitorCount] = useState<string>('000000');
@@ -546,24 +550,51 @@ export default function App() {
     }
   };
 
-  const handlePasswordLogin = (e: React.FormEvent) => {
+  useEffect(() => {
+    const savedUser = localStorage.getItem('admin_user');
+    if (savedUser) {
+      setAdminUser(JSON.parse(savedUser));
+      setIsAdmin(true);
+    }
+  }, []);
+
+  const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
-    const correctPassword = import.meta.env.VITE_ADMIN_PASSWORD || "admin123";
+    setLoginLoading(true);
     
-    if (adminPasswordInput === correctPassword) {
-      localStorage.setItem('admin_authenticated', 'true');
-      setIsAdmin(true);
-      setShowLoginModal(false);
-      setAdminPasswordInput('');
-    } else {
-      setLoginError("Mật khẩu không chính xác.");
+    try {
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('*')
+        .eq('username', adminUsernameInput)
+        .eq('password', adminPasswordInput)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        localStorage.setItem('admin_user', JSON.stringify(data));
+        setAdminUser(data);
+        setIsAdmin(true);
+        setShowLoginModal(false);
+        setAdminUsernameInput('');
+        setAdminPasswordInput('');
+      } else {
+        setLoginError("Tên đăng nhập hoặc mật khẩu không chính xác.");
+      }
+    } catch (err: any) {
+      console.error("Login err:", err);
+      setLoginError("Lỗi hệ thống. Vui lòng thử lại.");
+    } finally {
+      setLoginLoading(false);
     }
   };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    localStorage.removeItem('admin_authenticated');
+    localStorage.removeItem('admin_user');
+    setAdminUser(null);
     setIsAdmin(false);
     setShowAdmin(false);
   };
@@ -2028,7 +2059,7 @@ export default function App() {
   }
 
   if (showAdmin && isAdmin) {
-    return <AdminDashboard onLogout={handleLogout} onExit={() => setShowAdmin(false)} />;
+    return <AdminDashboard onLogout={handleLogout} onExit={() => setShowAdmin(false)} user={adminUser} />;
   }
 
   return (
@@ -2389,22 +2420,37 @@ export default function App() {
             </div>
             
             <div className="p-8">
-              <form onSubmit={handlePasswordLogin} className="space-y-6">
+              <form onSubmit={handlePasswordLogin} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Mật khẩu admin</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Tên đăng nhập</label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <input 
+                      type="text"
+                      value={adminUsernameInput}
+                      onChange={(e) => setAdminUsernameInput(e.target.value)}
+                      placeholder="Username"
+                      className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Mật khẩu</label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                     <input 
                       type="password"
                       value={adminPasswordInput}
                       onChange={(e) => setAdminPasswordInput(e.target.value)}
-                      placeholder="Nhập mật khẩu..."
+                      placeholder="••••••••"
                       className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
-                      autoFocus
+                      required
                     />
                   </div>
                   {loginError && (
-                    <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
+                    <p className="mt-2 text-xs text-red-500 font-bold flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
                       <AlertCircle className="w-4 h-4" /> {loginError}
                     </p>
                   )}
@@ -2412,9 +2458,11 @@ export default function App() {
 
                 <button 
                   type="submit"
-                  className="w-full bg-blue-900 text-white py-3 rounded-xl font-bold hover:bg-blue-800 transition-all shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2"
+                  disabled={loginLoading}
+                  className="w-full bg-blue-900 text-white py-3 rounded-xl font-bold hover:bg-blue-800 transition-all shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  <LogIn className="w-5 h-5" /> Đăng nhập
+                  {loginLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5" />} 
+                  {loginLoading ? 'Đang kiểm tra...' : 'Đăng nhập'}
                 </button>
               </form>
 
