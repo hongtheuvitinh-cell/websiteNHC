@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import * as Icons from 'lucide-react';
 import { 
   Plus, 
   Trash2, 
@@ -59,7 +60,8 @@ import {
   Palette,
   Eye,
   ChevronDown,
-  Mail
+  Mail,
+  BadgeCheck
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
@@ -709,15 +711,32 @@ const MarkdownEditorWithPreview = ({
 };
 // --- Markdown Helpers End ---
 
-type TabType = 'news' | 'admissions' | 'home' | 'about' | 'contact' | 'admissions_page' | 'news_page' | 'features' | 'departments' | 'youth_union' | 'achievements' | 'schedule' | 'gallery' | 'archive' | 'messages';
+type TabType = 'news' | 'admissions' | 'home' | 'about' | 'contact' | 'admissions_page' | 'news_page' | 'features' | 'departments' | 'youth_union' | 'achievements' | 'schedule' | 'gallery' | 'archive' | 'messages' | 'admins';
 
 interface AdminDashboardProps {
   onLogout?: () => void;
   onExit?: () => void;
+  user: any;
 }
 
-export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<TabType>('news');
+export default function AdminDashboard({ onLogout, onExit, user }: AdminDashboardProps) {
+  // Determine initial tab based on role
+  const getInitialTab = (): TabType => {
+    if (user?.role === 'youth_union_officer') return 'youth_union';
+    if (user?.role === 'dept_head') return 'departments';
+    return 'news';
+  };
+
+  const [activeTab, setActiveTab] = useState<TabType>(getInitialTab());
+
+  // For dept_head, lock them into managing their specific department
+  useEffect(() => {
+    if (user?.role === 'dept_head' && user.dept_id) {
+      setSelectedDeptId(user.dept_id);
+      setIsManagingDeptContent(true);
+      setActiveTab('departments');
+    }
+  }, [user]);
 
   useEffect(() => {
     setAdminSearch('');
@@ -732,6 +751,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
   const [gallery, setGallery] = useState<any[]>([]);
   const [archiveDocuments, setArchiveDocuments] = useState<any[]>([]);
   const [contactSubmissions, setContactSubmissions] = useState<any[]>([]);
+  const [adminUsers, setAdminUsers] = useState<any[]>([]);
   const [deptPersonnel, setDeptPersonnel] = useState<any[]>([]);
   const [deptActivities, setDeptActivities] = useState<any[]>([]);
   const [deptDocuments, setDeptDocuments] = useState<any[]>([]);
@@ -931,6 +951,15 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
     email: ''
   });
 
+  const [adminUserForm, setAdminUserForm] = useState({
+    username: '',
+    password: '',
+    display_name: '',
+    role: 'dept_head',
+    dept_id: ''
+  });
+  const [editingAdminUserId, setEditingAdminUserId] = useState<string | null>(null);
+
   const departments = [
     { id: 'toan', name: 'Tổ Toán', icon: 'Calculator' },
     { id: 'ly', name: 'Tổ Vật lý', icon: 'Zap' },
@@ -989,6 +1018,11 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
     } else if (activeTab === 'messages') {
       const { data } = await supabase.from('contact_submissions').select('*').order('created_at', { ascending: false });
       if (data) setContactSubmissions(data);
+    } else if (activeTab === 'admins') {
+      const { data: users } = await supabase.from('admin_users').select('*').order('created_at', { ascending: false });
+      if (users) setAdminUsers(users);
+      const { data: depts } = await supabase.from('departments').select('id, name');
+      if (depts) setDepartmentsList(depts);
     }
     setLoading(false);
   }, [activeTab]);
@@ -1029,9 +1063,42 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
     };
   }, [activeTab, fetchData]);
 
+  const isSuperAdmin = user?.role === 'super_admin';
+  const isYouthUnion = user?.role === 'youth_union_officer';
+  const isDeptHead = user?.role === 'dept_head';
+
+  const canViewTab = (tab: TabType) => {
+    if (isSuperAdmin) return true;
+    if (isYouthUnion) {
+      return ['youth_union', 'gallery', 'achievements'].includes(tab);
+    }
+    if (isDeptHead) {
+      return ['departments'].includes(tab);
+    }
+    return false;
+  };
+
   const fetchDeptData = useCallback(async () => {
     if (!selectedDeptId) return;
     setLoading(true);
+    
+    // Fetch department details to populate form and header
+    const { data: deptData } = await supabase.from('departments').select('*').eq('id', selectedDeptId).maybeSingle();
+    if (deptData) {
+      setDeptForm({
+        name: deptData.name,
+        icon: deptData.icon,
+        description: deptData.description,
+        content: deptData.content || ''
+      });
+      // Also ensure it's in the list for the header to find the name
+      setDepartmentsList(prev => {
+        const exists = prev.find(d => d.id === deptData.id);
+        if (exists) return prev;
+        return [...prev, deptData];
+      });
+    }
+
     const { data: personnel } = await supabase.from('personnel').select('*').eq('dept_id', selectedDeptId);
     if (personnel) setDeptPersonnel(personnel);
     const { data: activities } = await supabase.from('activities').select('*').eq('dept_id', selectedDeptId).order('date', { ascending: false });
@@ -1544,6 +1611,37 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
     }
   };
 
+  const handleSaveAdminUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingAdminUserId) {
+        const { error } = await supabase.from('admin_users').update(adminUserForm).eq('id', editingAdminUserId);
+        if (error) throw error;
+        setEditingAdminUserId(null);
+      } else {
+        const { error } = await supabase.from('admin_users').insert([adminUserForm]);
+        if (error) throw error;
+      }
+      setAdminUserForm({ username: '', password: '', display_name: '', role: 'dept_head', dept_id: '' });
+      showSuccess();
+      fetchData();
+    } catch (error: any) {
+      showAlert("Lỗi", "Lỗi lưu tài khoản: " + error.message);
+    }
+  };
+
+  const handleDeleteAdminUser = async (id: string) => {
+    if (id === user.id) {
+      showAlert("Lỗi", "Bạn không thể tự xóa tài khoản của chính mình.");
+      return;
+    }
+    showConfirm("Xác nhận xóa", "Xóa tài khoản quản trị này?", async () => {
+      const { error } = await supabase.from('admin_users').delete().eq('id', id);
+      if (error) showAlert("Lỗi", "Lỗi khi xóa: " + error.message);
+      else fetchData();
+    });
+  };
+
   const handleDeletePersonnel = async (id: string) => {
     if (!selectedDeptId) return;
     showConfirm("Xác nhận xóa", "Xóa nhân sự này?", async () => {
@@ -1638,105 +1736,154 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
     <div className="min-h-screen bg-slate-100 flex">
       {/* Admin Sidebar */}
       <aside className="w-64 bg-slate-900 text-white p-6 flex flex-col sticky top-0 h-screen">
-        <div className="flex items-center gap-3 mb-10">
-          <LayoutDashboard className="w-8 h-8 text-blue-400" />
-          <h1 className="text-xl font-bold uppercase tracking-tight">Quản trị</h1>
+        <div className="mb-8 pb-8 border-b border-slate-800">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-black text-white shadow-lg shadow-blue-900/50">
+              {user?.display_name?.charAt(0) || 'A'}
+            </div>
+            <div className="overflow-hidden">
+              <p className="text-sm font-black truncate text-white" title={user?.display_name}>{user?.display_name || 'Quản trị viên'}</p>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                {user?.role === 'super_admin' ? 'Ban Giám Hiệu' : (user?.role === 'youth_union_officer' ? 'Cán bộ Đoàn' : 'Tổ trưởng')}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <LayoutDashboard className="w-5 h-5 text-blue-400" />
+            <h1 className="text-sm font-black uppercase tracking-tighter">Hệ thống Quản trị</h1>
+          </div>
         </div>
 
         <nav className="flex-1 space-y-2 overflow-y-auto pr-2 custom-scrollbar">
-          <button 
-            onClick={() => setActiveTab('news')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'news' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
-          >
-            <Bell className="w-5 h-5" /> Danh sách Tin tức
-          </button>
-          <button 
-            onClick={() => setActiveTab('news_page')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'news_page' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
-          >
-            <Settings className="w-5 h-5" /> Trang Tin tức
-          </button>
-          <button 
-            onClick={() => setActiveTab('admissions')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'admissions' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
-          >
-            <GraduationCap className="w-5 h-5" /> Danh sách Tuyển sinh
-          </button>
-          <button 
-            onClick={() => setActiveTab('admissions_page')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'admissions_page' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
-          >
-            <Settings className="w-5 h-5" /> Trang Tuyển sinh
-          </button>
-          <button 
-            onClick={() => setActiveTab('home')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'home' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
-          >
-            <Home className="w-5 h-5" /> Trang chủ
-          </button>
-          <button 
-            onClick={() => setActiveTab('features')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'features' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
-          >
-            <Plus className="w-5 h-5" /> Thẻ Tính năng
-          </button>
-          <button 
-            onClick={() => setActiveTab('about')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'about' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
-          >
-            <Info className="w-5 h-5" /> Giới thiệu
-          </button>
-          <button 
-            onClick={() => setActiveTab('contact')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'contact' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
-          >
-            <Phone className="w-5 h-5" /> Liên hệ & Cấu hình
-          </button>
-          <button 
-            onClick={() => setActiveTab('departments')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'departments' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
-          >
-            <BookOpen className="w-5 h-5" /> Tổ chuyên môn
-          </button>
-          <button 
-            onClick={() => setActiveTab('youth_union')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'youth_union' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
-          >
-            <Users className="w-5 h-5" /> Hoạt động Đoàn
-          </button>
-          <button 
-            onClick={() => setActiveTab('achievements')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'achievements' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
-          >
-            <Award className="w-5 h-5" /> Thành tích học tập
-          </button>
-          <button 
-            onClick={() => setActiveTab('schedule')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'schedule' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
-          >
-            <Calendar className="w-5 h-5" /> Lịch công tác
-          </button>
-          <button 
-            onClick={() => setActiveTab('gallery')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'gallery' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
-          >
-            <Globe className="w-5 h-5" /> Thư viện ảnh
-          </button>
-          <button 
-            onClick={() => setActiveTab('archive')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'archive' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
-          >
-            <Archive className="w-5 h-5" /> Lưu trữ văn bản
-          </button>
-          <div className="pt-4 mt-4 border-t border-slate-800">
-            <p className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Tương tác người dùng</p>
+          {canViewTab('news') && (
             <button 
-              onClick={() => setActiveTab('messages')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'messages' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+              onClick={() => setActiveTab('news')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'news' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
             >
-              <Mail className="w-5 h-5" /> Hộp thư góp ý
+              <Bell className="w-5 h-5" /> Danh sách Tin tức
             </button>
-          </div>
+          )}
+          {canViewTab('news_page') && (
+            <button 
+              onClick={() => setActiveTab('news_page')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'news_page' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+            >
+              <Settings className="w-5 h-5" /> Trang Tin tức
+            </button>
+          )}
+          {canViewTab('admissions') && (
+            <button 
+              onClick={() => setActiveTab('admissions')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'admissions' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+            >
+              <GraduationCap className="w-5 h-5" /> Danh sách Tuyển sinh
+            </button>
+          )}
+          {canViewTab('admissions_page') && (
+            <button 
+              onClick={() => setActiveTab('admissions_page')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'admissions_page' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+            >
+              <Settings className="w-5 h-5" /> Trang Tuyển sinh
+            </button>
+          )}
+          {canViewTab('home') && (
+            <button 
+              onClick={() => setActiveTab('home')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'home' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+            >
+              <Home className="w-5 h-5" /> Trang chủ
+            </button>
+          )}
+          {canViewTab('features') && (
+            <button 
+              onClick={() => setActiveTab('features')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'features' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+            >
+              <Plus className="w-5 h-5" /> Thẻ Tính năng
+            </button>
+          )}
+          {canViewTab('about') && (
+            <button 
+              onClick={() => setActiveTab('about')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'about' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+            >
+              <Info className="w-5 h-5" /> Giới thiệu
+            </button>
+          )}
+          {canViewTab('contact') && (
+            <button 
+              onClick={() => setActiveTab('contact')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'contact' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+            >
+              <Phone className="w-5 h-5" /> Liên hệ & Cấu hình
+            </button>
+          )}
+          {canViewTab('departments') && (
+            <button 
+              onClick={() => setActiveTab('departments')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'departments' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+            >
+              <BookOpen className="w-5 h-5" /> Tổ chuyên môn
+            </button>
+          )}
+          {canViewTab('youth_union') && (
+            <button 
+              onClick={() => setActiveTab('youth_union')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'youth_union' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+            >
+              <Users className="w-5 h-5" /> Hoạt động Đoàn
+            </button>
+          )}
+          {canViewTab('achievements') && (
+            <button 
+              onClick={() => setActiveTab('achievements')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'achievements' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+            >
+              <Award className="w-5 h-5" /> Thành tích học tập
+            </button>
+          )}
+          {canViewTab('schedule') && (
+            <button 
+              onClick={() => setActiveTab('schedule')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'schedule' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+            >
+              <Calendar className="w-5 h-5" /> Lịch công tác
+            </button>
+          )}
+          {canViewTab('gallery') && (
+            <button 
+              onClick={() => setActiveTab('gallery')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'gallery' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+            >
+              <Globe className="w-5 h-5" /> Thư viện ảnh
+            </button>
+          )}
+          {canViewTab('archive') && (
+            <button 
+              onClick={() => setActiveTab('archive')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'archive' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+            >
+              <Archive className="w-5 h-5" /> Lưu trữ văn bản
+            </button>
+          )}
+          {isSuperAdmin && (
+            <div className="pt-4 mt-4 border-t border-slate-800">
+              <p className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Tương tác người dùng</p>
+              <button 
+                onClick={() => setActiveTab('messages')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'messages' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+              >
+                <Mail className="w-5 h-5" /> Hộp thư góp ý
+              </button>
+              <button 
+                onClick={() => setActiveTab('admins')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'admins' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+              >
+                <Users className="w-5 h-5" /> Quản lý tài khoản
+              </button>
+            </div>
+          )}
         </nav>
 
         <button 
@@ -1774,6 +1921,7 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
               {activeTab === 'gallery' && 'Quản lý Thư viện ảnh'}
               {activeTab === 'archive' && 'Quản lý Lưu trữ văn bản'}
               {activeTab === 'messages' && 'Hộp thư phản hồi & Ý kiến'}
+              {activeTab === 'admins' && 'Quản lý Tài khoản Quản trị'}
             </h2>
             {saveStatus && (
               <div className="flex items-center gap-2 text-green-600 font-bold animate-in slide-in-from-top-4">
@@ -2543,18 +2691,31 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
               </div>
               ) : (
                 <div className="space-y-10">
-                  <button 
-                    onClick={() => setIsManagingDeptContent(false)}
-                    className="flex items-center gap-2 text-blue-600 font-bold hover:text-blue-800"
-                  >
-                    <ArrowLeft className="w-5 h-5" /> Quay lại danh sách tổ
-                  </button>
+                  {!isDeptHead && (
+                    <button 
+                      onClick={() => setIsManagingDeptContent(false)}
+                      className="flex items-center gap-2 text-blue-600 font-bold hover:text-blue-800"
+                    >
+                      <ArrowLeft className="w-5 h-5" /> Quay lại danh sách tổ
+                    </button>
+                  )}
 
-                  <div className="bg-blue-900 text-white p-8 rounded-3xl shadow-lg">
-                    <h3 className="text-2xl font-bold uppercase tracking-wider">
-                      {departmentsList.find(d => d.id === selectedDeptId)?.name}
-                    </h3>
-                    <p className="text-blue-200 mt-2">Cập nhật thông tin nhân sự, hoạt động và tài liệu của tổ.</p>
+                  <div className="bg-blue-900 text-white p-8 rounded-3xl shadow-lg relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-8 opacity-10">
+                      {React.createElement(Icons[departmentsList.find(d => d.id === selectedDeptId)?.icon as keyof typeof Icons] || Icons.BookOpen, { size: 120 })}
+                    </div>
+                    <div className="relative z-10">
+                      <h3 className="text-2xl font-black uppercase tracking-wider">
+                        {departmentsList.find(d => d.id === selectedDeptId)?.name || 'Quản lý Tổ chuyên môn'}
+                      </h3>
+                      <p className="text-blue-200 mt-2 font-medium">Cập nhật thông tin nhân sự, hoạt động và tài liệu của tổ chuyên môn phụ trách.</p>
+                      {isDeptHead && (
+                        <div className="mt-4 flex items-center gap-2 text-xs font-bold bg-blue-800/50 w-fit px-3 py-1.5 rounded-full border border-blue-700">
+                          <Icons.BadgeCheck className="w-4 h-4 text-green-400" />
+                          Tài khoản: {user?.display_name}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Tabs for Department Content */}
@@ -3811,6 +3972,168 @@ export default function AdminDashboard({ onLogout, onExit }: AdminDashboardProps
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {activeTab === 'admins' && isSuperAdmin && (
+            <div className="space-y-8 animate-in fade-in duration-500">
+               <form onSubmit={handleSaveAdminUser} className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+                 <h3 className="text-xl font-black text-slate-900 flex items-center gap-3">
+                   {editingAdminUserId ? <Edit className="w-6 h-6 text-amber-500" /> : <Plus className="w-6 h-6 text-blue-600" />}
+                   {editingAdminUserId ? 'Cập nhật tài khoản' : 'Thêm tài khoản quản trị mới'}
+                 </h3>
+                 
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                   <div className="space-y-2">
+                     <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Tên đăng nhập</label>
+                     <input 
+                       type="text"
+                       value={adminUserForm.username}
+                       onChange={e => setAdminUserForm({...adminUserForm, username: e.target.value})}
+                       className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold"
+                       placeholder="username"
+                       required
+                     />
+                   </div>
+                   <div className="space-y-2">
+                     <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Mật khẩu</label>
+                     <input 
+                       type="text"
+                       value={adminUserForm.password}
+                       onChange={e => setAdminUserForm({...adminUserForm, password: e.target.value})}
+                       className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold"
+                       placeholder="password"
+                       required
+                     />
+                   </div>
+                   <div className="space-y-2">
+                     <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Tên hiển thị</label>
+                     <input 
+                       type="text"
+                       value={adminUserForm.display_name}
+                       onChange={e => setAdminUserForm({...adminUserForm, display_name: e.target.value})}
+                       className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold"
+                       placeholder="Ví dụ: Tổ trưởng Vật Lý"
+                       required
+                     />
+                   </div>
+                   <div className="space-y-2">
+                     <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Quyền hạn</label>
+                     <select 
+                       value={adminUserForm.role}
+                       onChange={e => setAdminUserForm({...adminUserForm, role: e.target.value})}
+                       className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold"
+                     >
+                       <option value="super_admin">Ban Giám Hiệu (Toàn quyền)</option>
+                       <option value="youth_union_officer">Cán bộ Đoàn (Đoàn, Ảnh, Thành tích)</option>
+                       <option value="dept_head">Tổ trưởng chuyên môn (Quản lý tổ riêng)</option>
+                     </select>
+                   </div>
+                 </div>
+
+                 {adminUserForm.role === 'dept_head' && (
+                   <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100 space-y-3">
+                     <label className="text-xs font-black text-blue-900 uppercase tracking-widest block">Chọn tổ chuyên môn phụ trách</label>
+                     <select 
+                       value={adminUserForm.dept_id}
+                       onChange={e => setAdminUserForm({...adminUserForm, dept_id: e.target.value})}
+                       className="w-full p-3 bg-white border border-blue-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-blue-900"
+                       required={adminUserForm.role === 'dept_head'}
+                     >
+                       <option value="">-- Chọn tổ --</option>
+                       {departmentsList.map(dept => (
+                         <option key={dept.id} value={dept.id}>{dept.name}</option>
+                       ))}
+                     </select>
+                     <p className="text-[10px] text-blue-600 font-bold italic">* Tài khoản tổ trưởng sẽ chỉ có quyền chỉnh sửa thông tin của tổ được chọn.</p>
+                   </div>
+                 )}
+
+                 <div className="flex gap-4">
+                   <button type="submit" className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 flex items-center gap-2">
+                     <Save className="w-5 h-5" /> {editingAdminUserId ? 'Cập nhật tài khoản' : 'Tạo tài khoản'}
+                   </button>
+                   {editingAdminUserId && (
+                     <button 
+                       type="button" 
+                       onClick={() => {
+                         setEditingAdminUserId(null);
+                         setAdminUserForm({ username: '', password: '', display_name: '', role: 'dept_head', dept_id: '' });
+                       }}
+                       className="px-8 py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-all"
+                     >
+                       Hủy bỏ
+                     </button>
+                   )}
+                 </div>
+               </form>
+
+               <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                 <table className="w-full text-left">
+                   <thead className="bg-slate-50 border-b border-slate-200">
+                     <tr>
+                       <th className="p-5 text-xs font-black text-slate-400 uppercase tracking-widest">Tên hiển thị</th>
+                       <th className="p-5 text-xs font-black text-slate-400 uppercase tracking-widest">Tài khoản</th>
+                       <th className="p-5 text-xs font-black text-slate-400 uppercase tracking-widest">Quyền</th>
+                       <th className="p-5 text-xs font-black text-slate-400 uppercase tracking-widest">Phụ trách</th>
+                       <th className="p-5 text-xs font-black text-slate-400 uppercase tracking-widest text-right">Thao tác</th>
+                     </tr>
+                   </thead>
+                   <tbody>
+                     {adminUsers.map(u => (
+                       <tr key={u.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                         <td className="p-5">
+                           <div className="font-black text-slate-900">{u.display_name}</div>
+                         </td>
+                         <td className="p-5">
+                           <div className="flex flex-col">
+                             <div className="text-sm font-bold text-slate-700">{u.username}</div>
+                             <div className="text-[10px] font-mono text-slate-400">PW: {u.password}</div>
+                           </div>
+                         </td>
+                         <td className="p-5">
+                           <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                             u.role === 'super_admin' ? 'bg-purple-100 text-purple-700' :
+                             u.role === 'youth_union_officer' ? 'bg-orange-100 text-orange-700' :
+                             'bg-blue-100 text-blue-700'
+                           }`}>
+                             {u.role === 'super_admin' ? 'BGH' : u.role === 'youth_union_officer' ? 'ĐOÀN' : 'TỔ TRƯỞNG'}
+                           </span>
+                         </td>
+                         <td className="p-5 text-sm font-bold text-slate-500">
+                           {u.dept_id ? departmentsList.find(d => d.id === u.dept_id)?.name || u.dept_id : '--'}
+                         </td>
+                         <td className="p-5 text-right">
+                            <div className="flex justify-end gap-2">
+                              <button 
+                                onClick={() => {
+                                  setEditingAdminUserId(u.id);
+                                  setAdminUserForm({
+                                    username: u.username,
+                                    password: u.password,
+                                    display_name: u.display_name,
+                                    role: u.role,
+                                    dept_id: u.dept_id || ''
+                                  });
+                                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                                }}
+                                className="p-2.5 text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                              >
+                                <Edit className="w-5 h-5" />
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteAdminUser(u.id)}
+                                className="p-2.5 text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                              >
+                                <Trash2 className="w-5 h-5" />
+                              </button>
+                            </div>
+                         </td>
+                       </tr>
+                     ))}
+                   </tbody>
+                 </table>
+               </div>
             </div>
           )}
         </div>
