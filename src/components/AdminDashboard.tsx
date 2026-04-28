@@ -132,6 +132,10 @@ const insertMarkdown = (
       insertion = `[${selectedText || 'link name'}](https://example.com)`;
       newCursorPos = start + 1;
       break;
+    case 'image':
+      insertion = `![${selectedText || 'mô tả ảnh'}](https://example.com/image.jpg)`;
+      newCursorPos = start + 2;
+      break;
     case 'formula':
       const formulaPattern = value || 'x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}';
       const formulaPrefix = '\n$$ ';
@@ -190,6 +194,7 @@ const insertMarkdown = (
       const contentText = selectedText || 
                           (type === 'bold' ? 'bold text' : 
                           type === 'italic' ? 'italic text' :
+                          type === 'image' ? 'mô tả ảnh' :
                           (type === 'font-size' || type === 'font-family' || type === 'text-color') ? 'văn bản' :
                           type === 'formula' ? (value || 'x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}') :
                           'text');
@@ -527,6 +532,16 @@ const MarkdownToolbar = ({
         </div>
 
         <div className="w-px h-6 bg-slate-100 mx-2" />
+
+        <button 
+          type="button" 
+          onClick={() => insertMarkdown(textareaRef, setter, form, field, 'image')}
+          className="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors relative" 
+          title="Chèn liên kết ảnh (URL)"
+        >
+          <LinkIcon className="w-4 h-4" />
+          <ImageIcon className="w-2.5 h-2.5 absolute top-1 right-1 bg-white rounded-full" />
+        </button>
 
         <input 
           type="file" 
@@ -2702,7 +2717,13 @@ export default function AdminDashboard({ onLogout, onExit, user }: AdminDashboar
 
                   <div className="bg-blue-900 text-white p-8 rounded-3xl shadow-lg relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-8 opacity-10">
-                      {React.createElement(Icons[departmentsList.find(d => d.id === selectedDeptId)?.icon as keyof typeof Icons] || Icons.BookOpen, { size: 120 })}
+                      {(() => {
+                        const iconName = departmentsList.find(d => d.id === selectedDeptId)?.icon;
+                        const IconComponent = (iconName && (Icons as any)[iconName]) || Icons.BookOpen;
+                        return typeof IconComponent === 'function' || typeof IconComponent === 'object' ? 
+                          React.createElement(IconComponent as any, { size: 120 }) : 
+                          <Icons.BookOpen size={120} />;
+                      })()}
                     </div>
                     <div className="relative z-10">
                       <h3 className="text-2xl font-black uppercase tracking-wider">
