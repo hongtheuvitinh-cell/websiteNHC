@@ -94,6 +94,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    document.title = "Website-NHC";
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
@@ -125,6 +126,40 @@ export default function App() {
   const [archiveSearch, setArchiveSearch] = useState('');
   const [archiveTypeFilter, setArchiveTypeFilter] = useState('Tất cả');
   const [showCopyToast, setShowCopyToast] = useState(false);
+  const [contactSubmissionForm, setContactSubmissionForm] = useState({ name: '', email: '', message: '' });
+  const [isSubmittingContact, setIsSubmittingContact] = useState(false);
+  const [contactSubmitSuccess, setContactSubmitSuccess] = useState(false);
+
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!contactSubmissionForm.name || !contactSubmissionForm.email || !contactSubmissionForm.message) {
+      alert("Vui lòng nhập đầy đủ thông tin.");
+      return;
+    }
+
+    setIsSubmittingContact(true);
+    try {
+      const { error } = await supabase.from('contact_submissions').insert([
+        { 
+          name: contactSubmissionForm.name, 
+          email: contactSubmissionForm.email, 
+          message: contactSubmissionForm.message,
+          created_at: new Date().toISOString()
+        }
+      ]);
+
+      if (error) throw error;
+
+      setContactSubmitSuccess(true);
+      setContactSubmissionForm({ name: '', email: '', message: '' });
+      setTimeout(() => setContactSubmitSuccess(false), 5000);
+    } catch (err: any) {
+      console.error("Error submitting contact form:", err);
+      alert("Gửi thông tin thất bại. Vui lòng thử lại sau.");
+    } finally {
+      setIsSubmittingContact(false);
+    }
+  };
 
   const copyToClipboard = (type: string, id: string) => {
     const baseUrl = window.location.origin + window.location.pathname;
@@ -1094,11 +1129,42 @@ export default function App() {
                   </div>
                 </div>
               </div>
-              <form className="bg-slate-50 p-8 rounded-3xl border border-slate-200 space-y-4">
-                <input type="text" placeholder="Họ và tên" className="w-full p-3 rounded-xl border border-slate-300 outline-none focus:ring-2 focus:ring-blue-500" />
-                <input type="email" placeholder="Email liên hệ" className="w-full p-3 rounded-xl border border-slate-300 outline-none focus:ring-2 focus:ring-blue-500" />
-                <textarea placeholder="Nội dung tin nhắn" className="w-full p-3 rounded-xl border border-slate-300 outline-none focus:ring-2 focus:ring-blue-500 h-32"></textarea>
-                <button className="w-full py-3 bg-blue-800 text-white font-bold rounded-xl hover:bg-blue-900 transition-colors">Gửi thông tin</button>
+              <form onSubmit={handleContactSubmit} className="bg-slate-50 p-8 rounded-3xl border border-slate-200 space-y-4">
+                <input 
+                  type="text" 
+                  placeholder="Họ và tên" 
+                  className="w-full p-3 rounded-xl border border-slate-300 outline-none focus:ring-2 focus:ring-blue-500" 
+                  value={contactSubmissionForm.name}
+                  onChange={(e) => setContactSubmissionForm({...contactSubmissionForm, name: e.target.value})}
+                  required
+                />
+                <input 
+                  type="email" 
+                  placeholder="Email liên hệ" 
+                  className="w-full p-3 rounded-xl border border-slate-300 outline-none focus:ring-2 focus:ring-blue-500" 
+                  value={contactSubmissionForm.email}
+                  onChange={(e) => setContactSubmissionForm({...contactSubmissionForm, email: e.target.value})}
+                  required
+                />
+                <textarea 
+                  placeholder="Nội dung tin nhắn" 
+                  className="w-full p-3 rounded-xl border border-slate-300 outline-none focus:ring-2 focus:ring-blue-500 h-32"
+                  value={contactSubmissionForm.message}
+                  onChange={(e) => setContactSubmissionForm({...contactSubmissionForm, message: e.target.value})}
+                  required
+                ></textarea>
+                <button 
+                  type="submit"
+                  disabled={isSubmittingContact}
+                  className="w-full py-3 bg-blue-800 text-white font-bold rounded-xl hover:bg-blue-900 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isSubmittingContact ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Gửi thông tin'}
+                </button>
+                {contactSubmitSuccess && (
+                  <div className="p-3 bg-green-100 text-green-700 rounded-xl text-sm font-bold text-center animate-in fade-in zoom-in">
+                    Cảm ơn bạn! Thông tin đã được gửi thành công.
+                  </div>
+                )}
               </form>
             </div>
           </div>
