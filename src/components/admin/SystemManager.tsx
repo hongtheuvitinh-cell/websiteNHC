@@ -342,15 +342,30 @@ export const SystemManager: React.FC<AdminManagerProps> = ({
 
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                    {galleryImages.map((img, idx) => (
-                     <div key={idx} className="aspect-square bg-white rounded-xl border border-slate-200 overflow-hidden relative group">
-                        <img src={img.url} className="w-full h-full object-cover" />
-                        <button 
-                          type="button"
-                          onClick={() => removeImageFromList(idx)}
-                          className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                     <div key={idx} className="bg-white rounded-xl border border-slate-200 overflow-hidden relative group flex flex-col">
+                        <div className="aspect-square relative flex-shrink-0">
+                          <img src={img.url} className="w-full h-full object-cover" />
+                          <button 
+                            type="button"
+                            onClick={() => removeImageFromList(idx)}
+                            className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-10 shadow-md"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <div className="p-2">
+                          <input 
+                            type="text"
+                            placeholder="Chú thích ảnh..."
+                            value={img.caption || ''}
+                            onChange={(e) => {
+                              const newList = [...galleryImages];
+                              newList[idx].caption = e.target.value;
+                              setGalleryImages(newList);
+                            }}
+                            className="w-full text-[10px] p-1.5 bg-slate-50 border border-transparent focus:border-blue-300 rounded outline-none font-bold text-slate-600 transition-all"
+                          />
+                        </div>
                      </div>
                    ))}
                    {galleryImages.length === 0 && (
