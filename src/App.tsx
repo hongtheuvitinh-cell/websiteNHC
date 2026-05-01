@@ -123,7 +123,8 @@ export default function App() {
   const [deptActivities, setDeptActivities] = useState<any[]>([]);
   const [deptDocuments, setDeptDocuments] = useState<any[]>([]);
   const [activeDeptTab, setActiveDeptTab] = useState<'personnel' | 'activities' | 'documents' | 'introduction'>('introduction');
-  const [documentFilter, setDocumentFilter] = useState<'new' | 'old'>('new');
+  const [docGradeFilter, setDocGradeFilter] = useState<'all' | '10' | '11' | '12'>('all');
+  const [docStatusFilter, setDocStatusFilter] = useState<'all' | 'new' | 'old'>('all');
   const [loginError, setLoginError] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -1434,32 +1435,62 @@ export default function App() {
                     {/* Documents Tab */}
                     {activeDeptTab === 'documents' && (
                       <div className="animate-in fade-in duration-300">
-                        <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
                           <h4 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
-                            <Icons.BookOpen className="w-7 h-7 text-amber-600" /> Tài liệu tổ chuyên môn
+                            <Icons.BookOpen className="w-7 h-7 text-blue-600" /> Tài liệu chuyên môn
                           </h4>
-                          <div className="flex p-1 bg-slate-100 rounded-xl">
-                            <button 
-                              onClick={() => setDocumentFilter('new')}
-                              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${documentFilter === 'new' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                            >
-                              TÀI LIỆU MỚI
-                            </button>
-                            <button 
-                              onClick={() => setDocumentFilter('old')}
-                              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${documentFilter === 'old' ? 'bg-white text-slate-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                            >
-                              TÀI LIỆU CŨ
-                            </button>
+                          <div className="space-y-2">
+                             <div className="flex items-center gap-2 justify-end">
+                               <Icons.Filter className="w-3.5 h-3.5 text-slate-400" />
+                               <div className="flex p-0.5 bg-slate-100 rounded-lg">
+                                {[
+                                  { id: 'all', label: 'TẤT CẢ KHỐI' },
+                                  { id: '10', label: 'KHỐI 10' },
+                                  { id: '11', label: 'KHỐI 11' },
+                                  { id: '12', label: 'KHỐI 12' }
+                                ].map(f => (
+                                  <button 
+                                    key={f.id}
+                                    onClick={() => setDocGradeFilter(f.id as any)}
+                                    className={`px-3 py-1 rounded-md text-[10px] font-black tracking-wider transition-all ${docGradeFilter === f.id ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                  >
+                                    {f.label}
+                                  </button>
+                                ))}
+                               </div>
+                             </div>
+                             <div className="flex items-center gap-2 justify-end">
+                               <Icons.LayoutDashboard className="w-3.5 h-3.5 text-slate-400" />
+                               <div className="flex p-0.5 bg-slate-50 rounded-lg border border-slate-100">
+                                {[
+                                  { id: 'all', label: 'TẤT CẢ' },
+                                  { id: 'new', label: 'TL MỚI' },
+                                  { id: 'old', label: 'TL CŨ' }
+                                ].map(f => (
+                                  <button 
+                                    key={f.id}
+                                    onClick={() => setDocStatusFilter(f.id as any)}
+                                    className={`px-3 py-1 rounded-md text-[10px] font-black tracking-wider transition-all ${docStatusFilter === f.id ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                                  >
+                                    {f.label}
+                                  </button>
+                                ))}
+                               </div>
+                             </div>
                           </div>
                         </div>
 
-                        {deptDocuments.filter(d => documentFilter === 'new' ? d.is_new : !d.is_new).length > 0 ? (
+                        {deptDocuments.filter(d => {
+                          const gradeMatch = docGradeFilter === 'all' || d.grade === docGradeFilter;
+                          const statusMatch = docStatusFilter === 'all' || (docStatusFilter === 'new' ? d.is_new : !d.is_new);
+                          return gradeMatch && statusMatch;
+                        }).length > 0 ? (
                           <div className="space-y-12">
                             {['Giáo án', 'Đề KT', 'Chuyên đề', 'Hệ thống học tập'].map(cat => {
                               const catDocs = deptDocuments.filter(d => 
                                 d.category === cat && 
-                                (documentFilter === 'new' ? d.is_new : !d.is_new)
+                                (docGradeFilter === 'all' || d.grade === docGradeFilter) &&
+                                (docStatusFilter === 'all' || (docStatusFilter === 'new' ? d.is_new : !d.is_new))
                               );
                               if (catDocs.length === 0) return null;
                               
@@ -1478,7 +1509,8 @@ export default function App() {
                                             <Icons.FileText className="w-5 h-5" />
                                           </div>
                                           <div className="min-w-0">
-                                            <h5 className="font-bold text-slate-800 group-hover:text-blue-900 transition-colors truncate flex items-center gap-1.5">
+                                            <h5 className="font-bold text-slate-800 group-hover:text-blue-900 transition-colors truncate flex items-center gap-2">
+                                              <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 shrink-0">K{docItem.grade === 'all' ? 'C' : docItem.grade}</span>
                                               {docItem.title}
                                               {docItem.is_new && <span className="px-1.5 py-0.5 bg-orange-600 text-white text-[8px] font-black rounded shadow-sm shrink-0">NEW</span>}
                                             </h5>
