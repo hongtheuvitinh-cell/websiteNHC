@@ -365,15 +365,42 @@ export const DepartmentManager: React.FC<AdminManagerProps> = ({
                      </select>
                    </div>
                  </div>
-                 <input type="url" placeholder="Link tài liệu" value={documentForm.file_url} onChange={e => setDocumentForm({...documentForm, file_url: e.target.value})} className="w-full p-3 border rounded-xl mb-4" required />
-                 <button type="submit" className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl">{editingDocumentId ? 'Cập nhật' : 'Thêm'}</button>
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <input type="url" placeholder="Link tài liệu (Drive, Mediafire...)" value={documentForm.file_url} onChange={e => setDocumentForm({...documentForm, file_url: e.target.value})} className="md:col-span-2 p-3 border rounded-xl" required />
+                    <label className="flex items-center justify-center gap-3 p-3 bg-slate-50 border rounded-xl cursor-pointer hover:bg-slate-100 transition-colors">
+                      <input 
+                        type="checkbox" 
+                        checked={documentForm.is_new}
+                        onChange={e => setDocumentForm({...documentForm, is_new: e.target.checked})}
+                        className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                      />
+                      <span className={`text-sm font-black uppercase tracking-widest ${documentForm.is_new ? 'text-blue-600' : 'text-slate-400'}`}>
+                        {documentForm.is_new ? 'Tài liệu Mới' : 'Tài liệu Cũ'}
+                      </span>
+                    </label>
+                 </div>
+                 <textarea 
+                    placeholder="Mô tả tóm tắt nội dung tài liệu (lược bớt)..." 
+                    value={documentForm.description} 
+                    onChange={e => setDocumentForm({...documentForm, description: e.target.value})} 
+                    className="w-full p-3 border rounded-xl h-24 mb-4 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium"
+                 />
+                 <button type="submit" className="px-10 py-3 bg-blue-600 text-white font-black uppercase tracking-widest rounded-xl hover:bg-blue-700 transition-all active:scale-95 shadow-lg shadow-blue-100">
+                    {editingDocumentId ? 'Cập nhật tài liệu' : 'Đưa lên hệ thống'}
+                 </button>
                </form>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {deptDocuments.map(d => (
                     <div key={d.id} className="bg-white p-4 rounded-xl border flex justify-between items-center group">
                        <div>
-                          <h5 className="font-bold">{d.title}</h5>
-                          <span className="text-[10px] bg-blue-50 px-1 inline-block">K{d.grade} - {d.category}</span>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h5 className="font-bold text-slate-800">{d.title}</h5>
+                            {d.is_new && <span className="px-1.5 py-0.5 bg-orange-600 text-white text-[8px] font-black rounded shadow-sm">NEW</span>}
+                          </div>
+                          <div className="flex gap-2 items-center">
+                            <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold">K{d.grade}</span>
+                            <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">{d.category}</span>
+                          </div>
                        </div>
                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                          <button onClick={() => { setEditingDocumentId(d.id); setDocumentForm({...d, description: d.description || '', is_new: !!d.is_new}); }} className="p-1 text-blue-500"><Edit className="w-3.5 h-3.5" /></button>
